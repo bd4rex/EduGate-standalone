@@ -10,6 +10,10 @@ EduGate 单机课堂版运行在教师电脑上，位于学生页面、教师控
 
 desktop/install_backend_deps.bat
 
+安装过程和常见问题见：
+
+docs/安装与故障排查.txt
+
 2. 启动单机课堂版：
 
 desktop/run_standalone.bat

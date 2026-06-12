@@ -96,9 +96,9 @@ UPSTREAM_BASE_URL=https://api.deepseek.com/v1
 UPSTREAM_API_KEY=replace-with-your-provider-api-key
 DEFAULT_MODEL=deepseek-chat
 
-ADMIN_API_KEY=change-me-admin-token
+ADMIN_API_KEY=local-admin-token
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-me-admin-password
+ADMIN_PASSWORD=edugate
 
 PLATFORM_API_KEY=change-me-platform-api-key
 EDUGATE_SQLITE_DB_PATH=edugate.sqlite3

@@ -16,6 +16,12 @@ Windows 首次运行先安装依赖：
 desktop/install_backend_deps.bat
 ```
 
+安装脚本会显示完整步骤，并默认使用清华 PyPI 镜像。详细说明见：
+
+```text
+docs/安装与故障排查.txt
+```
+
 启动单机课堂版：
 
 ```text

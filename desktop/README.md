@@ -19,6 +19,12 @@ run_standalone.bat
 install_backend_deps.bat
 ```
 
+安装脚本会检查 Python、pip、依赖包，并默认使用清华 PyPI 镜像。详细故障排查见：
+
+```text
+..\docs\安装与故障排查.txt
+```
+
 或命令行运行：
 
 ```powershell

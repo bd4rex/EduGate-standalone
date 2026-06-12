@@ -1,0 +1,101 @@
+EduGate 单机课堂版安装与故障排查
+
+一、推荐环境
+
+操作系统：Windows 10 / Windows 11
+Python：3.9 或更新版本
+网络：能访问国内 PyPI 镜像，或能通过本机代理访问网络
+
+二、首次安装
+
+1. 双击运行：
+
+desktop/install_backend_deps.bat
+
+2. 安装脚本会自动完成：
+
+- 检查 Python 是否存在。
+- 检查 pip 是否可用。
+- 使用清华 PyPI 镜像安装后端依赖。
+- 如果清华源安装失败，自动尝试本机代理 http://127.0.0.1:7890。
+- 验证 fastapi、httpx、uvicorn、pydantic、python-multipart、pypdf 是否可导入。
+- 如果 backend/.env 不存在，自动从 backend/.env.example 复制一份。
+
+3. 看到以下提示表示安装成功：
+
+[OK] EduGate backend dependencies are ready.
+
+三、启动
+
+安装成功后，双击运行：
+
+desktop/run_standalone.bat
+
+启动器会显示：
+
+教师控制台：http://教师电脑IP:8080/admin.html
+学生 API：http://教师电脑IP:8000
+
+默认登录：
+
+用户名：admin
+密码：edugate
+
+四、正式上课前必须修改
+
+请编辑 backend/.env：
+
+ADMIN_PASSWORD=改成教师自己的管理密码
+ADMIN_API_KEY=改成随机长字符串
+UPSTREAM_API_KEY=填入模型公司 API Key
+
+DeepSeek 示例：
+
+UPSTREAM_PROVIDER=DeepSeek
+UPSTREAM_BASE_URL=https://api.deepseek.com/v1
+UPSTREAM_API_KEY=你的DeepSeek API Key
+DEFAULT_MODEL=deepseek-chat
+
+五、常见问题
+
+1. 提示找不到 Python
+
+安装 Python 3.9 或更新版本。安装时勾选 Add python.exe to PATH。
+
+2. pip 下载失败
+
+安装脚本默认使用清华源：
+
+https://pypi.tuna.tsinghua.edu.cn/simple
+
+如果仍失败，请确认电脑能联网。
+
+3. 提示 Cannot connect to proxy
+
+这通常说明 Windows 配了本机代理，但代理软件没有启动，或代理地址不对。
+
+如果使用 Clash/V2Ray，确认代理软件正在运行，并且 HTTP 代理端口是 127.0.0.1:7890。
+
+4. 启动器提示缺少后端依赖
+
+重新运行：
+
+desktop/install_backend_deps.bat
+
+5. 学生电脑打不开页面
+
+请确认：
+
+- 学生电脑和教师电脑在同一局域网。
+- Windows 防火墙允许 Python 或 EduGate 程序访问网络。
+- 学生电脑可访问教师电脑 8080 端口。
+- 学生电脑可访问教师电脑 8000 端口。
+
+6. 可以打开教师控制台，但 AI 不回答
+
+请检查：
+
+- backend/.env 中 UPSTREAM_API_KEY 是否已填写。
+- 教师控制台里当前模型是否配置了正确 Base URL 和 API Key。
+- AI 总开关是否开启。
+- 模型公司账号余额或额度是否正常。
