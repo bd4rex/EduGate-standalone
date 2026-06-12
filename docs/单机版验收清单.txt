@@ -1,0 +1,47 @@
+EduGate 单机课堂版验收清单
+
+一、启动
+
+[ ] 首次运行 install_backend_deps.bat 能完成依赖安装。
+[ ] 运行 run_standalone.bat 后，窗口显示“运行中”。
+[ ] 启动器显示教师控制台地址和学生 API 地址。
+[ ] 点击“打开教师控制台”能打开 admin.html。
+
+二、教师登录和配置
+
+[ ] 使用 admin / edugate 可以登录。
+[ ] 登录后立即修改 ADMIN_PASSWORD 和 ADMIN_API_KEY。
+[ ] 可以新增或更新 OpenAI-compatible 模型。
+[ ] 模型 API Key 不会回显到页面。
+[ ] 可以切换当前课堂模型。
+[ ] 可以保存 system prompt、temperature、max tokens 和 AI 开关。
+
+三、知识库
+
+[ ] 可以创建知识库。
+[ ] 可以上传 txt、md、pdf 等资料文件。
+[ ] 上传后知识库文件列表显示 chunk 数量。
+[ ] 挂载知识库后学生问答会注入相关资料片段。
+
+四、学生端
+
+[ ] 学生测试页 http://教师电脑IP:8080/student.html 可打开。
+[ ] 学生页自动请求 http://教师电脑IP:8000/chat/stream。
+[ ] 普通 /chat 接口仍可用。
+[ ] /v1/chat/completions 兼容入口仍可用。
+[ ] 关闭 AI 总开关后，学生接口停止回答。
+
+五、运行期文件
+
+[ ] backend/runtime_config.json 自动生成。
+[ ] backend/edugate.sqlite3 自动生成并记录教师与日志。
+[ ] backend/knowledge.sqlite3 自动生成并记录知识库索引。
+[ ] backend/knowledge_files/ 保存上传资料。
+[ ] 上述运行期文件不会提交到 Git。
+
+六、网络
+
+[ ] 学生电脑和教师电脑在同一局域网。
+[ ] 学生电脑可访问教师电脑 8000 端口。
+[ ] 学生电脑可访问教师电脑 8080 端口。
+[ ] Windows 防火墙已允许 Python 或打包后的 EduGate 程序通信。

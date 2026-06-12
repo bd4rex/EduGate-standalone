@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IP 地址学习单 + AI 助手</title>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --paper: #ffffff;
+      --line: #d9e2ef;
+      --line-dark: #b9c7da;
+      --text: #22324a;
+      --subtext: #5c6b80;
+      --primary: #2f6fda;
+      --primary-soft: #eaf2ff;
+      --success: #2f8f57;
+      --warn: #c67a18;
+      --danger: #c54848;
+      --assistant-bg: #f8fbff;
+      --student-bg: #eef6ff;
+      --ai-bg: #f5f7fb;
+      --shadow: 0 8px 24px rgba(25, 50, 90, 0.08);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .topbar {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+
+    .topbar-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .topbar-subtitle {
+      color: var(--subtext);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.35fr 0.9fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .sheet {
+      overflow: hidden;
+    }
+
+    .sheet-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #f9fbff 0%, #f4f8ff 100%);
+    }
+
+    .sheet-header-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .sheet-title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .sheet-badge {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid #cfe0ff;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .sheet-meta {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--subtext);
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .sheet-body {
+      padding: 20px 22px 24px;
+    }
+
+    .section {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: #fff;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #1f3f73;
+    }
+
+    .goal-list,
+    .task-list,
+    .tip-list {
+      margin: 0;
+      padding-left: 20px;
+      line-height: 1.9;
+      color: var(--text);
+    }
+
+    .question-box {
+      background: #fbfdff;
+      border: 1px dashed var(--line-dark);
+      border-radius: 12px;
+      padding: 14px;
+      line-height: 1.8;
+    }
+
+    .question-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #284f93;
+    }
+
+    .thinking-area {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      border: 1px solid var(--line-dark);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+      background: #fcfdff;
+      outline: none;
+    }
+
+    .thinking-area:focus,
+    .chat-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(47, 111, 218, 0.12);
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .quick-btn,
+    .btn {
+      border: 1px solid var(--line-dark);
+      background: #fff;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .quick-btn:hover,
+    .btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #f8fbff;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: #265ec0;
+      color: #fff;
+    }
+
+    .btn-soft {
+      background: var(--primary-soft);
+      border-color: #cfe0ff;
+      color: var(--primary);
+    }
+
+    .assistant-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 860px;
+    }
+
+    .assistant-header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--assistant-bg);
+    }
+
+    .assistant-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .assistant-desc {
+      font-size: 13px;
+      color: var(--subtext);
+      line-height: 1.6;
+      margin-bottom: 6px;
+    }
+
+    .status-bar {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.6;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--subtext);
+    }
+
+    .status-ok {
+      color: var(--success);
+      border-color: #cfe9d8;
+      background: #f4fbf7;
+    }
+
+    .status-warn {
+      color: var(--warn);
+      border-color: #f0dcc0;
+      background: #fffaf3;
+    }
+
+    .status-error {
+      color: var(--danger);
+      border-color: #edcaca;
+      background: #fff5f5;
+    }
+
+    .chat-history {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      background: #fcfdff;
+      min-height: 420px;
+      max-height: 520px;
+    }
+
+    .msg {
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .msg-role {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+      letter-spacing: 0.3px;
+    }
+
+    .msg-bubble {
+      max-width: 95%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 14px;
+    }
+
+    .msg-student .msg-bubble {
+      background: var(--student-bg);
+      border-color: #cfe0ff;
+      margin-left: auto;
+    }
+
+    .msg-ai .msg-bubble {
+      background: var(--ai-bg);
+    }
+
+    .assistant-footer {
+      padding: 14px 16px 16px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .chat-input {
+      width: 100%;
+      min-height: 90px;
+      resize: vertical;
+      border: 1px solid var(--line-dark);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.7;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    .footer-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--subtext);
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    .table-like {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    .table-like th,
+    .table-like td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .table-like th {
+      background: #f7faff;
+      color: #365a96;
+      font-weight: 700;
+      width: 130px;
+    }
+
+    @media (max-width: 1080px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .assistant-panel {
+        min-height: auto;
+      }
+
+      .chat-history {
+        max-height: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar card">
+      <div class="topbar-title">信息科技课堂学习单：认识 IP 地址</div>
+      <div class="topbar-subtitle">
+        左侧是课堂学习单，右侧是嵌入式 AI 学习助手。页面会优先调用流式接口，实现边生成边显示；若失败，则自动回退到普通接口。
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="card sheet">
+        <div class="sheet-header">
+          <div class="sheet-header-top">
+            <div class="sheet-title">《IP 地址》动态学习单</div>
+            <div class="sheet-badge">七年级 / 信息科技 / 网络基础</div>
+          </div>
+          <div class="sheet-meta">
+            <span>学习主题：IP 地址的作用与基本表示方法</span>
+            <span>课堂形式：任务驱动 + AI 辅助探究</span>
+            <span>建议用时：20–25 分钟</span>
+          </div>
+        </div>
+
+        <div class="sheet-body">
+          <div class="section">
+            <div class="section-title">一、学习目标</div>
+            <ul class="goal-list">
+              <li>知道什么是 IP 地址，理解它在网络通信中的作用。</li>
+              <li>初步认识 IPv4 地址的基本形式，了解“点分十进制”的表达方式。</li>
+              <li>能区分公网地址与私网地址的基本概念。</li>
+              <li>尝试用自己的语言解释“设备为什么需要 IP 地址”。</li>
+            </ul>
+          </div>
+
+          <div class="section">
+            <div class="section-title">二、课堂任务</div>
+            <ul class="task-list">
+              <li>阅读下表，了解 IP 地址的核心含义。</li>
+              <li>观察示例地址，找出它们的共同特点。</li>
+              <li>完成题目，并在“思考记录区”中写下你的判断过程。</li>
+              <li>遇到不理解的地方，可以点击右侧 AI 助手进行提问。</li>
+            </ul>
+
+            <table class="table-like">
+              <tr>
+                <th>概念</th>
+                <td>IP 地址可以理解为网络中设备的“地址”或“编号”。</td>
+              </tr>
+              <tr>
+                <th>作用</th>
+                <td>让数据能够知道“发给谁”“从哪里来”。</td>
+              </tr>
+              <tr>
+                <th>常见形式</th>
+                <td>IPv4 常写成：<code>192.168.1.10</code> 这样的四段数字形式。</td>
+              </tr>
+              <tr>
+                <th>生活类比</th>
+                <td>就像寄快递时需要写清楚收件地址一样，网络传输数据也需要目标地址。</td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="section">
+            <div class="section-title">三、示例题目</div>
+            <div class="question-box">
+              <div class="question-title">题目 1</div>
+              下面哪个更像一个 IPv4 地址？请说明理由。<br />
+              A. 192.168.1.25<br />
+              B. 300.15.6.1<br />
+              C. 10.0.abc.5<br />
+              D. 172.16.5
+              <br /><br />
+              <div class="question-title">题目 2</div>
+              为什么同一个教室里的很多电脑都可能使用 <code>192.168.x.x</code> 这样的地址？
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">四、思考提示</div>
+            <ul class="tip-list">
+              <li>IPv4 地址通常由 <strong>4 段数字</strong> 组成，中间用英文句点 <code>.</code> 分隔。</li>
+              <li>每一段通常是 <strong>0 到 255</strong> 之间的整数。</li>
+              <li><code>192.168.x.x</code>、<code>10.x.x.x</code>、<code>172.16.x.x - 172.31.x.x</code> 常见于内网环境。</li>
+            </ul>
+          </div>
+
+          <div class="section">
+            <div class="section-title">五、学生思考记录区</div>
+            <textarea
+              id="thinkingArea"
+              class="thinking-area"
+              placeholder="请在这里写下你的判断过程、你的疑问，或者你对 IP 地址作用的理解……"
+            >我认为 IP 地址像网络里的门牌号。没有它，数据可能就不知道该发给哪一台设备。</textarea>
+          </div>
+
+          <div class="section">
+            <div class="section-title">六、快捷提问</div>
+            <div class="quick-actions">
+              <button class="quick-btn" data-question="请用中学生能听懂的话解释什么是 IP 地址。">什么是 IP 地址？</button>
+              <button class="quick-btn" data-question="为什么一个设备必须有 IP 地址才能联网？">为什么必须有 IP 地址？</button>
+              <button class="quick-btn" data-question="192.168.1.25 为什么看起来像一个 IPv4 地址？">判断 IPv4 地址</button>
+              <button class="quick-btn" data-question="什么是公网 IP 和私网 IP？请举例说明。">公网与私网</button>
+              <button class="quick-btn" data-question="请结合教室网络环境解释为什么很多电脑会使用 192.168 开头的地址。">教室里的 192.168</button>
+              <button class="quick-btn" data-question="请帮我分析题目 1，但不要直接只给答案，要说明理由。">分析题目 1</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card assistant-panel">
+        <div class="assistant-header">
+          <div class="assistant-title">课堂 AI 助手</div>
+          <div class="assistant-desc">
+            这是嵌入在教学平台中的辅助问答区域。学生不能选择模型，也不能修改教学提示词。
+            系统会在后端自动按教学场景配置模型和提示词。
+          </div>
+
+          <div id="statusBar" class="status-bar">
+            已准备就绪。点击下方快捷按钮或直接输入问题即可开始。
+          </div>
+        </div>
+
+        <div id="chatHistory" class="chat-history"></div>
+
+        <div class="assistant-footer">
+          <textarea
+            id="chatInput"
+            class="chat-input"
+            placeholder="请输入你想问 AI 助手的问题，例如：为什么 192.168.1.25 看起来像一个 IPv4 地址？"
+          ></textarea>
+
+          <div class="footer-actions">
+            <button id="sendBtn" class="btn btn-primary">发送问题</button>
+            <button id="sendThinkingBtn" class="btn btn-soft">带上我的思考</button>
+            <button id="clearBtn" class="btn">清空对话</button>
+          </div>
+
+          <div class="hint">
+            页面会在本地保留最近几轮对话，并只发送最近 10 条 messages，避免上下文过长。
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    /*
+      ============================================
+      后端配置：对用户隐藏，前端内置
+      ============================================
+      如需修改后端地址或默认教学策略，请改这里。
+      如果 URL 带 ?teacher=xxx / ?teacher_id=xxx，
+      页面会按该教师当前加载的 AI 策略请求后端。
+    */
+    function defaultBackendBaseUrl() {
+      const host = window.location.hostname || "127.0.0.1";
+      const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+      return `${protocol}//${host}:8000`;
+    }
+
+    const BACKEND_BASE_URL = defaultBackendBaseUrl();
+    const STREAM_URL = `${BACKEND_BASE_URL}/chat/stream`;
+    const FALLBACK_URL = `${BACKEND_BASE_URL}/chat`;
+    const SCENARIO_ID = "default";
+    const URL_PARAMS = new URLSearchParams(window.location.search);
+    const TEACHER_ID = URL_PARAMS.get("teacher_id") || URL_PARAMS.get("teacher") || "";
+
+    const MAX_MESSAGES_TO_SEND = 10;
+
+    let messages = [
+      {
+        role: "assistant",
+        content: "你好，我是课堂中的 AI 学习助手。你可以问我：什么是 IP 地址、如何判断一个地址是否像 IPv4 地址、什么是公网和私网等问题。"
+      }
+    ];
+
+    const chatHistoryEl = document.getElementById("chatHistory");
+    const chatInputEl = document.getElementById("chatInput");
+    const thinkingAreaEl = document.getElementById("thinkingArea");
+    const statusBarEl = document.getElementById("statusBar");
+    const sendBtnEl = document.getElementById("sendBtn");
+    const sendThinkingBtnEl = document.getElementById("sendThinkingBtn");
+    const clearBtnEl = document.getElementById("clearBtn");
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function renderMessages() {
+      chatHistoryEl.innerHTML = "";
+      messages.forEach((msg) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = "msg " + (msg.role === "user" ? "msg-student" : "msg-ai");
+
+        const role = document.createElement("div");
+        role.className = "msg-role";
+        role.textContent = msg.role === "user" ? "学生提问" : "AI 助手";
+
+        const bubble = document.createElement("div");
+        bubble.className = "msg-bubble";
+        bubble.innerHTML = escapeHtml(msg.content);
+
+        wrapper.appendChild(role);
+        wrapper.appendChild(bubble);
+        chatHistoryEl.appendChild(wrapper);
+      });
+
+      chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    }
+
+    function appendTemporaryAssistantMessage(initialText = "") {
+      const wrapper = document.createElement("div");
+      wrapper.className = "msg msg-ai";
+
+      const role = document.createElement("div");
+      role.className = "msg-role";
+      role.textContent = "AI 助手";
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.textContent = initialText;
+
+      wrapper.appendChild(role);
+      wrapper.appendChild(bubble);
+      chatHistoryEl.appendChild(wrapper);
+      chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+
+      return bubble;
+    }
+
+    function setStatus(message, type = "") {
+      statusBarEl.textContent = message;
+      statusBarEl.className = "status-bar";
+      if (type === "ok") statusBarEl.classList.add("status-ok");
+      if (type === "warn") statusBarEl.classList.add("status-warn");
+      if (type === "error") statusBarEl.classList.add("status-error");
+    }
+
+    function setGeneratingState(isGenerating) {
+      sendBtnEl.disabled = isGenerating;
+      sendThinkingBtnEl.disabled = isGenerating;
+      clearBtnEl.disabled = isGenerating;
+      chatInputEl.disabled = isGenerating;
+      sendBtnEl.textContent = isGenerating ? "AI 正在生成……" : "发送问题";
+    }
+
+    function getRecentMessages() {
+      return messages.slice(-MAX_MESSAGES_TO_SEND);
+    }
+
+    function buildPayload() {
+      const payload = { messages: getRecentMessages() };
+      if (TEACHER_ID) {
+        payload.teacher_id = TEACHER_ID;
+      } else {
+        payload.scenario_id = SCENARIO_ID;
+      }
+      return payload;
+    }
+
+    function extractAssistantTextFromJson(dataObj) {
+      if (dataObj && Array.isArray(dataObj.choices) && dataObj.choices[0]) {
+        const choice = dataObj.choices[0];
+
+        if (choice.delta && typeof choice.delta.content === "string") {
+          return choice.delta.content;
+        }
+
+        if (choice.message && typeof choice.message.content === "string") {
+          return choice.message.content;
+        }
+
+        if (typeof choice.text === "string") {
+          return choice.text;
+        }
+      }
+
+      if (typeof dataObj.content === "string") return dataObj.content;
+      if (typeof dataObj.reply === "string") return dataObj.reply;
+      if (typeof dataObj.output === "string") return dataObj.output;
+
+      return "";
+    }
+
+    async function sendWithFallback() {
+      const payload = buildPayload();
+
+      const resp = await fetch(FALLBACK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        throw new Error("普通接口请求失败，HTTP 状态码：" + resp.status);
+      }
+
+      const data = await resp.json();
+      const text = extractAssistantTextFromJson(data);
+
+      if (!text) {
+        throw new Error("普通接口返回成功，但没有解析到 AI 回复内容。");
+      }
+
+      return text;
+    }
+
+    async function sendMessage(userText) {
+      const cleanText = (userText || "").trim();
+      if (!cleanText) {
+        setStatus("请输入问题后再发送。", "warn");
+        return;
+      }
+
+      messages.push({
+        role: "user",
+        content: cleanText
+      });
+
+      renderMessages();
+      chatInputEl.value = "";
+      setGeneratingState(true);
+      setStatus("正在连接流式接口并等待 AI 返回……", "warn");
+
+      const tempBubble = appendTemporaryAssistantMessage("");
+      let fullAssistantReply = "";
+
+      try {
+        const payload = buildPayload();
+
+        const response = await fetch(STREAM_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error("流式接口请求失败，HTTP 状态码：" + response.status);
+        }
+
+        if (!response.body) {
+          throw new Error("浏览器不支持 ReadableStream，无法读取流式响应。");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+        let streamEnded = false;
+        let currentEventType = "message";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          let boundaryIndex;
+          while ((boundaryIndex = buffer.indexOf("\n\n")) !== -1) {
+            const rawEventBlock = buffer.slice(0, boundaryIndex);
+            buffer = buffer.slice(boundaryIndex + 2);
+
+            const lines = rawEventBlock.split(/\r?\n/);
+            let dataLines = [];
+            currentEventType = "message";
+
+            for (const line of lines) {
+              if (line.startsWith("event:")) {
+                currentEventType = line.slice(6).trim();
+              } else if (line.startsWith("data:")) {
+                dataLines.push(line.slice(5).trim());
+              }
+            }
+
+            const dataText = dataLines.join("\n").trim();
+            if (!dataText) continue;
+
+            if (dataText === "[DONE]") {
+              streamEnded = true;
+              break;
+            }
+
+            if (currentEventType === "error") {
+              let errorMsg = dataText;
+              try {
+                const errObj = JSON.parse(dataText);
+                errorMsg =
+                  errObj.message ||
+                  errObj.error ||
+                  JSON.stringify(errObj, null, 2);
+              } catch (e) {}
+              throw new Error("后端返回错误事件：" + errorMsg);
+            }
+
+            try {
+              const json = JSON.parse(dataText);
+              const deltaText = extractAssistantTextFromJson(json);
+              if (deltaText) {
+                fullAssistantReply += deltaText;
+                tempBubble.textContent = fullAssistantReply;
+                chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+              }
+            } catch (err) {
+              fullAssistantReply += dataText;
+              tempBubble.textContent = fullAssistantReply;
+              chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+            }
+          }
+
+          if (streamEnded) break;
+        }
+
+        if (!fullAssistantReply.trim()) {
+          throw new Error("流式接口已返回，但没有解析到有效内容。");
+        }
+
+        messages.push({
+          role: "assistant",
+          content: fullAssistantReply
+        });
+
+        renderMessages();
+        setStatus("回答完成，已加入本地对话历史。", "ok");
+      } catch (streamErr) {
+        console.error("流式请求失败：", streamErr);
+        setStatus(
+          "流式接口失败，正在尝试普通接口 fallback……可能原因：后端地址错误、服务未启动、CORS 未配置，或流式格式不符合预期。",
+          "warn"
+        );
+
+        try {
+          const fallbackText = await sendWithFallback();
+
+          messages.push({
+            role: "assistant",
+            content: fallbackText
+          });
+
+          renderMessages();
+          setStatus("流式失败，已自动使用普通接口完成回复。", "warn");
+        } catch (fallbackErr) {
+          console.error("普通接口也失败：", fallbackErr);
+          renderMessages();
+          setStatus(
+            "请求失败，请检查后端地址或 CORS。流式错误：" +
+              streamErr.message +
+              "；普通接口错误：" +
+              fallbackErr.message,
+            "error"
+          );
+        }
+      } finally {
+        setGeneratingState(false);
+      }
+    }
+
+    function sendThinkingAsQuestion() {
+      const thought = thinkingAreaEl.value.trim();
+      if (!thought) {
+        setStatus("思考记录区为空，请先写下你的思考。", "warn");
+        return;
+      }
+
+      const combined = [
+        "这是我的课堂思考，请你结合我的思考来帮助我理解 IP 地址相关知识：",
+        "",
+        thought
+      ].join("\n");
+
+      sendMessage(combined);
+    }
+
+    document.querySelectorAll(".quick-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const q = btn.getAttribute("data-question") || "";
+        chatInputEl.value = q;
+        chatInputEl.focus();
+      });
+    });
+
+    sendBtnEl.addEventListener("click", () => {
+      sendMessage(chatInputEl.value);
+    });
+
+    sendThinkingBtnEl.addEventListener("click", () => {
+      sendThinkingAsQuestion();
+    });
+
+    clearBtnEl.addEventListener("click", () => {
+      messages = [
+        {
+          role: "assistant",
+          content: "你好，我是课堂中的 AI 学习助手。你可以继续提问关于 IP 地址、IPv4、公网与私网、内网地址等问题。"
+        }
+      ];
+      renderMessages();
+      setStatus("本地对话历史已清空。", "ok");
+    });
+
+    chatInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (!sendBtnEl.disabled) {
+          sendMessage(chatInputEl.value);
+        }
+      }
+    });
+
+    renderMessages();
+    if (TEACHER_ID) {
+      setStatus("已使用教师策略：" + TEACHER_ID, "ok");
+    }
+  </script>
+</body>
+</html>

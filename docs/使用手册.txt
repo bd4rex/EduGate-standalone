@@ -1,0 +1,94 @@
+EduGate 单机课堂版使用手册
+
+一、系统概述
+
+EduGate 单机课堂版运行在教师电脑上，位于学生页面、教师控制端和上游模型公司 API 之间。教师可统一配置模型、提示词、知识库和 AI 开关，学生只在学习任务中提问，不能直接接触模型密钥、供应商接口和 system prompt。
+
+二、启动
+
+1. 如首次运行或启动器提示缺少依赖，先运行：
+
+desktop/install_backend_deps.bat
+
+2. 启动单机课堂版：
+
+desktop/run_standalone.bat
+
+启动器会显示两个地址：
+
+教师控制台：http://教师电脑IP:8080/admin.html
+学生 API：http://教师电脑IP:8000
+
+三、登录教师控制端
+
+1. 点击启动器里的“打开教师控制台”，或在浏览器访问启动器显示的教师控制台地址。
+2. 默认账号：
+
+用户名：admin
+密码：edugate
+
+3. 正式课堂使用前，请在 backend/.env 中修改 ADMIN_PASSWORD 和 ADMIN_API_KEY。
+
+四、接入模型公司 API
+
+方式一：修改 backend/.env。
+
+示例：
+
+EDUGATE_MODE=standalone
+UPSTREAM_PROVIDER=DeepSeek
+UPSTREAM_BASE_URL=https://api.deepseek.com/v1
+UPSTREAM_API_KEY=你的模型公司APIKey
+DEFAULT_MODEL=deepseek-chat
+
+方式二：登录教师控制台，在“模型与供应商管理”中新增模型。
+
+模型来源选择“EduGate 直连 OpenAI-compatible”。
+Base URL 填模型公司的 OpenAI-compatible 地址。
+API Key 填模型公司提供的 key。
+
+五、配置 AI 策略
+
+教师可设置：
+
+模型：选择当前课堂使用的 AI 模型。
+System Prompt：设置教学助手行为，例如启发式讲解、分步提示、不直接代做。
+Temperature：控制回答发散程度。
+Max Tokens：控制回答最大长度。
+知识库：选择已创建的知识库，让回答优先参考课堂资料。
+严格知识库模式：资料不足时引导 AI 说明无法依据资料回答。
+AI 总开关：关闭后学生聊天接口立即停止回答。
+
+六、知识库管理
+
+教师可创建知识库并上传课堂资料。支持 txt、md、csv、json、html、xml、log、pdf 等文件。上传后，系统会抽取文本、切分片段并建立检索索引。
+
+七、学生端使用
+
+1. 打开学生测试页：
+
+http://教师电脑IP:8080/student.html
+
+2. 使用指定教师策略：
+
+http://教师电脑IP:8080/student.html?teacher_id=TEACHER_USERNAME
+
+3. 学生页面会自动调用同一台教师电脑上的后端：
+
+POST http://教师电脑IP:8000/chat/stream
+POST http://教师电脑IP:8000/chat
+
+八、典型课堂流程
+
+1. 教师启动 EduGate 单机课堂版。
+2. 教师配置模型公司 API Key、模型、提示词和知识库。
+3. 教师把学生页面地址发给学生，或嵌入教学平台。
+4. 学生围绕课堂任务提问，AI 根据教师策略和知识库回答。
+5. 教师通过日志查看使用情况，优化后续提示词和资料。
+
+九、注意事项
+
+1. 不要把 ADMIN_API_KEY、供应商 API Key 写入任何前端页面。
+2. 学生电脑需要能访问教师电脑的 8000 和 8080 端口。
+3. 知识库严格模式是提示词约束，不是绝对安全规则，重要内容仍需教师审核。
+4. /run_python 接口仅用于课堂短代码演示，不是完整在线判题沙箱。

@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EduGate 嵌入测试页</title>
+  <style>
+    :root {
+      --paper: #f7f3ea;
+      --ink: #21302b;
+      --muted: #6d766f;
+      --line: #ded4c3;
+      --card: #fffaf0;
+      --accent: #2f6b4f;
+      --accent-dark: #214d39;
+      --student: #e9f3ee;
+      --assistant: #fff;
+      --danger: #9b2f24;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "LXGW WenKai", "Noto Serif SC", "Microsoft YaHei", serif;
+      background:
+        linear-gradient(90deg, rgba(47, 107, 79, 0.07) 1px, transparent 1px),
+        linear-gradient(rgba(47, 107, 79, 0.06) 1px, transparent 1px),
+        var(--paper);
+      background-size: 28px 28px;
+    }
+
+    .shell {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 28px auto;
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      gap: 22px;
+    }
+
+    .lesson,
+    .assistant-panel {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(255, 250, 240, 0.92);
+      box-shadow: 0 18px 50px rgba(63, 50, 30, 0.12);
+      overflow: hidden;
+    }
+
+    .lesson-header {
+      padding: 22px 26px;
+      background: linear-gradient(135deg, #e8dcc7, #fff7e7);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1.15;
+    }
+
+    .lesson-body {
+      padding: 26px;
+    }
+
+    .task-card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fffdf8;
+      margin-bottom: 18px;
+    }
+
+    .task-card h2 {
+      margin: 0 0 12px;
+      font-size: 22px;
+    }
+
+    .task-card p {
+      color: var(--muted);
+      line-height: 1.8;
+      margin: 0 0 12px;
+    }
+
+    .question {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .question label {
+      font-weight: 700;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 128px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px 16px;
+      color: var(--ink);
+      background: #fffdf8;
+      font: inherit;
+      line-height: 1.6;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(47, 107, 79, 0.12);
+    }
+
+    .hint-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .chip {
+      border: 1px solid #bfd0c6;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: var(--student);
+      color: var(--accent-dark);
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .assistant-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: calc(100vh - 56px);
+      min-height: 640px;
+      position: sticky;
+      top: 28px;
+    }
+
+    .assistant-header {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fff7e7;
+    }
+
+    .assistant-header h2 {
+      margin: 0 0 6px;
+      font-size: 22px;
+    }
+
+    .assistant-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .status {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #b9b1a0;
+    }
+
+    .dot.ok {
+      background: #2f9a63;
+    }
+
+    .dot.bad {
+      background: var(--danger);
+    }
+
+    .messages {
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: rgba(255, 253, 248, 0.7);
+    }
+
+    .bubble {
+      max-width: 92%;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 13px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .bubble.assistant {
+      align-self: flex-start;
+      background: var(--assistant);
+    }
+
+    .bubble.user {
+      align-self: flex-end;
+      background: var(--student);
+      border-color: #c8dbd0;
+    }
+
+    .bubble.error {
+      border-color: #dba79d;
+      background: #fff1ee;
+      color: var(--danger);
+    }
+
+    .composer {
+      padding: 14px;
+      border-top: 1px solid var(--line);
+      background: #fff7e7;
+    }
+
+    .composer textarea {
+      min-height: 86px;
+      border-radius: 14px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button.primary,
+    button.secondary {
+      border: 0;
+      border-radius: 14px;
+      padding: 11px 14px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    button.primary {
+      flex: 1;
+      color: #fff;
+      background: var(--accent);
+    }
+
+    button.primary:hover {
+      background: var(--accent-dark);
+    }
+
+    button.primary:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    button.secondary {
+      color: var(--accent-dark);
+      background: #e4ecdf;
+    }
+
+    .config {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .config label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .config input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: #fffdf8;
+      color: var(--ink);
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        grid-template-columns: 1fr;
+        margin: 16px auto;
+      }
+
+      .assistant-panel {
+        position: static;
+        height: 720px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="lesson">
+      <header class="lesson-header">
+        <p class="eyebrow">Grade 5 · Mathematics</p>
+        <h1>分数加法：先理解，再计算</h1>
+      </header>
+
+      <div class="lesson-body">
+        <article class="task-card">
+          <h2>学习目标</h2>
+          <p>今天我们练习把两个分数放到同一个“整体”里观察，理解为什么异分母分数相加时需要先通分。</p>
+          <p>右侧的 AI 助手已经被教师设置为“提示式引导”：它不会直接替你完成作业，而是会通过问题帮助你想清楚。</p>
+        </article>
+
+        <article class="task-card">
+          <h2>课堂任务</h2>
+          <p>问题：小明吃了一个披萨的 <strong>1/4</strong>，小红吃了同样大小披萨的 <strong>1/3</strong>。他们一共吃了多少？</p>
+          <div class="question">
+            <label for="student-work">你的思考记录</label>
+            <textarea id="student-work" placeholder="先写下你的想法，例如：我觉得要把 1/4 和 1/3 变成相同大小的小块……"></textarea>
+          </div>
+          <div class="hint-row">
+            <button class="chip" data-prompt="我不太懂为什么 1/4 和 1/3 不能直接分子相加，你能提示我吗？">为什么不能直接加？</button>
+            <button class="chip" data-prompt="请用披萨切块的方式提示我怎么理解通分。">用披萨解释通分</button>
+            <button class="chip" data-prompt="我已经算出了 7/12，请帮我检查思路，但不要直接给标准答案。">检查我的思路</button>
+          </div>
+        </article>
+
+        <article class="task-card">
+          <h2>嵌入测试说明</h2>
+          <p>这个页面模拟“动态学习单 + 右侧 AI 助手”。点击右侧发送后，请求会发到 EduGate 后端，再由后端按教师配置调用上游模型 API。</p>
+          <p>默认接口地址会自动使用当前主机的 8000 端口；如果你把后端改到别的地址，可以在右侧设置里修改。</p>
+        </article>
+      </div>
+    </section>
+
+    <aside class="assistant-panel">
+      <header class="assistant-header">
+        <h2>课堂 AI 助手</h2>
+        <p>教师配置场景：<strong>default</strong>。学生不能在这里选择模型或改 system prompt。</p>
+        <span class="status"><span class="dot" id="status-dot"></span><span id="status-text">尚未连接</span></span>
+        <div class="config">
+          <label>
+            后端地址
+            <input id="api-url" />
+          </label>
+          <label>
+            场景 ID
+            <input id="scenario-id" value="default" />
+          </label>
+        </div>
+      </header>
+
+      <section class="messages" id="messages">
+        <div class="bubble assistant">你好，我是这节课的 AI 助手。你可以先说说自己卡在哪里，我会尽量用提示帮助你自己想出来。</div>
+      </section>
+
+      <footer class="composer">
+        <textarea id="chat-input" placeholder="输入你想问 AI 助手的问题……"></textarea>
+        <div class="actions">
+          <button class="secondary" id="use-work">带上我的思考</button>
+          <button class="primary" id="send">发送</button>
+        </div>
+      </footer>
+    </aside>
+  </main>
+
+  <script>
+    const messagesEl = document.querySelector("#messages");
+    const inputEl = document.querySelector("#chat-input");
+    const workEl = document.querySelector("#student-work");
+    const sendButton = document.querySelector("#send");
+    const useWorkButton = document.querySelector("#use-work");
+    const apiUrlEl = document.querySelector("#api-url");
+    const scenarioIdEl = document.querySelector("#scenario-id");
+    const statusDot = document.querySelector("#status-dot");
+    const statusText = document.querySelector("#status-text");
+
+    function defaultBackendBaseUrl() {
+      const host = window.location.hostname || "127.0.0.1";
+      const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+      return `${protocol}//${host}:8000`;
+    }
+
+    apiUrlEl.value = `${defaultBackendBaseUrl()}/chat`;
+
+    const history = [];
+
+    function setStatus(kind, text) {
+      statusDot.className = `dot ${kind || ""}`;
+      statusText.textContent = text;
+    }
+
+    function addBubble(role, content, isError = false) {
+      const bubble = document.createElement("div");
+      bubble.className = `bubble ${isError ? "error" : role}`;
+      bubble.textContent = content;
+      messagesEl.appendChild(bubble);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return bubble;
+    }
+
+    async function sendMessage(content) {
+      const text = content.trim();
+      if (!text) return;
+
+      const userMessage = { role: "user", content: text };
+      history.push(userMessage);
+      addBubble("user", text);
+      inputEl.value = "";
+      sendButton.disabled = true;
+      setStatus("", "正在请求 AI 中台……");
+
+      try {
+        const response = await fetch(apiUrlEl.value.trim(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenario_id: scenarioIdEl.value.trim() || "default",
+            messages: history.slice(-8)
+          })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(JSON.stringify(data, null, 2));
+        }
+
+        const answer = data?.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
+        history.push({ role: "assistant", content: answer });
+        addBubble("assistant", answer);
+        setStatus("ok", `连接正常 · ${data.model || "unknown model"}`);
+      } catch (error) {
+        addBubble("assistant", `请求失败：\n${error.message}`, true);
+        setStatus("bad", "请求失败，请检查后端地址或 CORS");
+      } finally {
+        sendButton.disabled = false;
+        inputEl.focus();
+      }
+    }
+
+    sendButton.addEventListener("click", () => sendMessage(inputEl.value));
+
+    inputEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        sendMessage(inputEl.value);
+      }
+    });
+
+    useWorkButton.addEventListener("click", () => {
+      const work = workEl.value.trim();
+      if (!work) {
+        inputEl.value = "我还没有写出思路，请先提示我第一步应该观察什么。";
+        inputEl.focus();
+        return;
+      }
+      inputEl.value = `这是我的思考记录：${work}\n请帮我检查方向，但不要直接给答案。`;
+      inputEl.focus();
+    });
+
+    document.querySelectorAll("[data-prompt]").forEach((button) => {
+      button.addEventListener("click", () => {
+        inputEl.value = button.dataset.prompt;
+        inputEl.focus();
+      });
+    });
+  </script>
+</body>
+</html>

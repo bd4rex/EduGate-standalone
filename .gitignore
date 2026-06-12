@@ -1,0 +1,17 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.sqlite
+*.sqlite3
+*.db
+*.log
+*.key
+*.pem
+knowledge_files/
+runtime_config.json
+dist/
+build/
+*.spec

@@ -1,0 +1,69 @@
+EduGate 单机课堂版说明
+
+一、定位
+
+单机课堂版面向“上这节课的老师”，主程序运行在教师端电脑上。
+它不要求学校部署服务器，不要求 Docker、PostgreSQL 或 LiteLLM。
+
+二、架构
+
+学生网页 / 课堂 HTML / 第三方客户端
+  -> 教师电脑上的 EduGate 后端
+  -> OpenAI-compatible 上游模型 API
+  -> DeepSeek / OpenAI / 通义千问 / 智谱 / 火山 / 本地模型服务
+
+三、本地运行期文件
+
+runtime_config.json   模型目录、教师策略、AI 开关和 prompt
+edugate.sqlite3       教师账号、请求日志和看板数据
+knowledge.sqlite3     知识库检索索引
+knowledge_files/      教师上传的资料文件
+
+四、默认登录信息
+
+用户名: admin
+密码: edugate
+管理 Token: local-admin-token
+
+正式课堂使用前，请在 backend/.env 中修改 ADMIN_PASSWORD 和 ADMIN_API_KEY。
+
+五、模型公司 API 接入
+
+方式一：通过 .env 预置。
+
+EDUGATE_MODE=standalone
+UPSTREAM_PROVIDER=DeepSeek
+UPSTREAM_BASE_URL=https://api.deepseek.com/v1
+UPSTREAM_API_KEY=replace-with-your-provider-api-key
+DEFAULT_MODEL=deepseek-chat
+
+方式二：登录教师控制端，在“模型与供应商管理”里新增模型。
+
+模型来源选择“EduGate 直连 OpenAI-compatible”。
+Base URL 填模型公司的 OpenAI-compatible 地址。
+API Key 填模型公司提供的 key。
+
+六、学生端接入
+
+学生端接口保持和服务器版一致：
+
+POST /chat
+POST /chat/stream
+POST /v1/chat/completions
+
+课堂页面只需要把后端地址改成教师电脑地址，例如：
+
+http://教师电脑IP:8000
+
+如果学生电脑和教师电脑在同一个局域网，教师端启动后学生即可通过该地址访问。
+
+七、桌面启动器
+
+desktop/edugate_standalone.py 已提供单机启动器。
+它会启动本地后端和教师控制台静态服务，显示本机 IP，并提供打开控制台和复制学生 API 地址的按钮。
+
+如果启动器提示缺少后端依赖，请先运行：
+
+desktop/install_backend_deps.bat
+
+后续如需交付给老师，可使用 PyInstaller 打包为 Windows exe。
