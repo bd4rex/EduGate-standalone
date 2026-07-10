@@ -25,6 +25,7 @@
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
 
     body {
       margin: 0;
@@ -102,6 +103,16 @@
     .tab.active { color: var(--violet); border-color: var(--violet); background: #fff; }
 
     .content { padding: 28px; }
+
+    .setup-callout {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid #e6c86b;
+      border-radius: 8px;
+      background: var(--amber-soft);
+      color: #76510d;
+    }
+    .setup-callout strong { display: block; margin-bottom: 6px; color: var(--ink); }
 
     .connection {
       display: grid;
@@ -242,6 +253,13 @@
       vertical-align: bottom;
     }
 
+    .classroom-link {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
     .login-state {
       display: inline-flex;
       align-items: center;
@@ -303,6 +321,7 @@
       .tab { min-height: 58px; font-size: 14px; }
       .content { padding: 16px; }
       .connection { padding: 14px; border-radius: 18px; }
+      .classroom-link { grid-template-columns: 1fr; }
       .session-card { padding: 20px; border-radius: 22px; }
       .row {
         align-items: stretch;
@@ -335,16 +354,32 @@
     </nav>
 
     <main class="content">
+      <div class="setup-callout" id="setup-callout" hidden>
+        <strong>首次运行：请先创建教师管理员密码</strong>
+        密码至少 10 个字符。密码只保存在这台电脑中，EduGate 不提供默认密码，也无法替你找回。
+      </div>
       <section class="connection">
         <label>后端地址<input id="base-url" placeholder="自动使用当前主机的 8000 端口" /></label>
         <label>用户名<input id="admin-username" autocomplete="username" value="admin" /></label>
         <label>密码<input id="admin-password" type="password" autocomplete="current-password" placeholder="教师端登录密码" /></label>
+        <label id="confirm-password-label" hidden>确认密码<input id="confirm-password" type="password" autocomplete="new-password" placeholder="再次输入新密码" /></label>
         <button class="button primary" id="login-button">登录并连接</button>
         <button class="button ghost" id="logout-button" type="button">退出</button>
         <div class="login-state" id="login-state">未登录</div>
       </section>
 
-      <section id="control-view">
+      <section id="control-view" hidden>
+        <section class="section">
+          <div class="section-title"><h2>学生课堂入口</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="classroom-link">
+              <label>课堂链接<input id="classroom-url" readonly placeholder="登录后生成" /></label>
+              <button class="button soft" id="copy-classroom-url" type="button">复制链接</button>
+              <button class="button ghost" id="rotate-classroom-token" type="button">换一个链接</button>
+            </div>
+            <p class="hint" style="margin:10px 0 0">每次启动会生成新的课堂令牌。点击“换一个链接”后，之前发给学生的链接立即失效。</p>
+          </div>
+        </section>
         <div class="control-grid">
           <div>
             <section class="session-card">
@@ -489,11 +524,25 @@
               <label>OpenAI-compatible Base URL<input id="model-base-url" placeholder="例如 https://api.deepseek.com/v1 或 https://api.openai.com/v1" /></label>
               <label>API Key<input id="model-api-key" type="password" placeholder="直连模型必填；更新资料不改 key 可留空" /></label>
               <label>说明<input id="model-description" placeholder="例如 低成本课堂问答模型" /></label>
-              <button class="button primary" id="save-model">新增/更新模型</button>
-              <p class="hint">直连模式只兼容 OpenAI Chat Completions 格式。API Key 只保存在后端配置，不会回显到页面。</p>
+              <div class="actions">
+                <button class="button soft" id="test-model" type="button">测试连接</button>
+                <button class="button primary" id="save-model">新增/更新模型</button>
+              </div>
+              <p class="hint">连接测试会实际请求供应商的模型列表接口。API Key 使用 Windows 凭据加密，只会在这台电脑上解密，不会回显到页面。</p>
             </div>
           </div>
           <div class="list-card" id="catalog-list" style="margin-top:16px"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>修改我的密码</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="stack">
+              <label>当前密码<input id="current-password" type="password" autocomplete="current-password" /></label>
+              <label>新密码<input id="new-password" type="password" autocomplete="new-password" placeholder="至少 10 个字符" /></label>
+              <button class="button primary" id="change-password" type="button">修改密码</button>
+            </div>
+          </div>
         </section>
       </section>
 
@@ -508,9 +557,10 @@
 
   <script>
     function defaultBackendBaseUrl() {
-      const host = window.location.hostname || "127.0.0.1";
-      const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-      return `${protocol}//${host}:8000`;
+      if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+        return window.location.origin;
+      }
+      return "http://127.0.0.1:8000";
     }
 
     const state = {
@@ -518,6 +568,10 @@
       adminToken: "",
       username: "admin",
       currentTeacher: null,
+      needsSetup: false,
+      sessionExpiresAt: 0,
+      classroomToken: "",
+      activeTab: "control",
       config: null,
       models: [],
       catalog: [],
@@ -530,6 +584,9 @@
       baseUrl: document.querySelector("#base-url"),
       adminUsername: document.querySelector("#admin-username"),
       adminPassword: document.querySelector("#admin-password"),
+      confirmPassword: document.querySelector("#confirm-password"),
+      confirmPasswordLabel: document.querySelector("#confirm-password-label"),
+      setupCallout: document.querySelector("#setup-callout"),
       loginButton: document.querySelector("#login-button"),
       logoutButton: document.querySelector("#logout-button"),
       loginState: document.querySelector("#login-state"),
@@ -565,6 +622,9 @@
       teacherRole: document.querySelector("#teacher-role"),
       teacherList: document.querySelector("#teacher-list"),
       teacherForm: document.querySelector("#teacher-form"),
+      classroomUrl: document.querySelector("#classroom-url"),
+      currentPassword: document.querySelector("#current-password"),
+      newPassword: document.querySelector("#new-password"),
       toast: document.querySelector("#toast"),
       tabs: document.querySelectorAll(".tab"),
       controlView: document.querySelector("#control-view"),
@@ -595,7 +655,9 @@
       if (teacherTitle) teacherTitle.textContent = admin ? "教师账号" : "我的 API";
       const hint = document.querySelector(".footer-note span");
       if (hint) {
-        hint.textContent = admin
+        hint.textContent = !state.adminToken
+          ? "● 请先完成首次初始化或登录教师账号。"
+          : admin
           ? "● 管理员可管理教师账号、模型供应商、全局策略和知识库。"
           : "● 普通老师只能复制自己的 API，并管理以自己用户名开头的知识库。";
       }
@@ -614,7 +676,7 @@
         const message = Array.isArray(detail)
           ? detail.map((item) => item.msg || JSON.stringify(item)).join("；")
           : String(detail || data || response.statusText);
-        if (response.status === 401 && message.includes("Invalid admin token")) {
+        if (response.status === 401 && /admin token|expired/i.test(message)) {
           clearSession();
           throw new Error("登录已过期，请重新输入用户名和密码登录。");
         }
@@ -623,29 +685,14 @@
       return data;
     }
 
-    function saveLoginSession() {
-      localStorage.setItem("edugate-admin-session", JSON.stringify({
-        baseUrl: state.baseUrl,
-        username: state.username,
-        currentTeacher: state.currentTeacher,
-      }));
-    }
-
-    function loadSession() {
-      try {
-        const saved = JSON.parse(localStorage.getItem("edugate-admin-session") || "{}");
-        if (saved.baseUrl) state.baseUrl = saved.baseUrl;
-        if (saved.username) state.username = saved.username;
-      } catch {}
-      el.baseUrl.value = state.baseUrl;
-      el.adminUsername.value = state.username;
-      updateLoginState();
-    }
-
     function clearSession() {
       state.adminToken = "";
       state.currentTeacher = null;
+      state.sessionExpiresAt = 0;
+      state.classroomToken = "";
+      sessionStorage.removeItem("edugate-admin-session");
       localStorage.removeItem("edugate-admin-session");
+      el.classroomUrl.value = "";
       updateLoginState();
       applyRoleUI();
       setStatus("未连接");
@@ -655,7 +702,65 @@
       const role = state.currentTeacher?.role === "admin" ? "管理员" : "普通老师";
       el.loginState.textContent = state.adminToken ? `已登录：${state.username}（${role}）` : "未登录";
       el.logoutButton.disabled = !state.adminToken;
+      el.tabs.forEach((tab) => {
+        tab.disabled = !state.adminToken;
+        tab.classList.toggle("active", tab.dataset.tab === state.activeTab);
+      });
+      el.controlView.hidden = !state.adminToken || state.activeTab !== "control";
+      el.settingsView.hidden = !state.adminToken || state.activeTab !== "settings";
       applyRoleUI();
+    }
+
+    function applySetupMode() {
+      el.setupCallout.hidden = !state.needsSetup;
+      el.confirmPasswordLabel.hidden = !state.needsSetup;
+      el.loginButton.textContent = state.needsSetup ? "创建管理员并进入" : "登录并连接";
+      el.adminPassword.autocomplete = state.needsSetup ? "new-password" : "current-password";
+      el.adminUsername.readOnly = state.needsSetup;
+    }
+
+    async function checkAuthStatus() {
+      state.baseUrl = el.baseUrl.value.trim() || state.baseUrl;
+      try {
+        const response = await fetch(api("/auth/status"));
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || response.statusText);
+        state.needsSetup = !data.initialized;
+        state.username = data.admin_username || state.username;
+        el.adminUsername.value = state.username;
+        applySetupMode();
+        return data;
+      } catch (error) {
+        setStatus("服务未连接");
+        showToast(`无法读取初始化状态：${error.message}`, true);
+        return null;
+      }
+    }
+
+    function saveLoginSession() {
+      sessionStorage.setItem("edugate-admin-session", JSON.stringify({
+        baseUrl: state.baseUrl,
+        username: state.username,
+        currentTeacher: state.currentTeacher,
+        adminToken: state.adminToken,
+        sessionExpiresAt: state.sessionExpiresAt,
+      }));
+    }
+
+    function loadSession() {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem("edugate-admin-session") || "{}");
+        if (saved.baseUrl) state.baseUrl = saved.baseUrl;
+        if (saved.username) state.username = saved.username;
+        if (saved.adminToken && Number(saved.sessionExpiresAt) > Date.now()) {
+          state.adminToken = saved.adminToken;
+          state.sessionExpiresAt = Number(saved.sessionExpiresAt);
+          state.currentTeacher = saved.currentTeacher || null;
+        }
+      } catch {}
+      el.baseUrl.value = state.baseUrl;
+      el.adminUsername.value = state.username;
+      updateLoginState();
     }
 
     function showToast(message, isError = false) {
@@ -693,7 +798,8 @@
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Accept": "text/event-stream"
+    "Accept": "text/event-stream",
+    "X-Class-Token": "${state.classroomToken}"
   },
   body: JSON.stringify(${JSON.stringify(payload, null, 2)})
 });`;
@@ -712,7 +818,8 @@
       return `fetch("${api("/chat")}", {
   method: "POST",
   headers: {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "X-Class-Token": "${state.classroomToken}"
   },
   body: JSON.stringify(${JSON.stringify(payload, null, 2)})
 });`;
@@ -932,7 +1039,7 @@
                 <span>${escapeHtml(model.description)}</span>
               </div>
             </div>
-            <button class="switch ${active ? "active" : ""}" type="button" data-model-id="${escapeHtml(model.id)}"></button>
+            <button class="switch ${active ? "active" : ""}" type="button" data-model-id="${escapeHtml(model.id)}" ${model.available ? "" : "disabled"}></button>
           </div>
         `;
       }).join("");
@@ -961,11 +1068,17 @@
             </div>
             <div class="row-meta">${escapeHtml(model.description || "")}</div>
           </div>
-          <button class="button ghost" type="button" data-catalog-edit="${escapeHtml(model.id)}">填入表单</button>
+          <div class="actions">
+            <button class="button soft" type="button" data-catalog-test="${escapeHtml(model.id)}">测试</button>
+            <button class="button ghost" type="button" data-catalog-edit="${escapeHtml(model.id)}">填入表单</button>
+          </div>
         </div>
       `).join("");
       el.catalogList.querySelectorAll("[data-catalog-edit]").forEach((button) => {
         button.addEventListener("click", () => fillModelForm(button.dataset.catalogEdit));
+      });
+      el.catalogList.querySelectorAll("[data-catalog-test]").forEach((button) => {
+        button.addEventListener("click", () => testModel(button.dataset.catalogTest));
       });
     }
 
@@ -994,7 +1107,7 @@
 
     function renderTeachers() {
       if (!state.teachers.length) {
-        el.teacherList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">${isAdmin() ? "暂无教师账号" : "未读取到当前教师账号"}</p><div class="row-meta">${isAdmin() ? "登录后会自动初始化 .env 中的管理员账号。" : "请重新登录后再试。"}</div></div></div>`;
+        el.teacherList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">${isAdmin() ? "暂无教师账号" : "未读取到当前教师账号"}</p><div class="row-meta">${isAdmin() ? "可以在上方创建课堂教师账号。" : "请重新登录后再试。"}</div></div></div>`;
         return;
       }
       el.teacherList.innerHTML = state.teachers.map((teacher) => `
@@ -1033,6 +1146,10 @@
     }
 
     async function login() {
+      if (state.needsSetup) {
+        await setupAdmin();
+        return;
+      }
       state.baseUrl = el.baseUrl.value.trim();
       state.username = el.adminUsername.value.trim();
       const password = el.adminPassword.value;
@@ -1052,6 +1169,7 @@
         if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
         state.adminToken = data.access_token || data.token;
         state.currentTeacher = data.teacher || null;
+        state.sessionExpiresAt = Date.now() + Number(data.expires_in || 0) * 1000;
         if (!state.adminToken) throw new Error("登录成功但后端没有返回 access_token。");
         el.adminPassword.value = "";
         saveLoginSession();
@@ -1073,6 +1191,48 @@
       }
     }
 
+    async function setupAdmin() {
+      state.baseUrl = el.baseUrl.value.trim();
+      state.username = el.adminUsername.value.trim();
+      const password = el.adminPassword.value;
+      const confirmation = el.confirmPassword.value;
+      if (password.length < 10) {
+        showToast("管理员密码至少需要 10 个字符。", true);
+        return;
+      }
+      if (password !== confirmation) {
+        showToast("两次输入的密码不一致。", true);
+        return;
+      }
+      el.loginButton.disabled = true;
+      setStatus("正在初始化");
+      try {
+        const response = await fetch(api("/auth/setup"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: state.username, password }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
+        state.adminToken = data.access_token;
+        state.currentTeacher = data.teacher;
+        state.sessionExpiresAt = Date.now() + Number(data.expires_in || 0) * 1000;
+        state.needsSetup = false;
+        el.adminPassword.value = "";
+        el.confirmPassword.value = "";
+        saveLoginSession();
+        applySetupMode();
+        updateLoginState();
+        await connectWithToken();
+        showToast("管理员创建完成。请妥善保管密码。 ");
+      } catch (error) {
+        setStatus("初始化失败");
+        showToast(`初始化失败：${error.message}`, true);
+      } finally {
+        el.loginButton.disabled = false;
+      }
+    }
+
     async function connectWithToken() {
       state.baseUrl = el.baseUrl.value.trim();
       if (!state.baseUrl || !state.adminToken) {
@@ -1086,6 +1246,7 @@
         ["知识库", loadSources],
         ["知识库文件", loadFiles],
         ["教师信息", loadTeachers],
+        ["课堂链接", loadClassroom],
       ];
       const failures = [];
       for (const [label, loader] of steps) {
@@ -1137,6 +1298,28 @@
     async function loadTeachers() {
       state.teachers = await request("/admin/teachers");
       renderTeachers();
+    }
+
+    async function loadClassroom() {
+      const data = await request("/admin/classroom");
+      state.classroomToken = data.class_token || "";
+      const params = new URLSearchParams({
+        teacher_id: state.currentTeacher?.username || state.username,
+        class_token: state.classroomToken,
+      });
+      el.classroomUrl.value = `${state.baseUrl.replace(/\/+$/, "")}/student.html#${params}`;
+    }
+
+    async function rotateClassroomToken() {
+      if (!confirm("换一个课堂链接后，之前发给学生的链接会立即失效。确定继续吗？")) return;
+      try {
+        const data = await request("/admin/classroom/rotate", { method: "POST" });
+        state.classroomToken = data.class_token || "";
+        await loadClassroom();
+        await copyText(el.classroomUrl.value, "新课堂链接");
+      } catch (error) {
+        showToast(`更换课堂链接失败：${error.message}`, true);
+      }
     }
 
     async function switchModel(modelId) {
@@ -1215,7 +1398,7 @@
       showToast("已填入模型表单。若不修改 API Key，请保持为空。");
     }
 
-    async function saveModel() {
+    async function saveModel({ silent = false } = {}) {
       const payload = {
         id: el.modelId.value.trim(),
         name: el.modelName.value.trim(),
@@ -1227,19 +1410,60 @@
       };
       if (!payload.id || !payload.name) {
         showToast("请填写模型 ID 和显示名称。", true);
-        return;
+        return null;
       }
       if (payload.source === "openai_compatible" && !payload.base_url) {
         showToast("直连 OpenAI-compatible 模型必须填写 Base URL。", true);
-        return;
+        return null;
       }
       try {
         await request("/admin/models", { method: "POST", body: JSON.stringify(payload) });
         el.modelApiKey.value = "";
         await loadModels();
-        showToast(`已保存模型：${payload.name}`);
+        if (!silent) showToast(`已保存模型：${payload.name}`);
+        return payload.id;
       } catch (error) {
         showToast(`保存模型失败：${error.message}`, true);
+        return null;
+      }
+    }
+
+    async function testModel(modelId = "") {
+      let targetId = modelId;
+      if (!targetId) {
+        targetId = await saveModel({ silent: true });
+      }
+      if (!targetId) return;
+      try {
+        const result = await request(`/admin/providers/${encodeURIComponent(targetId)}/test`, { method: "POST" });
+        if (!result.ok) throw new Error(result.error || `HTTP ${result.status_code || "unknown"}`);
+        showToast(`连接成功：供应商返回 ${result.model_count ?? 0} 个模型。`);
+      } catch (error) {
+        showToast(`连接测试失败：${error.message}`, true);
+      }
+    }
+
+    async function changePassword() {
+      const currentPassword = el.currentPassword.value;
+      const newPassword = el.newPassword.value;
+      if (!currentPassword || newPassword.length < 10) {
+        showToast("请填写当前密码，新密码至少 10 个字符。", true);
+        return;
+      }
+      try {
+        const data = await request("/auth/password", {
+          method: "POST",
+          body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+        });
+        state.adminToken = data.access_token;
+        state.currentTeacher = data.teacher;
+        state.sessionExpiresAt = Date.now() + Number(data.expires_in || 0) * 1000;
+        el.currentPassword.value = "";
+        el.newPassword.value = "";
+        saveLoginSession();
+        showToast("密码已修改，其他登录会话已失效。 ");
+      } catch (error) {
+        showToast(`修改密码失败：${error.message}`, true);
       }
     }
 
@@ -1333,7 +1557,10 @@
     }
 
     el.loginButton.addEventListener("click", login);
-    el.logoutButton.addEventListener("click", () => {
+    el.logoutButton.addEventListener("click", async () => {
+      try {
+        if (state.adminToken) await request("/auth/logout", { method: "POST" });
+      } catch {}
       clearSession();
       showToast("已退出教师端。");
     });
@@ -1348,6 +1575,12 @@
     document.querySelector("#save-scenario").addEventListener("click", saveScenario);
     document.querySelector("#save-source").addEventListener("click", saveSource);
     document.querySelector("#save-model").addEventListener("click", saveModel);
+    document.querySelector("#test-model").addEventListener("click", () => testModel());
+    document.querySelector("#change-password").addEventListener("click", changePassword);
+    document.querySelector("#copy-classroom-url").addEventListener("click", () => {
+      if (el.classroomUrl.value) copyText(el.classroomUrl.value, "学生课堂链接");
+    });
+    document.querySelector("#rotate-classroom-token").addEventListener("click", rotateClassroomToken);
     document.querySelector("#upload-file").addEventListener("click", uploadFile);
     document.querySelector("#save-teacher").addEventListener("click", saveTeacher);
     el.aiEnabledSwitch.addEventListener("click", toggleAIEnabled);
@@ -1359,17 +1592,23 @@
     el.tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         const name = tab.dataset.tab;
+        state.activeTab = name;
         el.tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === name));
         el.controlView.hidden = name !== "control";
         el.settingsView.hidden = name !== "settings";
       });
     });
 
-    loadSession();
-    renderAll();
-    if (state.adminToken) {
-      connectWithToken().catch(() => {});
+    async function boot() {
+      loadSession();
+      renderAll();
+      await checkAuthStatus();
+      if (state.adminToken && !state.needsSetup) {
+        connectWithToken().catch(() => {});
+      }
     }
+
+    boot();
   </script>
 </body>
 </html>

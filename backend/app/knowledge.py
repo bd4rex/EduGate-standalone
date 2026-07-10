@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict
 
 
@@ -62,16 +63,28 @@ class KnowledgeHit(BaseModel):
 
 
 class KnowledgeStore:
-    def __init__(self, db_path: str, storage_dir: str) -> None:
+    def __init__(
+        self,
+        db_path: str,
+        storage_dir: str,
+        *,
+        max_upload_bytes: int = 25 * 1024 * 1024,
+        max_pdf_pages: int = 200,
+    ) -> None:
         self.db_path = Path(db_path)
         self.storage_dir = Path(storage_dir)
+        self.max_upload_bytes = max_upload_bytes
+        self.max_pdf_pages = max_pdf_pages
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA busy_timeout = 10000")
         return conn
 
     def _init_db(self) -> None:
@@ -130,7 +143,7 @@ class KnowledgeStore:
                     COUNT(c.id) AS chunk_count
                 FROM sources s
                 LEFT JOIN files f ON f.source_id = s.id
-                LEFT JOIN chunks c ON c.source_id = s.id
+                LEFT JOIN chunks c ON c.file_id = f.id
                 GROUP BY s.id
                 ORDER BY s.created_at ASC
                 """
@@ -194,33 +207,48 @@ class KnowledgeStore:
                 if not chunk:
                     break
                 size += len(chunk)
+                if size > self.max_upload_bytes:
+                    out.close()
+                    target_path.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"File exceeds the {self.max_upload_bytes // (1024 * 1024)} MB upload limit",
+                    )
                 out.write(chunk)
 
-        text = extract_text(target_path)
-        chunks = chunk_text(text)
+        try:
+            text = await run_in_threadpool(extract_text, target_path, max_pdf_pages=self.max_pdf_pages)
+            chunks = chunk_text(text)
+        except Exception:
+            target_path.unlink(missing_ok=True)
+            raise
         if not chunks:
             target_path.unlink(missing_ok=True)
             raise HTTPException(status_code=400, detail="No readable text was extracted from the file")
 
         created_at = _now()
-        with self._connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO files (id, source_id, filename, content_type, size_bytes, path, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (file_id, source_id, filename, upload.content_type, size, str(target_path), created_at),
-            )
-            conn.executemany(
-                """
-                INSERT INTO chunks (id, file_id, source_id, chunk_index, text)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                [
-                    (uuid.uuid4().hex, file_id, source_id, index, chunk)
-                    for index, chunk in enumerate(chunks)
-                ],
-            )
+        try:
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO files (id, source_id, filename, content_type, size_bytes, path, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (file_id, source_id, filename, upload.content_type, size, str(target_path), created_at),
+                )
+                conn.executemany(
+                    """
+                    INSERT INTO chunks (id, file_id, source_id, chunk_index, text)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    [
+                        (uuid.uuid4().hex, file_id, source_id, index, chunk)
+                        for index, chunk in enumerate(chunks)
+                    ],
+                )
+        except Exception:
+            target_path.unlink(missing_ok=True)
+            raise
 
         return self.get_file(file_id)
 
@@ -304,9 +332,9 @@ class KnowledgeStore:
         return scored[:limit]
 
 
-def extract_text(path: Path) -> str:
+def extract_text(path: Path, *, max_pdf_pages: int = 200) -> str:
     if path.suffix.lower() == ".pdf":
-        return extract_pdf_text(path)
+        return extract_pdf_text(path, max_pdf_pages=max_pdf_pages)
     raw = path.read_bytes()
     for encoding in ("utf-8", "utf-8-sig", "gb18030"):
         try:
@@ -324,12 +352,17 @@ def extract_text(path: Path) -> str:
     return normalize_text(text)
 
 
-def extract_pdf_text(path: Path) -> str:
+def extract_pdf_text(path: Path, *, max_pdf_pages: int = 200) -> str:
     try:
         from pypdf import PdfReader
     except ImportError as error:
         raise HTTPException(status_code=500, detail="PDF support requires pypdf") from error
     reader = PdfReader(str(path))
+    if len(reader.pages) > max_pdf_pages:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"PDF exceeds the {max_pdf_pages}-page limit",
+        )
     pages = [(page.extract_text() or "") for page in reader.pages]
     return normalize_text("\n".join(pages))
 

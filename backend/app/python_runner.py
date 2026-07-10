@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
 import tempfile
 import time
 from dataclasses import dataclass
+
+if os.name == "nt":
+    import ctypes
+    from ctypes import wintypes
 
 
 FORBIDDEN_NODES = (
@@ -108,46 +114,127 @@ class PythonRunResult:
     duration_ms: int
 
 
-def run_python_code(code: str, *, timeout_seconds: float = 3.0, output_limit: int = 12000) -> PythonRunResult:
+def run_python_code(
+    code: str,
+    *,
+    timeout_seconds: float = 3.0,
+    output_limit: int = 12000,
+    memory_limit_mb: int = 128,
+) -> PythonRunResult:
     start = time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="edugate-python-") as workdir:
+        job_handle = None
         try:
             env = os.environ.copy()
             env.update({"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"})
-            completed = subprocess.run(
+            process = subprocess.Popen(
                 [sys.executable, "-I", "-S", "-c", RUNNER_SCRIPT],
-                input=code,
                 text=True,
                 cwd=workdir,
                 env=env,
-                capture_output=True,
-                timeout=timeout_seconds,
-                check=False,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                preexec_fn=_unix_memory_limit(memory_limit_mb),
             )
-            stdout = completed.stdout[:output_limit]
-            stderr = completed.stderr[:output_limit]
-            if len(completed.stdout) > output_limit:
+            if os.name == "nt":
+                job_handle = _assign_windows_job(process, memory_limit_mb)
+            stdout_full, stderr_full = process.communicate(code, timeout=timeout_seconds)
+            stdout = stdout_full[:output_limit]
+            stderr = stderr_full[:output_limit]
+            if len(stdout_full) > output_limit:
                 stderr += "\n输出过长，已截断。"
-            if len(completed.stderr) > output_limit:
+            if len(stderr_full) > output_limit:
                 stderr += "\n错误输出过长，已截断。"
             return PythonRunResult(
                 stdout=stdout,
                 stderr=stderr,
-                exit_code=completed.returncode,
+                exit_code=process.returncode,
                 timed_out=False,
                 duration_ms=int((time.perf_counter() - start) * 1000),
             )
-        except subprocess.TimeoutExpired as error:
-            stdout = (error.stdout or "")[:output_limit]
-            stderr = (error.stderr or "")[:output_limit]
-            if isinstance(stdout, bytes):
-                stdout = stdout.decode("utf-8", errors="replace")
-            if isinstance(stderr, bytes):
-                stderr = stderr.decode("utf-8", errors="replace")
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout_full, stderr_full = process.communicate()
             return PythonRunResult(
-                stdout=stdout,
-                stderr=(stderr + "\n程序运行超时，已终止。").strip(),
+                stdout=(stdout_full or "")[:output_limit],
+                stderr=((stderr_full or "")[:output_limit] + "\n程序运行超时，已终止。").strip(),
                 exit_code=124,
                 timed_out=True,
                 duration_ms=int((time.perf_counter() - start) * 1000),
             )
+        finally:
+            if job_handle is not None:
+                ctypes.windll.kernel32.CloseHandle(job_handle)
+
+
+def _unix_memory_limit(memory_limit_mb: int):
+    if os.name == "nt":
+        return None
+
+    def apply_limit() -> None:
+        import resource
+
+        limit = memory_limit_mb * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+
+    return apply_limit
+
+
+if os.name == "nt":
+    class _IoCounters(ctypes.Structure):
+        _fields_ = [
+            ("ReadOperationCount", ctypes.c_uint64),
+            ("WriteOperationCount", ctypes.c_uint64),
+            ("OtherOperationCount", ctypes.c_uint64),
+            ("ReadTransferCount", ctypes.c_uint64),
+            ("WriteTransferCount", ctypes.c_uint64),
+            ("OtherTransferCount", ctypes.c_uint64),
+        ]
+
+
+    class _BasicLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_int64),
+            ("PerJobUserTimeLimit", ctypes.c_int64),
+            ("LimitFlags", wintypes.DWORD),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", wintypes.DWORD),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", wintypes.DWORD),
+            ("SchedulingClass", wintypes.DWORD),
+        ]
+
+
+    class _ExtendedLimitInformation(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", _BasicLimitInformation),
+            ("IoInfo", _IoCounters),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+
+    def _assign_windows_job(process: subprocess.Popen[str], memory_limit_mb: int):
+        job = ctypes.windll.kernel32.CreateJobObjectW(None, None)
+        if not job:
+            raise ctypes.WinError()
+        info = _ExtendedLimitInformation()
+        info.BasicLimitInformation.LimitFlags = 0x100 | 0x2000
+        info.ProcessMemoryLimit = memory_limit_mb * 1024 * 1024
+        if not ctypes.windll.kernel32.SetInformationJobObject(
+            job, 9, ctypes.byref(info), ctypes.sizeof(info)
+        ):
+            ctypes.windll.kernel32.CloseHandle(job)
+            raise ctypes.WinError()
+        if not ctypes.windll.kernel32.AssignProcessToJobObject(job, wintypes.HANDLE(process._handle)):
+            ctypes.windll.kernel32.CloseHandle(job)
+            process.kill()
+            raise ctypes.WinError()
+        return job
+else:
+    def _assign_windows_job(process: subprocess.Popen[str], memory_limit_mb: int):
+        return None

@@ -1,47 +1,54 @@
 EduGate 单机课堂版验收清单
+==========================
 
-一、启动
+安装
+----
+[ ] 全新 Windows 用户可运行 desktop\install_backend_deps.bat。
+[ ] 安装输出明确显示清华 PyPI 镜像。
+[ ] 依赖位于 %LOCALAPPDATA%\EduGate\venv，而不是系统或用户 site-packages。
+[ ] desktop\run_standalone.bat 可重复启动。
 
-[ ] 首次运行 install_backend_deps.bat 能完成依赖安装。
-[ ] 运行 run_standalone.bat 后，窗口显示“运行中”。
-[ ] 启动器显示教师控制台地址和学生 API 地址。
-[ ] 点击“打开教师控制台”能打开 admin.html。
+首次初始化
+----------
+[ ] 首次页面要求创建至少 10 个字符的管理员密码。
+[ ] admin / edugate 无法登录。
+[ ] 非教师电脑不能调用首次初始化接口。
+[ ] 退出后原会话 token 立即失效。
 
-二、教师登录和配置
+模型与密钥
+----------
+[ ] 可添加 OpenAI-compatible Base URL、模型 ID 和 API Key。
+[ ] “测试连接”会实际访问供应商并显示结果。
+[ ] 页面/API 不回显 API Key。
+[ ] runtime_config.json 和 secrets.json 中没有 API Key 明文。
+[ ] 换 Windows 用户后要求重新填写 API Key。
 
-[ ] 使用 admin / edugate 可以登录。
-[ ] 登录后立即修改 ADMIN_PASSWORD 和 ADMIN_API_KEY。
-[ ] 可以新增或更新 OpenAI-compatible 模型。
-[ ] 模型 API Key 不会回显到页面。
-[ ] 可以切换当前课堂模型。
-[ ] 可以保存 system prompt、temperature、max tokens 和 AI 开关。
+课堂访问
+--------
+[ ] 教师控制台和学生页面都通过 8000 端口打开。
+[ ] 学生完整课堂链接可从同一局域网访问。
+[ ] 缺少或错误课堂令牌时 /chat 和 /chat/stream 返回 401。
+[ ] 点击“换一个链接”后旧链接立即失效。
+[ ] 学生不能覆盖模型或 system prompt。
+[ ] 频繁请求会触发 429。
+[ ] 学生可停止正在生成的流式回答。
 
-三、知识库
+知识库与资源限制
+----------------
+[ ] 超过 25 MB 的默认上传被拒绝且不留残余文件。
+[ ] 超过 200 页的默认 PDF 被拒绝。
+[ ] PDF 解析期间健康检查和其他请求仍可响应。
+[ ] 严格知识库模式按教师策略工作。
 
-[ ] 可以创建知识库。
-[ ] 可以上传 txt、md、pdf 等资料文件。
-[ ] 上传后知识库文件列表显示 chunk 数量。
-[ ] 挂载知识库后学生问答会注入相关资料片段。
+Python 与平台接口
+-----------------
+[ ] 默认 /run_python 返回“disabled”。
+[ ] 启用后仍要求课堂令牌，import 被拒绝，死循环会超时。
+[ ] 未配置 PLATFORM_API_KEY 时 /v1/chat/completions 不可用。
 
-四、学生端
-
-[ ] 学生测试页 http://教师电脑IP:8080/student.html 可打开。
-[ ] 学生页自动请求 http://教师电脑IP:8000/chat/stream。
-[ ] 普通 /chat 接口仍可用。
-[ ] /v1/chat/completions 兼容入口仍可用。
-[ ] 关闭 AI 总开关后，学生接口停止回答。
-
-五、运行期文件
-
-[ ] backend/runtime_config.json 自动生成。
-[ ] backend/edugate.sqlite3 自动生成并记录教师与日志。
-[ ] backend/knowledge.sqlite3 自动生成并记录知识库索引。
-[ ] backend/knowledge_files/ 保存上传资料。
-[ ] 上述运行期文件不会提交到 Git。
-
-六、网络
-
-[ ] 学生电脑和教师电脑在同一局域网。
-[ ] 学生电脑可访问教师电脑 8000 端口。
-[ ] 学生电脑可访问教师电脑 8080 端口。
-[ ] Windows 防火墙已允许 Python 或打包后的 EduGate 程序通信。
+数据与升级
+----------
+[ ] 数据生成在 %LOCALAPPDATA%\EduGate。
+[ ] 默认日志不含消息正文，并按 LOG_MAX_RECORDS 清理旧记录。
+[ ] 更新或替换程序目录后，账号、知识库和策略仍存在。
+[ ] desktop\build_windows.bat 可生成 dist\EduGate-Standalone。

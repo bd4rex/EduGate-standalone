@@ -12,7 +12,15 @@ class LiteLLMClient:
         self._prefix = settings.litellm_api_prefix
         self._timeout = settings.request_timeout_seconds
         self._client = httpx.AsyncClient(timeout=self._timeout, trust_env=False)
-        self._stream_client = httpx.AsyncClient(timeout=None, trust_env=False)
+        self._stream_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(
+                connect=min(self._timeout, 15),
+                read=settings.stream_read_timeout_seconds,
+                write=min(self._timeout, 30),
+                pool=min(self._timeout, 15),
+            ),
+            trust_env=False,
+        )
 
     def _url(self, path: str) -> str:
         path = path if path.startswith("/") else f"/{path}"
@@ -85,9 +93,24 @@ class LiteLLMClient:
             async for chunk in response.aiter_bytes():
                 yield chunk
 
+    async def probe_openai_provider(self, *, base_url: str, api_key: str) -> dict[str, Any]:
+        response = await self._client.get(
+            _openai_url(base_url, "/models"),
+            headers=_openai_headers(api_key),
+        )
+        response.raise_for_status()
+        data = response.json()
+        models = data.get("data", []) if isinstance(data, dict) else []
+        return {"ok": True, "model_count": len(models)}
+
 
 def _openai_url(base_url: str, path: str) -> str:
     base = base_url.rstrip("/")
+    if base.split("?", 1)[0].endswith("/chat/completions"):
+        if path.rstrip("/") == "/chat/completions":
+            return base
+        base_without_query = base.split("?", 1)[0]
+        return f"{base_without_query[:-len('/chat/completions')]}{path}"
     if not base.endswith("/v1"):
         base = f"{base}/v1"
     path = path if path.startswith("/") else f"/{path}"

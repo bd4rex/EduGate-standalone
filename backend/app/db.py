@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import os
 import secrets
 import sqlite3
@@ -11,17 +12,26 @@ from pathlib import Path
 from typing import Any
 
 
+logger = logging.getLogger(__name__)
+
+
 class BusinessDB:
-    def __init__(self, database_url: str | None, sqlite_path: str = "edugate.sqlite3") -> None:
-        self.database_url = database_url
+    def __init__(self, sqlite_path: str = "edugate.sqlite3", *, log_max_records: int = 5000) -> None:
         self.sqlite_path = sqlite_path
+        self.log_max_records = max(100, log_max_records)
         self.enabled = True
 
     def init(self) -> None:
         Path(self.sqlite_path).parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as conn:
-            conn.execute(
+            conn.executescript(
                 """
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
                 CREATE TABLE IF NOT EXISTS edugate_teachers (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT NOT NULL UNIQUE,
@@ -32,11 +42,8 @@ class BusinessDB:
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     last_login_at TEXT
-                )
-                """
-            )
-            conn.execute(
-                """
+                );
+
                 CREATE TABLE IF NOT EXISTS ai_request_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -57,22 +64,16 @@ class BusinessDB:
                     stream_duration_ms INTEGER,
                     stream_finish_reason TEXT,
                     error TEXT
-                )
-                """
-            )
-            conn.execute(
-                """
+                );
+
                 CREATE TABLE IF NOT EXISTS ai_feedback_scores (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     request_log_id INTEGER REFERENCES ai_request_logs(id) ON DELETE SET NULL,
                     score INTEGER NOT NULL,
                     comment TEXT NOT NULL DEFAULT ''
-                )
-                """
-            )
-            conn.execute(
-                """
+                );
+
                 CREATE TABLE IF NOT EXISTS edugate_teaching_sessions (
                     id TEXT PRIMARY KEY,
                     teacher_username TEXT NOT NULL REFERENCES edugate_teachers(username) ON DELETE RESTRICT,
@@ -84,9 +85,64 @@ class BusinessDB:
                     is_active INTEGER NOT NULL DEFAULT 1,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
+                );
                 """
             )
+
+    def is_admin_initialized(self, username: str) -> bool:
+        with self._connect() as conn:
+            setting = conn.execute(
+                "SELECT value FROM app_settings WHERE key = 'admin_initialized'"
+            ).fetchone()
+            if setting is not None:
+                return setting["value"] == "1"
+            row = conn.execute(
+                "SELECT password_hash FROM edugate_teachers WHERE username = ? AND role = 'admin'",
+                (username,),
+            ).fetchone()
+            if row is None or verify_password("edugate", row["password_hash"]):
+                return False
+            self._set_setting(conn, "admin_initialized", "1")
+            return True
+
+    def setup_admin(self, *, username: str, password: str, display_name: str) -> dict[str, Any]:
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            initialized = conn.execute(
+                "SELECT value FROM app_settings WHERE key = 'admin_initialized'"
+            ).fetchone()
+            if initialized is not None and initialized["value"] == "1":
+                raise ValueError("Administrator has already been initialized")
+            conn.execute(
+                """
+                INSERT INTO edugate_teachers (username, password_hash, display_name, role, is_active)
+                VALUES (?, ?, ?, 'admin', 1)
+                ON CONFLICT(username) DO UPDATE SET
+                    password_hash = excluded.password_hash,
+                    display_name = excluded.display_name,
+                    role = 'admin',
+                    is_active = 1,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (username, hash_password(password), display_name),
+            )
+            self._set_setting(conn, "admin_initialized", "1")
+            row = self._teacher_row(conn, username)
+        return _json_ready(row)
+
+    def change_teacher_password(self, username: str, password: str) -> dict[str, Any] | None:
+        return self.update_teacher_password(username, password)
+
+    @staticmethod
+    def _set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
+        conn.execute(
+            """
+            INSERT INTO app_settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+            """,
+            (key, value),
+        )
 
     def seed_teacher(
         self,
@@ -425,8 +481,17 @@ class BusinessDB:
                         error,
                     ),
                 )
-        except Exception:
-            return
+                conn.execute(
+                    """
+                    DELETE FROM ai_request_logs
+                    WHERE id NOT IN (
+                        SELECT id FROM ai_request_logs ORDER BY id DESC LIMIT ?
+                    )
+                    """,
+                    (self.log_max_records,),
+                )
+        except Exception as error:
+            logger.warning("Failed to write EduGate request log: %s", error)
 
     def list_logs(self, limit: int = 50) -> list[dict[str, Any]]:
         with self._connect() as conn:
@@ -475,9 +540,11 @@ class BusinessDB:
         return {"database_enabled": True, **_json_ready(row or {})}
 
     def _connect(self):
-        conn = sqlite3.connect(self.sqlite_path)
+        conn = sqlite3.connect(self.sqlite_path, timeout=10)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA busy_timeout = 10000")
         return conn
 
     @staticmethod

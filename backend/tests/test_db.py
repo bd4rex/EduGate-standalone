@@ -4,7 +4,7 @@ from app.db import BusinessDB
 
 
 def test_sqlite_business_db_stores_teachers_and_logs(tmp_path: Path) -> None:
-    db = BusinessDB(None, str(tmp_path / "edugate.sqlite3"))
+    db = BusinessDB(str(tmp_path / "edugate.sqlite3"))
     db.init()
     db.seed_teacher(username="admin", password="edugate", display_name="Admin", role="admin")
 
@@ -39,3 +39,21 @@ def test_sqlite_business_db_stores_teachers_and_logs(tmp_path: Path) -> None:
     assert logs[0]["teacher_id"] == "zhang"
     assert logs[0]["total_tokens"] == 3
     assert db.dashboard()["total_requests"] == 1
+
+
+def test_first_admin_setup_is_one_time_and_has_no_default_password(tmp_path: Path) -> None:
+    db = BusinessDB(str(tmp_path / "first-run.sqlite3"))
+    db.init()
+
+    assert db.is_admin_initialized("admin") is False
+    db.setup_admin(username="admin", password="teacher-chosen-password", display_name="Admin")
+    assert db.is_admin_initialized("admin") is True
+    assert db.authenticate_teacher("admin", "edugate") is None
+    assert db.authenticate_teacher("admin", "teacher-chosen-password") is not None
+
+    try:
+        db.setup_admin(username="admin", password="another-password", display_name="Admin")
+    except ValueError as error:
+        assert "already" in str(error)
+    else:
+        raise AssertionError("second administrator setup should be rejected")

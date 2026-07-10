@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
+import os
 import secrets
+import threading
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any, AsyncIterator, Iterable, Literal
 
 import httpx
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import settings
@@ -22,12 +26,25 @@ from app.knowledge import KnowledgeFile, KnowledgeSource, KnowledgeStore
 from app.litellm_client import LiteLLMClient
 from app.observability import LangfuseClient
 from app.python_runner import run_python_code
+from app.secret_store import SecretStore
+from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter
 
 
 client = LiteLLMClient()
-knowledge_store = KnowledgeStore(settings.knowledge_db_path, settings.knowledge_dir)
-business_db = BusinessDB(settings.database_url, settings.sqlite_db_path)
+knowledge_store = KnowledgeStore(
+    settings.knowledge_db_path,
+    settings.knowledge_dir,
+    max_upload_bytes=settings.max_upload_bytes,
+    max_pdf_pages=settings.max_pdf_pages,
+)
+business_db = BusinessDB(settings.sqlite_db_path, log_max_records=settings.log_max_records)
+secret_store = SecretStore(settings.secret_store_path)
 langfuse = LangfuseClient()
+sessions = SessionStore(settings.session_ttl_seconds)
+classroom_access = ClassroomAccess()
+rate_limiter = SlidingWindowRateLimiter()
+model_semaphore = asyncio.Semaphore(settings.model_max_concurrency)
+python_semaphore = asyncio.Semaphore(1)
 
 STRICT_KNOWLEDGE_MISS_MESSAGE = (
     "\u6839\u636e\u6559\u5e08\u5f53\u524d\u6302\u8f7d\u7684\u77e5\u8bc6\u5e93\uff0c\u6211\u6ca1\u6709\u627e\u5230\u4e0e\u8fd9\u4e2a\u95ee\u9898\u76f8\u5173\u7684\u8bfe\u5802\u8d44\u6599\u4f9d\u636e\u3002"
@@ -180,12 +197,6 @@ def _tag_for_path(path: str) -> str:
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     business_db.init()
-    business_db.seed_teacher(
-        username=settings.admin_username,
-        password=settings.admin_password,
-        display_name="System Admin",
-        role="admin",
-    )
     try:
         yield
     finally:
@@ -204,13 +215,14 @@ app = FastAPI(
     openapi_tags=OPENAPI_TAGS,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=list(settings.cors_origins),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if settings.cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(settings.cors_origins),
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 def custom_openapi() -> dict[str, Any]:
@@ -295,6 +307,7 @@ class ModelCatalogItem(BaseModel):
     description: str = ""
     source: Literal["litellm", "openai_compatible"] = "openai_compatible"
     base_url: str | None = Field(default=None, min_length=1)
+    credential_id: str | None = None
     api_key: str | None = Field(default=None, min_length=1)
 
 
@@ -359,20 +372,35 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1)
 
 
+class SetupRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(default="admin", min_length=3, max_length=80)
+    password: str = Field(..., min_length=10, max_length=200)
+    display_name: str = Field(default="教师管理员", min_length=1, max_length=120)
+
+
+class ChangePasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: str = Field(..., min_length=1, max_length=200)
+    new_password: str = Field(..., min_length=10, max_length=200)
+
+
 class TeacherAccountRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     username: str = Field(..., min_length=1, max_length=80)
-    password: str | None = Field(default=None, min_length=6, max_length=200)
+    password: str | None = Field(default=None, min_length=10, max_length=200)
     display_name: str = Field(default="", max_length=120)
-    role: str = Field(default="teacher", max_length=40)
+    role: Literal["teacher", "admin"] = "teacher"
     is_active: bool = True
 
 
 class TeacherPasswordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    password: str = Field(..., min_length=6, max_length=200)
+    password: str = Field(..., min_length=10, max_length=200)
 
 
 class PythonRunRequest(BaseModel):
@@ -406,8 +434,12 @@ def _teacher_policy_key(username: str) -> str:
 class RuntimeConfig:
     def __init__(self, path: str) -> None:
         self._path = Path(path)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.RLock()
         self.data = self._load()
-        self._migrate_open_default()
+        self._migrate_plaintext_secrets()
+        if self._migrate_open_default():
+            self.save()
         self._ensure_standalone_default_model()
 
     def _load(self) -> RuntimeConfigData:
@@ -415,11 +447,17 @@ class RuntimeConfig:
             return RuntimeConfigData()
         return RuntimeConfigData.model_validate_json(self._path.read_text(encoding="utf-8"))
 
-    def _migrate_open_default(self) -> None:
+    def _migrate_open_default(self) -> bool:
         legacy_default = self.data.scenarios.get("default")
+        changed = False
         if legacy_default and self._has_classroom_policy(legacy_default) and not self.data.teacher_policies:
             self.data.teacher_policies[_teacher_policy_key(settings.admin_username)] = legacy_default
-        self.data.scenarios["default"] = TeachingScenario()
+            changed = True
+        open_default = TeachingScenario()
+        if legacy_default != open_default:
+            self.data.scenarios["default"] = open_default
+            changed = True
+        return changed
 
     def _ensure_standalone_default_model(self) -> None:
         if settings.deployment_mode != "standalone":
@@ -428,6 +466,9 @@ class RuntimeConfig:
             return
         if settings.default_model in self.data.model_catalog:
             return
+        credential_id = f"model:{settings.default_model}"
+        if settings.upstream_api_key:
+            secret_store.set(credential_id, settings.upstream_api_key)
         self.data.model_catalog[settings.default_model] = ModelCatalogItem(
             id=settings.default_model,
             name=settings.default_model,
@@ -435,9 +476,24 @@ class RuntimeConfig:
             description="Local classroom default upstream model. Edit base_url and api_key before live use.",
             source="openai_compatible",
             base_url=settings.upstream_base_url or None,
-            api_key=settings.upstream_api_key or None,
+            credential_id=credential_id,
         )
         self.save()
+
+    def _migrate_plaintext_secrets(self) -> None:
+        changed = False
+        for model_id, model in list(self.data.model_catalog.items()):
+            credential_id = model.credential_id or f"model:{model_id}"
+            if model.api_key:
+                secret_store.set(credential_id, model.api_key)
+                changed = True
+            if model.credential_id != credential_id or model.api_key is not None:
+                self.data.model_catalog[model_id] = model.model_copy(
+                    update={"credential_id": credential_id, "api_key": None}
+                )
+                changed = True
+        if changed:
+            self.save()
 
     @staticmethod
     def _has_classroom_policy(scenario: TeachingScenario) -> bool:
@@ -453,10 +509,14 @@ class RuntimeConfig:
         )
 
     def save(self) -> None:
-        self._path.write_text(
-            self.data.model_dump_json(indent=2),
-            encoding="utf-8",
-        )
+        with self._lock:
+            temp = self._path.with_suffix(self._path.suffix + ".tmp")
+            payload = self.data.model_dump_json(indent=2)
+            with temp.open("w", encoding="utf-8") as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp, self._path)
 
     def get_scenario(self, scenario_id: str) -> TeachingScenario:
         scenario = self.data.scenarios.get(scenario_id)
@@ -468,68 +528,79 @@ class RuntimeConfig:
         return scenario
 
     def get_teacher_policy(self, username: str) -> TeachingScenario:
-        key = _teacher_policy_key(username)
-        scenario = self.data.teacher_policies.get(key)
-        if scenario is None:
-            scenario = TeachingScenario()
-            self.data.teacher_policies[key] = scenario
-            self.save()
-        return scenario
+        with self._lock:
+            key = _teacher_policy_key(username)
+            scenario = self.data.teacher_policies.get(key)
+            if scenario is None:
+                scenario = TeachingScenario()
+                self.data.teacher_policies[key] = scenario
+                self.save()
+            return scenario
 
     def update_scenario(self, scenario_id: str, request: ScenarioUpdateRequest) -> TeachingScenario:
-        current = self.data.scenarios.get(scenario_id, TeachingScenario())
-        changes = request.model_dump(exclude_unset=True)
-        updated = current.model_copy(update=changes)
-        self.data.scenarios[scenario_id] = updated
-        self.save()
-        return updated
+        with self._lock:
+            current = self.data.scenarios.get(scenario_id, TeachingScenario())
+            changes = request.model_dump(exclude_unset=True)
+            updated = current.model_copy(update=changes)
+            self.data.scenarios[scenario_id] = updated
+            self.save()
+            return updated
 
     def update_teacher_policy(self, username: str, request: ScenarioUpdateRequest) -> TeachingScenario:
-        key = _teacher_policy_key(username)
-        current = self.data.teacher_policies.get(key, TeachingScenario())
-        changes = request.model_dump(exclude_unset=True)
-        updated = current.model_copy(update=changes)
-        self.data.teacher_policies[key] = updated
-        self.save()
-        return updated
+        with self._lock:
+            key = _teacher_policy_key(username)
+            current = self.data.teacher_policies.get(key, TeachingScenario())
+            changes = request.model_dump(exclude_unset=True)
+            updated = current.model_copy(update=changes)
+            self.data.teacher_policies[key] = updated
+            self.save()
+            return updated
 
     def upsert_model(self, request: ModelCatalogItem) -> ModelCatalogItem:
         if request.source == "openai_compatible" and not request.base_url:
             raise HTTPException(status_code=400, detail="base_url is required for OpenAI-compatible models")
-        current = self.data.model_catalog.get(request.id)
-        if request.source == "openai_compatible" and current and not request.api_key:
-            request = request.model_copy(update={"api_key": current.api_key})
-        self.data.model_catalog[request.id] = request
-        self.save()
-        return request
+        with self._lock:
+            current = self.data.model_catalog.get(request.id)
+            credential_id = (current.credential_id if current else None) or f"model:{request.id}"
+            if request.api_key:
+                secret_store.set(credential_id, request.api_key)
+            request = request.model_copy(update={"credential_id": credential_id, "api_key": None})
+            self.data.model_catalog[request.id] = request
+            self.save()
+            return request
 
     def delete_model(self, model_id: str) -> None:
-        if model_id in self.data.model_catalog:
-            del self.data.model_catalog[model_id]
-            self.save()
+        with self._lock:
+            model = self.data.model_catalog.pop(model_id, None)
+            if model:
+                self.save()
+                secret_store.delete(model.credential_id)
 
 
 runtime_config = RuntimeConfig(settings.runtime_config_path)
-_login_sessions: dict[str, dict[str, Any]] = {}
 
 
-def require_admin(x_admin_token: str | None = Header(default=None, alias="X-Admin-Token")) -> dict[str, Any]:
-    if not settings.admin_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="ADMIN_API_KEY is not configured",
-        )
-    if x_admin_token and secrets.compare_digest(x_admin_token, settings.admin_api_key):
-        return {
-            "username": settings.admin_username,
-            "display_name": "System Admin",
-            "role": "admin",
-            "is_active": True,
-        }
-    teacher = _login_sessions.get(x_admin_token or "")
-    if not teacher:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin token")
-    if not teacher.get("is_active"):
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _is_loopback(request: Request) -> bool:
+    try:
+        return ipaddress.ip_address(_client_ip(request)).is_loopback
+    except ValueError:
+        return False
+
+
+def require_admin(
+    request: Request,
+    x_admin_token: str | None = Header(default=None, alias="X-Admin-Token"),
+) -> dict[str, Any]:
+    record = sessions.resolve(x_admin_token or "")
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired admin token")
+    teacher = business_db.get_teacher(record.username)
+    if not teacher or not teacher.get("is_active"):
+        sessions.revoke(x_admin_token or "")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Teacher is inactive")
     return teacher
 
@@ -567,10 +638,26 @@ def _ensure_source_access(source_id: str, teacher: dict[str, Any], *, write: boo
 
 def require_platform_key(authorization: str | None = Header(default=None)) -> None:
     if not settings.platform_api_key:
-        return
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OpenAI-compatible platform endpoint is disabled until PLATFORM_API_KEY is configured",
+        )
     expected = f"Bearer {settings.platform_api_key}"
     if not authorization or not secrets.compare_digest(authorization, expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid platform API key")
+
+
+def require_classroom_access(
+    request: Request,
+    x_class_token: str | None = Header(default=None, alias="X-Class-Token"),
+    class_token: str | None = None,
+) -> None:
+    token = x_class_token or class_token
+    if not classroom_access.matches(token):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid classroom token")
+    key = f"chat:{_client_ip(request)}"
+    if not rate_limiter.allow(key, limit=settings.classroom_rate_limit, window_seconds=60):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom request limit exceeded")
 
 
 def _resolve_chat_context(request: ChatRequest) -> tuple[str, TeachingScenario, dict[str, Any] | None]:
@@ -809,7 +896,7 @@ def _public_model(model: ModelCatalogItem) -> ModelCatalogPublicItem:
         description=model.description,
         source=model.source,
         base_url=model.base_url,
-        api_key_set=bool(model.api_key),
+        api_key_set=secret_store.has(model.credential_id),
     )
 
 
@@ -827,41 +914,59 @@ def _direct_openai_model(model_id: str) -> ModelCatalogItem | None:
     return None
 
 
+def _validate_model_selection(model_id: str) -> None:
+    if settings.deployment_mode != "standalone":
+        return
+    model = runtime_config.data.model_catalog.get(model_id)
+    if model is None:
+        raise HTTPException(status_code=404, detail=f"Unknown model: {model_id}")
+    if model.source == "openai_compatible" and (
+        not model.base_url or not secret_store.has(model.credential_id)
+    ):
+        raise HTTPException(status_code=400, detail=f"Model is not fully configured: {model_id}")
+
+
 async def _chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
     direct_model = _direct_openai_model(str(payload.get("model", "")))
     if direct_model:
-        if not direct_model.base_url or not direct_model.api_key:
+        api_key = secret_store.get(direct_model.credential_id)
+        if not direct_model.base_url or not api_key:
             raise HTTPException(
                 status_code=503,
                 detail=f"Direct OpenAI-compatible model is missing base_url or api_key: {direct_model.id}",
             )
-        return await client.openai_chat_completion(
-            base_url=direct_model.base_url,
-            api_key=direct_model.api_key,
-            payload=payload,
-        )
-    return await client.chat_completion(payload)
+        async with model_semaphore:
+            return await client.openai_chat_completion(
+                base_url=direct_model.base_url,
+                api_key=api_key,
+                payload=payload,
+            )
+    async with model_semaphore:
+        return await client.chat_completion(payload)
 
 
 async def _stream_chat_completion(payload: dict[str, Any]):
     direct_model = _direct_openai_model(str(payload.get("model", "")))
     if direct_model:
-        if not direct_model.base_url or not direct_model.api_key:
+        api_key = secret_store.get(direct_model.credential_id)
+        if not direct_model.base_url or not api_key:
             event = {
                 "status_code": 503,
                 "detail": f"Direct OpenAI-compatible model is missing base_url or api_key: {direct_model.id}",
             }
             yield f"event: error\ndata: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
             return
-        async for chunk in client.stream_openai_chat_completion(
-            base_url=direct_model.base_url,
-            api_key=direct_model.api_key,
-            payload=payload,
-        ):
-            yield chunk
+        async with model_semaphore:
+            async for chunk in client.stream_openai_chat_completion(
+                base_url=direct_model.base_url,
+                api_key=api_key,
+                payload=payload,
+            ):
+                yield chunk
         return
-    async for chunk in client.stream_chat_completion(payload):
-        yield chunk
+    async with model_semaphore:
+        async for chunk in client.stream_chat_completion(payload):
+            yield chunk
 
 
 def _build_knowledge_context(
@@ -906,6 +1011,12 @@ def _to_http_exception(error: httpx.HTTPStatusError) -> HTTPException:
     return HTTPException(status_code=error.response.status_code, detail=detail)
 
 
+def _message_preview(messages: list[Any]) -> str | None:
+    if not settings.log_message_preview:
+        return None
+    return latest_user_preview(messages)
+
+
 async def _trace_chat_result(
     *,
     route: str,
@@ -925,18 +1036,18 @@ async def _trace_chat_result(
         teacher_id=teacher_id,
         model=scenario.model,
         knowledge_source_id=scenario.knowledge_source_id,
-        user_message_preview=latest_user_preview(request.messages),
+        user_message_preview=_message_preview(request.messages),
         status_code=status_code,
         latency_ms=latency_ms,
         usage=usage,
         error=error,
     )
     output = None
-    if response:
+    if settings.log_message_preview and response:
         output = response.get("choices", [{}])[0].get("message", {}).get("content")
     await langfuse.trace_chat(
         name=route,
-        input_text=latest_user_preview(request.messages),
+        input_text=_message_preview(request.messages),
         output_text=output,
         metadata={
             "route": route,
@@ -954,7 +1065,7 @@ async def _trace_chat_result(
 
 async def _stream_with_errors(payload: dict[str, Any]):
     try:
-        async for chunk in _stream_chat_completion(payload):
+        async for chunk in _stream_with_heartbeat(_stream_chat_completion(payload)):
             yield chunk
     except httpx.HTTPStatusError as error:
         try:
@@ -969,6 +1080,29 @@ async def _stream_with_errors(payload: dict[str, Any]):
             "detail": f"Upstream provider connection failed: {type(error).__name__}: {error!s}",
         }
         yield f"event: error\ndata: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
+
+
+async def _stream_with_heartbeat(source: AsyncIterator[bytes]):
+    iterator = source.__aiter__()
+    pending: asyncio.Task[bytes] | None = None
+    try:
+        pending = asyncio.create_task(iterator.__anext__())
+        while True:
+            done, _ = await asyncio.wait({pending}, timeout=settings.stream_heartbeat_seconds)
+            if not done:
+                yield b": edugate-keep-alive\n\n"
+                continue
+            try:
+                chunk = pending.result()
+            except StopAsyncIteration:
+                break
+            yield chunk
+            pending = asyncio.create_task(iterator.__anext__())
+    finally:
+        if pending and not pending.done():
+            pending.cancel()
+            with suppress(asyncio.CancelledError, StopAsyncIteration):
+                await pending
 
 
 async def _iterate_stream_bytes(source: AsyncIterator[bytes] | Iterable[bytes]):
@@ -1004,7 +1138,7 @@ async def _stream_with_completion_log(
             teacher_id=teacher_id,
             model=scenario.model,
             knowledge_source_id=scenario.knowledge_source_id,
-            user_message_preview=latest_user_preview(request.messages),
+            user_message_preview=_message_preview(request.messages),
             status_code=status_code,
             latency_ms=now_ms(start),
             stream_done=stream_done,
@@ -1058,27 +1192,88 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/auth/status")
+async def auth_status() -> dict[str, Any]:
+    return {
+        "initialized": business_db.is_admin_initialized(settings.admin_username),
+        "admin_username": settings.admin_username,
+    }
+
+
+@app.post("/auth/setup")
+async def setup_admin(request: Request, payload: SetupRequest) -> dict[str, Any]:
+    if not _is_loopback(request):
+        raise HTTPException(status_code=403, detail="Administrator setup is only allowed from this computer")
+    if business_db.is_admin_initialized(settings.admin_username):
+        raise HTTPException(status_code=409, detail="Administrator has already been initialized")
+    if payload.username != settings.admin_username:
+        raise HTTPException(
+            status_code=400,
+            detail=f"The administrator username must be {settings.admin_username!r}",
+        )
+    try:
+        teacher = business_db.setup_admin(
+            username=payload.username,
+            password=payload.password,
+            display_name=payload.display_name,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    token = sessions.issue(teacher["username"])
+    return {
+        "access_token": token,
+        "token_type": "x-admin-token",
+        "expires_in": settings.session_ttl_seconds,
+        "teacher": teacher,
+    }
+
+
 @app.post("/auth/login")
-async def login(request: LoginRequest) -> dict[str, Any]:
+async def login(http_request: Request, request: LoginRequest) -> dict[str, Any]:
+    if not business_db.is_admin_initialized(settings.admin_username):
+        raise HTTPException(status_code=409, detail="Administrator setup is required")
+    rate_key = f"login:{_client_ip(http_request)}:{request.username.lower()}"
+    if not rate_limiter.allow(rate_key, limit=settings.login_rate_limit, window_seconds=300):
+        raise HTTPException(status_code=429, detail="Too many login attempts; try again later")
     teacher = business_db.authenticate_teacher(request.username, request.password)
     if teacher is None:
-        if not settings.admin_password:
-            raise HTTPException(status_code=503, detail="ADMIN_PASSWORD is not configured")
-        if request.username != settings.admin_username or not secrets.compare_digest(
-            request.password, settings.admin_password
-        ):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        teacher = {
-            "username": settings.admin_username,
-            "display_name": "System Admin",
-            "role": "admin",
-            "is_active": True,
-        }
-    if not settings.admin_api_key:
-        raise HTTPException(status_code=503, detail="ADMIN_API_KEY is not configured")
-    access_token = secrets.token_urlsafe(32)
-    _login_sessions[access_token] = teacher
-    return {"access_token": access_token, "token_type": "x-admin-token", "teacher": teacher}
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    access_token = sessions.issue(teacher["username"])
+    return {
+        "access_token": access_token,
+        "token_type": "x-admin-token",
+        "expires_in": settings.session_ttl_seconds,
+        "teacher": teacher,
+    }
+
+
+@app.post("/auth/logout")
+async def logout(
+    current_teacher: dict[str, Any] = Depends(require_admin),
+    x_admin_token: str | None = Header(default=None, alias="X-Admin-Token"),
+) -> dict[str, str]:
+    sessions.revoke(x_admin_token or "")
+    return {"status": "logged_out", "username": current_teacher["username"]}
+
+
+@app.post("/auth/password")
+async def change_own_password(
+    request: ChangePasswordRequest,
+    current_teacher: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    verified = business_db.authenticate_teacher(current_teacher["username"], request.current_password)
+    if verified is None:
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    teacher = business_db.change_teacher_password(current_teacher["username"], request.new_password)
+    sessions.revoke_user(current_teacher["username"])
+    token = sessions.issue(current_teacher["username"])
+    return {
+        "status": "password_changed",
+        "access_token": token,
+        "token_type": "x-admin-token",
+        "expires_in": settings.session_ttl_seconds,
+        "teacher": teacher,
+    }
 
 
 @app.get("/models", dependencies=[Depends(require_super_admin)])
@@ -1093,7 +1288,7 @@ async def models() -> dict[str, Any]:
                     "owned_by": model.provider,
                     "source": model.source,
                     "base_url": model.base_url,
-                    "api_key_set": bool(model.api_key),
+                    "api_key_set": secret_store.has(model.credential_id),
                 }
                 for model in runtime_config.data.model_catalog.values()
             ],
@@ -1109,7 +1304,7 @@ async def models() -> dict[str, Any]:
         ) from error
 
 
-@app.post("/chat")
+@app.post("/chat", dependencies=[Depends(require_classroom_access)])
 async def chat(request: ChatRequest) -> dict[str, Any]:
     effective_scenario_id, scenario, teacher = _resolve_chat_context(request)
     teacher_id = teacher["username"] if teacher else request.teacher_id
@@ -1145,7 +1340,7 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
             teacher_id=teacher_id,
             model=scenario.model,
             knowledge_source_id=scenario.knowledge_source_id,
-            user_message_preview=latest_user_preview(request.messages),
+            user_message_preview=_message_preview(request.messages),
             status_code=error.response.status_code,
             latency_ms=latency,
             error=str(error),
@@ -1159,7 +1354,7 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
             teacher_id=teacher_id,
             model=scenario.model,
             knowledge_source_id=scenario.knowledge_source_id,
-            user_message_preview=latest_user_preview(request.messages),
+            user_message_preview=_message_preview(request.messages),
             status_code=502,
             latency_ms=latency,
             error=str(error),
@@ -1170,7 +1365,7 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
         ) from error
 
 
-@app.post("/chat/stream")
+@app.post("/chat/stream", dependencies=[Depends(require_classroom_access)])
 async def chat_stream(request: ChatRequest) -> StreamingResponse:
     effective_scenario_id, scenario, teacher = _resolve_chat_context(request)
     teacher_id = teacher["username"] if teacher else request.teacher_id
@@ -1258,6 +1453,7 @@ async def switch_default_model(
     request: ModelSwitchRequest,
     current_teacher: dict[str, Any] = Depends(require_admin),
 ) -> ConfigResponse:
+    _validate_model_selection(request.model)
     runtime_config.update_teacher_policy(current_teacher["username"], ScenarioUpdateRequest(model=request.model))
     return _config_response(current_teacher)
 
@@ -1304,6 +1500,16 @@ async def admin_logs(limit: int = 50) -> list[dict[str, Any]]:
     return business_db.list_logs(limit=min(max(limit, 1), 200))
 
 
+@app.get("/admin/classroom", dependencies=[Depends(require_admin)])
+async def admin_classroom_access() -> dict[str, str]:
+    return {"class_token": classroom_access.token()}
+
+
+@app.post("/admin/classroom/rotate", dependencies=[Depends(require_admin)])
+async def rotate_classroom_access() -> dict[str, str]:
+    return {"class_token": classroom_access.rotate()}
+
+
 @app.get("/admin/teachers")
 async def admin_list_teachers(current_teacher: dict[str, Any] = Depends(require_admin)) -> list[dict[str, Any]]:
     if not _is_super_admin(current_teacher):
@@ -1313,6 +1519,8 @@ async def admin_list_teachers(current_teacher: dict[str, Any] = Depends(require_
 
 @app.post("/admin/teachers", dependencies=[Depends(require_super_admin)])
 async def admin_upsert_teacher(request: TeacherAccountRequest) -> dict[str, Any]:
+    if request.username == settings.admin_username and (request.role != "admin" or not request.is_active):
+        raise HTTPException(status_code=400, detail="The primary administrator must remain an active admin")
     try:
         return business_db.upsert_teacher(
             username=request.username,
@@ -1335,17 +1543,21 @@ async def admin_update_teacher_password(username: str, request: TeacherPasswordR
         raise HTTPException(status_code=503, detail=str(error)) from error
     if not teacher:
         raise HTTPException(status_code=404, detail=f"Unknown teacher: {username}")
+    sessions.revoke_user(username)
     return teacher
 
 
 @app.delete("/admin/teachers/{username}", dependencies=[Depends(require_super_admin)])
 async def admin_disable_teacher(username: str) -> dict[str, Any]:
+    if username == settings.admin_username:
+        raise HTTPException(status_code=400, detail="The primary administrator cannot be disabled")
     try:
         teacher = business_db.set_teacher_active(username, False)
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     if not teacher:
         raise HTTPException(status_code=404, detail=f"Unknown teacher: {username}")
+    sessions.revoke_user(username)
     return teacher
 
 
@@ -1359,9 +1571,7 @@ async def admin_delete_teacher(username: str) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=str(error)) from error
     if not teacher:
         raise HTTPException(status_code=404, detail=f"Unknown teacher: {username}")
-    for token, session_teacher in list(_login_sessions.items()):
-        if session_teacher.get("username") == username:
-            _login_sessions.pop(token, None)
+    sessions.revoke_user(username)
     return {"status": "deleted", "teacher": teacher}
 
 
@@ -1385,6 +1595,7 @@ async def admin_set_default_model(
     model_id: str,
     current_teacher: dict[str, Any] = Depends(require_super_admin),
 ) -> ConfigResponse:
+    _validate_model_selection(model_id)
     runtime_config.update_teacher_policy(current_teacher["username"], ScenarioUpdateRequest(model=model_id))
     return _config_response(current_teacher)
 
@@ -1396,7 +1607,9 @@ async def admin_providers() -> list[dict[str, Any]]:
             model for model in runtime_config.data.model_catalog.values()
             if model.source == "openai_compatible"
         ]
-        configured_count = sum(1 for model in direct_models if model.base_url and model.api_key)
+        configured_count = sum(
+            1 for model in direct_models if model.base_url and secret_store.has(model.credential_id)
+        )
         return [
             {
                 "name": "openai_compatible",
@@ -1441,7 +1654,10 @@ async def admin_test_provider(name: str) -> dict[str, Any]:
                 item for item in runtime_config.data.model_catalog.values()
                 if item.source == "openai_compatible"
             ]
-            configured = [item.id for item in direct_models if item.base_url and item.api_key]
+            configured = [
+                item.id for item in direct_models
+                if item.base_url and secret_store.has(item.credential_id)
+            ]
             return {
                 "name": name,
                 "ok": bool(configured),
@@ -1449,12 +1665,23 @@ async def admin_test_provider(name: str) -> dict[str, Any]:
                 "model_count": len(direct_models),
             }
         if model and model.source == "openai_compatible":
-            return {
-                "name": name,
-                "ok": bool(model.base_url and model.api_key),
-                "base_url": model.base_url,
-                "api_key_set": bool(model.api_key),
-            }
+            api_key = secret_store.get(model.credential_id)
+            if not model.base_url or not api_key:
+                return {"name": name, "ok": False, "error": "Base URL or API Key is missing"}
+            try:
+                result = await client.probe_openai_provider(base_url=model.base_url, api_key=api_key)
+                return {"name": name, "base_url": model.base_url, **result}
+            except httpx.HTTPStatusError as error:
+                return {
+                    "name": name,
+                    "ok": False,
+                    "status_code": error.response.status_code,
+                    "error": error.response.text[:500] or error.response.reason_phrase,
+                }
+            except httpx.TimeoutException:
+                return {"name": name, "ok": False, "error": "Provider request timed out"}
+            except httpx.HTTPError as error:
+                return {"name": name, "ok": False, "error": str(error)}
         if name.lower() == "langfuse":
             return {"name": name, "ok": langfuse.enabled}
         raise HTTPException(status_code=404, detail=f"Unknown provider or model: {name}")
@@ -1579,15 +1806,21 @@ async def delete_knowledge_file(
     return {"status": "deleted"}
 
 
-@app.post("/run_python", response_model=PythonRunResponse)
+@app.post(
+    "/run_python",
+    response_model=PythonRunResponse,
+    dependencies=[Depends(require_classroom_access)],
+)
 async def run_python(request: PythonRunRequest) -> PythonRunResponse:
     if not settings.python_runner_enabled:
         raise HTTPException(status_code=503, detail="Python runner is disabled")
-    result = await run_in_threadpool(
-        run_python_code,
-        request.code,
-        timeout_seconds=settings.python_runner_timeout_seconds,
-    )
+    async with python_semaphore:
+        result = await run_in_threadpool(
+            run_python_code,
+            request.code,
+            timeout_seconds=settings.python_runner_timeout_seconds,
+            memory_limit_mb=settings.python_runner_memory_mb,
+        )
     return PythonRunResponse(
         stdout=result.stdout,
         stderr=result.stderr,
@@ -1595,3 +1828,13 @@ async def run_python(request: PythonRunRequest) -> PythonRunResponse:
         timed_out=result.timed_out,
         duration_ms=result.duration_ms,
     )
+
+
+@app.get("/", include_in_schema=False)
+async def root_page() -> RedirectResponse:
+    return RedirectResponse(url="/admin.html")
+
+
+frontend_path = Path(settings.frontend_dir)
+if frontend_path.exists():
+    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

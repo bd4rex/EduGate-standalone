@@ -527,6 +527,7 @@
           <div class="footer-actions">
             <button id="sendBtn" class="btn btn-primary">发送问题</button>
             <button id="sendThinkingBtn" class="btn btn-soft">带上我的思考</button>
+            <button id="stopBtn" class="btn" disabled>停止生成</button>
             <button id="clearBtn" class="btn">清空对话</button>
           </div>
 
@@ -548,17 +549,21 @@
       页面会按该教师当前加载的 AI 策略请求后端。
     */
     function defaultBackendBaseUrl() {
-      const host = window.location.hostname || "127.0.0.1";
-      const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-      return `${protocol}//${host}:8000`;
+      if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+        return window.location.origin;
+      }
+      return "http://127.0.0.1:8000";
     }
 
     const BACKEND_BASE_URL = defaultBackendBaseUrl();
     const STREAM_URL = `${BACKEND_BASE_URL}/chat/stream`;
     const FALLBACK_URL = `${BACKEND_BASE_URL}/chat`;
     const SCENARIO_ID = "default";
-    const URL_PARAMS = new URLSearchParams(window.location.search);
+    const URL_PARAMS = new URLSearchParams(
+      window.location.hash ? window.location.hash.slice(1) : window.location.search
+    );
     const TEACHER_ID = URL_PARAMS.get("teacher_id") || URL_PARAMS.get("teacher") || "";
+    const CLASS_TOKEN = URL_PARAMS.get("class_token") || "";
 
     const MAX_MESSAGES_TO_SEND = 10;
 
@@ -568,6 +573,7 @@
         content: "你好，我是课堂中的 AI 学习助手。你可以问我：什么是 IP 地址、如何判断一个地址是否像 IPv4 地址、什么是公网和私网等问题。"
       }
     ];
+    let activeController = null;
 
     const chatHistoryEl = document.getElementById("chatHistory");
     const chatInputEl = document.getElementById("chatInput");
@@ -575,6 +581,7 @@
     const statusBarEl = document.getElementById("statusBar");
     const sendBtnEl = document.getElementById("sendBtn");
     const sendThinkingBtnEl = document.getElementById("sendThinkingBtn");
+    const stopBtnEl = document.getElementById("stopBtn");
     const clearBtnEl = document.getElementById("clearBtn");
 
     function escapeHtml(str) {
@@ -638,6 +645,7 @@
       sendBtnEl.disabled = isGenerating;
       sendThinkingBtnEl.disabled = isGenerating;
       clearBtnEl.disabled = isGenerating;
+      stopBtnEl.disabled = !isGenerating;
       chatInputEl.disabled = isGenerating;
       sendBtnEl.textContent = isGenerating ? "AI 正在生成……" : "发送问题";
     }
@@ -680,14 +688,19 @@
       return "";
     }
 
-    async function sendWithFallback() {
+    function classroomHeaders(extra = {}) {
+      return { ...extra, "X-Class-Token": CLASS_TOKEN };
+    }
+
+    async function sendWithFallback(signal) {
       const payload = buildPayload();
 
       const resp = await fetch(FALLBACK_URL, {
         method: "POST",
-        headers: {
+        headers: classroomHeaders({
           "Content-Type": "application/json"
-        },
+        }),
+        signal,
         body: JSON.stringify(payload)
       });
 
@@ -724,16 +737,18 @@
 
       const tempBubble = appendTemporaryAssistantMessage("");
       let fullAssistantReply = "";
+      activeController = new AbortController();
 
       try {
         const payload = buildPayload();
 
         const response = await fetch(STREAM_URL, {
           method: "POST",
-          headers: {
+          headers: classroomHeaders({
             "Content-Type": "application/json",
             "Accept": "text/event-stream"
-          },
+          }),
+          signal: activeController.signal,
           body: JSON.stringify(payload)
         });
 
@@ -757,10 +772,12 @@
 
           buffer += decoder.decode(value, { stream: true });
 
-          let boundaryIndex;
-          while ((boundaryIndex = buffer.indexOf("\n\n")) !== -1) {
+          while (true) {
+            const boundary = buffer.match(/\r?\n\r?\n/);
+            if (!boundary) break;
+            const boundaryIndex = boundary.index;
             const rawEventBlock = buffer.slice(0, boundaryIndex);
-            buffer = buffer.slice(boundaryIndex + 2);
+            buffer = buffer.slice(boundaryIndex + boundary[0].length);
 
             const lines = rawEventBlock.split(/\r?\n/);
             let dataLines = [];
@@ -824,14 +841,19 @@
         renderMessages();
         setStatus("回答完成，已加入本地对话历史。", "ok");
       } catch (streamErr) {
+        if (streamErr.name === "AbortError") {
+          renderMessages();
+          setStatus("已停止本次生成。", "warn");
+          return;
+        }
         console.error("流式请求失败：", streamErr);
         setStatus(
-          "流式接口失败，正在尝试普通接口 fallback……可能原因：后端地址错误、服务未启动、CORS 未配置，或流式格式不符合预期。",
+          "流式接口失败，正在尝试普通接口……",
           "warn"
         );
 
         try {
-          const fallbackText = await sendWithFallback();
+          const fallbackText = await sendWithFallback(activeController.signal);
 
           messages.push({
             role: "assistant",
@@ -841,10 +863,15 @@
           renderMessages();
           setStatus("流式失败，已自动使用普通接口完成回复。", "warn");
         } catch (fallbackErr) {
+          if (fallbackErr.name === "AbortError") {
+            renderMessages();
+            setStatus("已停止本次生成。", "warn");
+            return;
+          }
           console.error("普通接口也失败：", fallbackErr);
           renderMessages();
           setStatus(
-            "请求失败，请检查后端地址或 CORS。流式错误：" +
+            "请求失败，请确认教师端正在运行，并重新打开老师提供的课堂链接。流式错误：" +
               streamErr.message +
               "；普通接口错误：" +
               fallbackErr.message,
@@ -852,6 +879,7 @@
           );
         }
       } finally {
+        activeController = null;
         setGeneratingState(false);
       }
     }
@@ -888,6 +916,10 @@
       sendThinkingAsQuestion();
     });
 
+    stopBtnEl.addEventListener("click", () => {
+      if (activeController) activeController.abort();
+    });
+
     clearBtnEl.addEventListener("click", () => {
       messages = [
         {
@@ -909,7 +941,9 @@
     });
 
     renderMessages();
-    if (TEACHER_ID) {
+    if (!CLASS_TOKEN) {
+      setStatus("课堂链接缺少访问令牌，请重新打开老师提供的完整链接。", "error");
+    } else if (TEACHER_ID) {
       setStatus("已使用教师策略：" + TEACHER_ID, "ok");
     }
   </script>

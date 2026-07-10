@@ -389,12 +389,18 @@
     const statusText = document.querySelector("#status-text");
 
     function defaultBackendBaseUrl() {
-      const host = window.location.hostname || "127.0.0.1";
-      const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-      return `${protocol}//${host}:8000`;
+      if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+        return window.location.origin;
+      }
+      return "http://127.0.0.1:8000";
     }
 
     apiUrlEl.value = `${defaultBackendBaseUrl()}/chat`;
+    const urlParams = new URLSearchParams(
+      window.location.hash ? window.location.hash.slice(1) : window.location.search
+    );
+    const classToken = urlParams.get("class_token") || "";
+    const teacherId = urlParams.get("teacher_id") || urlParams.get("teacher") || "";
 
     const history = [];
 
@@ -426,9 +432,14 @@
       try {
         const response = await fetch(apiUrlEl.value.trim(), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Class-Token": classToken
+          },
           body: JSON.stringify({
-            scenario_id: scenarioIdEl.value.trim() || "default",
+            ...(teacherId
+              ? { teacher_id: teacherId }
+              : { scenario_id: scenarioIdEl.value.trim() || "default" }),
             messages: history.slice(-8)
           })
         });
@@ -444,7 +455,7 @@
         setStatus("ok", `连接正常 · ${data.model || "unknown model"}`);
       } catch (error) {
         addBubble("assistant", `请求失败：\n${error.message}`, true);
-        setStatus("bad", "请求失败，请检查后端地址或 CORS");
+        setStatus("bad", "请求失败，请确认教师端正在运行，并使用完整课堂链接");
       } finally {
         sendButton.disabled = false;
         inputEl.focus();
@@ -476,6 +487,10 @@
         inputEl.focus();
       });
     });
+
+    if (!classToken) {
+      setStatus("bad", "课堂链接缺少访问令牌");
+    }
   </script>
 </body>
 </html>
