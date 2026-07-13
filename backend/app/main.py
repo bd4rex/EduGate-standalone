@@ -16,7 +16,7 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,6 +28,17 @@ from app.observability import LangfuseClient
 from app.python_runner import run_python_code
 from app.secret_store import SecretStore
 from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter
+from app.system_control import system_control
+from app.system_ops import (
+    create_backup,
+    launcher_log_tail,
+    read_advanced_settings,
+    remove_backup_file,
+    save_restore_archive,
+    system_status,
+    update_advanced_settings,
+)
+from starlette.background import BackgroundTask
 
 
 client = LiteLLMClient()
@@ -417,6 +428,24 @@ class PythonRunResponse(BaseModel):
     duration_ms: int
 
 
+class SystemActionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["restart", "shutdown"]
+
+
+class AdvancedSettingsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    values: dict[str, Any]
+
+
+class PlatformKeyRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    api_key: str | None = Field(default=None, max_length=500)
+
+
 class ConfigResponse(BaseModel):
     scenarios: dict[str, TeachingScenario]
     model_catalog: dict[str, ModelCatalogPublicItem]
@@ -637,12 +666,13 @@ def _ensure_source_access(source_id: str, teacher: dict[str, Any], *, write: boo
 
 
 def require_platform_key(authorization: str | None = Header(default=None)) -> None:
-    if not settings.platform_api_key:
+    platform_api_key = secret_store.get("system:platform_api_key") or settings.platform_api_key
+    if not platform_api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="OpenAI-compatible platform endpoint is disabled until PLATFORM_API_KEY is configured",
         )
-    expected = f"Bearer {settings.platform_api_key}"
+    expected = f"Bearer {platform_api_key}"
     if not authorization or not secrets.compare_digest(authorization, expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid platform API key")
 
@@ -1500,6 +1530,68 @@ async def admin_logs(limit: int = 50) -> list[dict[str, Any]]:
     return business_db.list_logs(limit=min(max(limit, 1), 200))
 
 
+@app.get("/admin/system/status", dependencies=[Depends(require_super_admin)])
+async def admin_system_status() -> dict[str, Any]:
+    return system_status(
+        supervised=system_control.supervised,
+        started_at=system_control.started_at,
+        platform_key_set=secret_store.has("system:platform_api_key") or bool(settings.platform_api_key),
+    )
+
+
+@app.get("/admin/system/launcher-logs", dependencies=[Depends(require_super_admin)])
+async def admin_launcher_logs(limit: int = 200) -> dict[str, Any]:
+    return {"lines": launcher_log_tail(limit)}
+
+
+@app.get("/admin/system/settings", dependencies=[Depends(require_super_admin)])
+async def admin_system_settings() -> dict[str, Any]:
+    return read_advanced_settings()
+
+
+@app.put("/admin/system/settings", dependencies=[Depends(require_super_admin)])
+async def admin_update_system_settings(request: AdvancedSettingsRequest) -> dict[str, Any]:
+    return update_advanced_settings(request.values)
+
+
+@app.put("/admin/system/platform-key", dependencies=[Depends(require_super_admin)])
+async def admin_update_platform_key(request: PlatformKeyRequest) -> dict[str, Any]:
+    value = (request.api_key or "").strip()
+    if value:
+        secret_store.set("system:platform_api_key", value)
+    else:
+        secret_store.delete("system:platform_api_key")
+    return {"status": "saved", "platform_api_key_set": bool(value)}
+
+
+@app.get("/admin/system/backup", dependencies=[Depends(require_super_admin)])
+async def admin_download_backup() -> FileResponse:
+    path = await run_in_threadpool(create_backup)
+    return FileResponse(
+        path,
+        media_type="application/zip",
+        filename=path.name,
+        background=BackgroundTask(remove_backup_file, path),
+    )
+
+
+@app.post("/admin/system/restore", dependencies=[Depends(require_super_admin)])
+async def admin_restore_backup(file: UploadFile = File(...)) -> dict[str, Any]:
+    if not system_control.supervised:
+        raise HTTPException(status_code=409, detail="Restore requires the EduGate supervised launcher")
+    await save_restore_archive(file)
+    if not system_control.request("restart"):
+        raise HTTPException(status_code=409, detail="Could not schedule EduGate restart")
+    return {"status": "restore_scheduled", "message": "EduGate will restart and restore the backup"}
+
+
+@app.post("/admin/system/action", dependencies=[Depends(require_super_admin)])
+async def admin_system_action(request: SystemActionRequest) -> dict[str, Any]:
+    if not system_control.request(request.action):
+        raise HTTPException(status_code=409, detail="System control requires the EduGate supervised launcher")
+    return {"status": "scheduled", "action": request.action}
+
+
 @app.get("/admin/classroom", dependencies=[Depends(require_admin)])
 async def admin_classroom_access() -> dict[str, str]:
     return {"class_token": classroom_access.token()}
@@ -1739,6 +1831,16 @@ async def upsert_model_catalog_item(request: ModelCatalogItem) -> ModelCatalogPu
 
 @app.delete("/model-catalog/{model_id}", dependencies=[Depends(require_super_admin)])
 async def delete_model_catalog_item(model_id: str) -> dict[str, str]:
+    in_use = [
+        scenario_id
+        for scenario_id, scenario in {
+            **runtime_config.data.scenarios,
+            **{f"teacher:{key}": value for key, value in runtime_config.data.teacher_policies.items()},
+        }.items()
+        if scenario.model == model_id
+    ]
+    if in_use:
+        raise HTTPException(status_code=409, detail=f"Model is used by: {', '.join(in_use)}")
     runtime_config.delete_model(model_id)
     return {"status": "deleted"}
 
@@ -1766,6 +1868,16 @@ async def delete_knowledge_source(
     current_teacher: dict[str, Any] = Depends(require_admin),
 ) -> dict[str, str]:
     _ensure_source_access(source_id, current_teacher, write=True)
+    in_use = [
+        scenario_id
+        for scenario_id, scenario in {
+            **runtime_config.data.scenarios,
+            **{f"teacher:{key}": value for key, value in runtime_config.data.teacher_policies.items()},
+        }.items()
+        if scenario.knowledge_source_id == source_id
+    ]
+    if in_use:
+        raise HTTPException(status_code=409, detail=f"Knowledge source is used by: {', '.join(in_use)}")
     knowledge_store.delete_source(source_id)
     return {"status": "deleted"}
 

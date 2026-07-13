@@ -3,6 +3,7 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 set "VENV_PYTHON=%LOCALAPPDATA%\EduGate\venv\Scripts\python.exe"
+set "VENV_PYTHONW=%LOCALAPPDATA%\EduGate\venv\Scripts\pythonw.exe"
 if not exist "%VENV_PYTHON%" (
   echo EduGate has not been installed on this computer yet.
   echo The first-time installer will now open and use the Tsinghua PyPI mirror.
@@ -11,9 +12,6 @@ if not exist "%VENV_PYTHON%" (
   if errorlevel 1 exit /b 1
 )
 
-"%VENV_PYTHON%" "%~dp0edugate_standalone.py"
-if %errorlevel% neq 0 (
-  echo.
-  echo EduGate stopped because of an error. See the message above.
-  pause
-)
+if not exist "%VENV_PYTHONW%" set "VENV_PYTHONW=%VENV_PYTHON%"
+start "" /b "%VENV_PYTHONW%" "%~dp0edugate_standalone.py"
+exit /b 0

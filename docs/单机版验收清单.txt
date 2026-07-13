@@ -7,6 +7,7 @@ EduGate 单机课堂版验收清单
 [ ] 安装输出明确显示清华 PyPI 镜像。
 [ ] 依赖位于 %LOCALAPPDATA%\EduGate\venv，而不是系统或用户 site-packages。
 [ ] desktop\run_standalone.bat 可重复启动。
+[ ] 启动后没有持续显示的 Windows 控制窗口，只打开教师 Web 控制台。
 
 首次初始化
 ----------
@@ -52,3 +53,7 @@ Python 与平台接口
 [ ] 默认日志不含消息正文，并按 LOG_MAX_RECORDS 清理旧记录。
 [ ] 更新或替换程序目录后，账号、知识库和策略仍存在。
 [ ] desktop\build_windows.bat 可生成 dist\EduGate-Standalone。
+[ ] “系统”页可显示监督状态、启动日志和请求统计。
+[ ] Web 重启后 PID 改变、服务恢复且旧登录会话失效。
+[ ] Web 停止后 8000 端口不再监听。
+[ ] 可下载完整备份，并可验证、暂存、重启恢复。

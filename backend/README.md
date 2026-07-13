@@ -33,6 +33,12 @@ GET  /admin/classroom        X-Admin-Token
 POST /admin/classroom/rotate X-Admin-Token
 POST /admin/models           管理员
 POST /admin/providers/{id}/test 管理员
+GET  /admin/system/status      管理员
+GET  /admin/system/settings    管理员
+PUT  /admin/system/settings    管理员，保存后需重启
+GET  /admin/system/backup      管理员
+POST /admin/system/restore     管理员，验证后重启恢复
+POST /admin/system/action      管理员，restart/shutdown
 ```
 
 ## 运行配置
@@ -41,6 +47,7 @@ POST /admin/providers/{id}/test 管理员
 
 ```env
 EDUGATE_MODE=standalone
+EDUGATE_BACKEND_PORT=8000
 EDUGATE_DATA_DIR=
 ADMIN_USERNAME=admin
 SESSION_TTL_SECONDS=28800

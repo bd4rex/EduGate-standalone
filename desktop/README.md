@@ -8,7 +8,7 @@
 - 数据位置：`%LOCALAPPDATA%\EduGate`。
 - Python 包源：`https://pypi.tuna.tsinghua.edu.cn/simple`。
 
-启动器只运行一个 Uvicorn 服务：
+启动程序没有 Windows 界面。它在后台监督一个 Uvicorn 服务，并自动打开教师 Web 控制台：
 
 ```text
 教师控制台  http://127.0.0.1:8000/admin.html
@@ -16,6 +16,8 @@
 ```
 
 首次打开教师控制台时创建管理员密码。不存在 `admin / edugate` 之类的默认密码。
+
+运行状态、启动日志、课堂链接、备份恢复、高级设置、重启和停止都在 Web 控制台的“系统”页完成。服务停止后，再次双击 `run_standalone.bat` 即可启动。
 
 ## 打包
 

@@ -10,12 +10,15 @@ EduGate 单机课堂版说明
 --------
 
 浏览器/学生设备
-    -> 教师电脑 Uvicorn :8000
+    -> 无窗口监督进程
+       -> 教师电脑 Uvicorn :8000
        -> 身份、课堂令牌、限流、教师策略
        -> 本地 SQLite 知识库检索
        -> OpenAI-compatible 模型公司 API
 
 教师端、学生端和 API 同源运行，因此局域网使用不依赖 CORS。可选的 CORS_ORIGINS 只用于确有需要的第三方网页集成。
+
+教师端只有 Web 界面。后台监督进程没有 Windows 窗口，负责启动、重启、停止和恢复前的离线数据替换；所有操作入口集中在教师 Web 控制台。
 
 身份与访问边界
 ------------
@@ -30,6 +33,8 @@ EduGate 单机课堂版说明
 ----------
 
 运行数据位于 %LOCALAPPDATA%\EduGate。模型 API Key 使用 Windows DPAPI 加密，runtime_config.json 只保存 credential_id。配置文件采用临时文件、fsync 和原子替换，SQLite 使用 WAL 和 busy timeout。
+
+Web 控制台可生成 SQLite 一致性快照备份。恢复包先验证并暂存，随后由监督进程在服务退出、数据库无连接时替换文件并重新启动。
 
 资源边界
 --------

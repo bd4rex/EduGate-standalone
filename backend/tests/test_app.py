@@ -388,3 +388,37 @@ def test_runtime_config_is_valid_json_after_updates() -> None:
     )
     data = json.loads(Path(settings.runtime_config_path).read_text(encoding="utf-8"))
     assert data["teacher_policies"][settings.admin_username]["system_prompt"] == "atomic write test"
+
+
+def test_system_management_requires_supervised_launcher(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    status_response = client.get("/admin/system/status", headers=admin_headers)
+    action_response = client.post(
+        "/admin/system/action",
+        headers=admin_headers,
+        json={"action": "restart"},
+    )
+
+    assert status_response.status_code == 200
+    assert status_response.json()["supervised"] is False
+    assert action_response.status_code == 409
+
+
+def test_platform_key_is_managed_in_encrypted_store(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    response = client.put(
+        "/admin/system/platform-key",
+        headers=admin_headers,
+        json={"api_key": "platform-secret"},
+    )
+    assert response.status_code == 200
+    assert secret_store.get("system:platform_api_key") == "platform-secret"
+    client.put(
+        "/admin/system/platform-key",
+        headers=admin_headers,
+        json={"api_key": None},
+    )

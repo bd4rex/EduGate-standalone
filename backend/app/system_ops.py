@@ -1,0 +1,221 @@
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import socket
+import sqlite3
+import tempfile
+import time
+import zipfile
+from pathlib import Path
+from typing import Any
+
+from dotenv import dotenv_values, set_key
+from fastapi import HTTPException, UploadFile, status
+
+from app.config import settings
+
+
+SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
+    "EDUGATE_BACKEND_PORT": {"type": "int", "default": 8000, "min": 1024, "max": 65535, "restart": True},
+    "SESSION_TTL_SECONDS": {"type": "int", "default": 28800, "min": 900, "max": 604800, "restart": True},
+    "CLASSROOM_RATE_LIMIT_PER_MINUTE": {"type": "int", "default": 30, "min": 1, "max": 1000, "restart": True},
+    "LOGIN_RATE_LIMIT_PER_5_MINUTES": {"type": "int", "default": 10, "min": 1, "max": 100, "restart": True},
+    "MODEL_MAX_CONCURRENCY": {"type": "int", "default": 4, "min": 1, "max": 32, "restart": True},
+    "REQUEST_TIMEOUT_SECONDS": {"type": "float", "default": 60, "min": 5, "max": 600, "restart": True},
+    "STREAM_READ_TIMEOUT_SECONDS": {"type": "float", "default": 120, "min": 10, "max": 1800, "restart": True},
+    "STREAM_HEARTBEAT_SECONDS": {"type": "float", "default": 15, "min": 2, "max": 120, "restart": True},
+    "MAX_UPLOAD_BYTES": {"type": "int", "default": 26214400, "min": 1048576, "max": 1073741824, "restart": True},
+    "MAX_PDF_PAGES": {"type": "int", "default": 200, "min": 1, "max": 5000, "restart": True},
+    "LOG_MAX_RECORDS": {"type": "int", "default": 5000, "min": 100, "max": 100000, "restart": True},
+    "LOG_MESSAGE_PREVIEW": {"type": "bool", "default": False, "restart": True},
+    "PYTHON_RUNNER_ENABLED": {"type": "bool", "default": False, "restart": True},
+    "PYTHON_RUNNER_TIMEOUT_SECONDS": {"type": "float", "default": 3, "min": 0.2, "max": 30, "restart": True},
+    "PYTHON_RUNNER_MAX_CODE_CHARS": {"type": "int", "default": 6000, "min": 100, "max": 50000, "restart": True},
+    "PYTHON_RUNNER_MEMORY_MB": {"type": "int", "default": 128, "min": 32, "max": 1024, "restart": True},
+    "CORS_ORIGINS": {"type": "str", "default": "", "restart": True},
+}
+
+MAX_RESTORE_BYTES = 1024 * 1024 * 1024
+MAX_RESTORE_FILES = 10000
+
+
+def local_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return "127.0.0.1"
+
+
+def system_status(*, supervised: bool, started_at: float, platform_key_set: bool) -> dict[str, Any]:
+    data_dir = Path(settings.data_dir)
+    disk = shutil.disk_usage(data_dir)
+    port = int(os.getenv("EDUGATE_BACKEND_PORT", "8000"))
+    ip = local_ip()
+    return {
+        "status": "running",
+        "supervised": supervised,
+        "pid": os.getpid(),
+        "uptime_seconds": max(0, int(time.time() - started_at)),
+        "data_dir": str(data_dir),
+        "frontend_dir": settings.frontend_dir,
+        "port": port,
+        "local_ip": ip,
+        "admin_url": f"http://127.0.0.1:{port}/admin.html",
+        "lan_base_url": f"http://{ip}:{port}",
+        "disk_free_bytes": disk.free,
+        "platform_api_key_set": platform_key_set,
+        "python_runner_enabled": settings.python_runner_enabled,
+    }
+
+
+def read_advanced_settings() -> dict[str, Any]:
+    env_path = Path(settings.data_dir) / ".env"
+    values = dotenv_values(env_path)
+    output = []
+    for key, schema in SETTINGS_SCHEMA.items():
+        raw = values.get(key) or os.getenv(key)
+        value = schema["default"] if raw in {None, ""} else _coerce_value(key, raw, schema)
+        output.append({"key": key, "value": value, **schema})
+    return {"settings": output, "env_path": str(env_path), "restart_required": True}
+
+
+def update_advanced_settings(values: dict[str, Any]) -> dict[str, Any]:
+    unknown = sorted(set(values) - set(SETTINGS_SCHEMA))
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unsupported settings: {', '.join(unknown)}")
+    env_path = Path(settings.data_dir) / ".env"
+    env_path.parent.mkdir(parents=True, exist_ok=True)
+    env_path.touch(exist_ok=True)
+    normalized: dict[str, Any] = {}
+    for key, raw in values.items():
+        schema = SETTINGS_SCHEMA[key]
+        value = _coerce_value(key, raw, schema)
+        normalized[key] = value
+        serialized = str(value).lower() if isinstance(value, bool) else str(value)
+        set_key(str(env_path), key, serialized, quote_mode="never")
+    return {"status": "saved", "values": normalized, "restart_required": True}
+
+
+def launcher_log_tail(limit: int = 200) -> list[str]:
+    path = Path(settings.data_dir) / "launcher.log"
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    return lines[-min(max(limit, 1), 1000) :]
+
+
+def create_backup() -> Path:
+    temp_dir = Path(tempfile.mkdtemp(prefix="edugate-backup-"))
+    archive_path = temp_dir / f"EduGate-backup-{time.strftime('%Y%m%d-%H%M%S')}.zip"
+    data_dir = Path(settings.data_dir)
+    db_snapshots: dict[str, Path] = {}
+    for name, source_path in {
+        "edugate.sqlite3": Path(settings.sqlite_db_path),
+        "knowledge.sqlite3": Path(settings.knowledge_db_path),
+    }.items():
+        if source_path.exists():
+            snapshot = temp_dir / name
+            with sqlite3.connect(source_path) as source, sqlite3.connect(snapshot) as target:
+                source.backup(target)
+            db_snapshots[name] = snapshot
+
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name in (".env", "runtime_config.json", "secrets.json"):
+            path = data_dir / name
+            if path.exists():
+                archive.write(path, name)
+        for name, path in db_snapshots.items():
+            archive.write(path, name)
+        knowledge_dir = Path(settings.knowledge_dir)
+        if knowledge_dir.exists():
+            for path in knowledge_dir.rglob("*"):
+                if path.is_file():
+                    archive.write(path, Path("knowledge_files") / path.relative_to(knowledge_dir))
+        archive.writestr(
+            "backup-info.json",
+            json.dumps({"version": 1, "created_at": time.time()}, ensure_ascii=False),
+        )
+    return archive_path
+
+
+async def save_restore_archive(upload: UploadFile) -> Path:
+    target = Path(settings.data_dir) / "pending-restore.zip"
+    temp = target.with_suffix(".tmp")
+    size = 0
+    try:
+        with temp.open("wb") as handle:
+            while True:
+                chunk = await upload.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX_RESTORE_BYTES:
+                    raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Backup exceeds 1 GB")
+                handle.write(chunk)
+        _validate_backup(temp)
+        os.replace(temp, target)
+        return target
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def remove_backup_file(path: Path) -> None:
+    shutil.rmtree(path.parent, ignore_errors=True)
+
+
+def _validate_backup(path: Path) -> None:
+    try:
+        with zipfile.ZipFile(path) as archive:
+            members = archive.infolist()
+            if len(members) > MAX_RESTORE_FILES:
+                raise HTTPException(status_code=400, detail="Backup contains too many files")
+            total_size = 0
+            for member in members:
+                member_path = Path(member.filename)
+                if member_path.is_absolute() or ".." in member_path.parts:
+                    raise HTTPException(status_code=400, detail=f"Unsafe backup path: {member.filename}")
+                allowed = (
+                    member.filename in {".env", "edugate.sqlite3", "knowledge.sqlite3", "runtime_config.json", "secrets.json", "backup-info.json"}
+                    or member.filename.startswith("knowledge_files/")
+                )
+                if not allowed:
+                    raise HTTPException(status_code=400, detail=f"Unsupported backup entry: {member.filename}")
+                total_size += member.file_size
+                if total_size > MAX_RESTORE_BYTES:
+                    raise HTTPException(status_code=400, detail="Expanded backup exceeds 1 GB")
+    except zipfile.BadZipFile as error:
+        raise HTTPException(status_code=400, detail="Invalid EduGate backup archive") from error
+
+
+def _coerce_value(key: str, raw: Any, schema: dict[str, Any]) -> Any:
+    kind = schema["type"]
+    try:
+        if kind == "bool":
+            if isinstance(raw, bool):
+                value = raw
+            elif str(raw).lower() in {"1", "true", "yes", "on"}:
+                value = True
+            elif str(raw).lower() in {"0", "false", "no", "off"}:
+                value = False
+            else:
+                raise ValueError
+        elif kind == "int":
+            value = int(raw)
+        elif kind == "float":
+            value = float(raw)
+        else:
+            value = str(raw).strip()
+    except (TypeError, ValueError) as error:
+        raise HTTPException(status_code=400, detail=f"Invalid value for {key}") from error
+    if "min" in schema and value < schema["min"]:
+        raise HTTPException(status_code=400, detail=f"{key} must be at least {schema['min']}")
+    if "max" in schema and value > schema["max"]:
+        raise HTTPException(status_code=400, detail=f"{key} must be at most {schema['max']}")
+    return value

@@ -84,7 +84,7 @@
 
     .tabs {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       border-bottom: 1px solid var(--line);
       background: var(--soft);
     }
@@ -272,6 +272,13 @@
       white-space: nowrap;
     }
 
+    .system-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .system-metric { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+    .system-metric span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .system-metric strong { display: block; margin-top: 8px; overflow-wrap: anywhere; font-size: 17px; }
+    .log-view { max-height: 360px; overflow: auto; margin: 0; padding: 14px; border-radius: 8px; background: #111827; color: #d7e0ef; white-space: pre-wrap; word-break: break-word; font: 12px/1.6 Consolas, monospace; }
+    .setting-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
     .toast {
       position: fixed;
       right: 22px;
@@ -322,6 +329,7 @@
       .content { padding: 16px; }
       .connection { padding: 14px; border-radius: 18px; }
       .classroom-link { grid-template-columns: 1fr; }
+      .system-grid, .setting-list { grid-template-columns: 1fr; }
       .session-card { padding: 20px; border-radius: 22px; }
       .row {
         align-items: stretch;
@@ -350,7 +358,8 @@
 
     <nav class="tabs">
       <button class="tab active" data-tab="control">控制 (Control)</button>
-      <button class="tab" data-tab="settings">配置 (Settings)</button>
+      <button class="tab" data-tab="settings">资源 (Resources)</button>
+      <button class="tab" data-tab="system" data-admin-only>系统 (System)</button>
     </nav>
 
     <main class="content">
@@ -464,6 +473,7 @@
                 <button class="button primary" id="save-source">新增/更新知识库</button>
               </div>
             </div>
+            <div class="list-card" id="source-admin-list" style="margin-top:14px"></div>
 
             <div class="section-title" style="margin-top:20px"><h2>上传资料</h2></div>
             <div class="list-card" style="padding:18px">
@@ -546,6 +556,60 @@
         </section>
       </section>
 
+      <section id="system-view" hidden data-admin-only>
+        <section class="section">
+          <div class="section-title">
+            <h2>运行状态</h2>
+            <div class="actions">
+              <button class="button soft" id="refresh-system" type="button">刷新</button>
+              <button class="button ghost" id="restart-system" type="button">重启服务</button>
+              <button class="button danger" id="shutdown-system" type="button">停止服务</button>
+            </div>
+          </div>
+          <div class="system-grid" id="system-metrics"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>请求统计</h2></div>
+          <div class="system-grid" id="dashboard-metrics"></div>
+          <div class="list-card" id="request-log-list" style="margin-top:14px"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>启动日志</h2></div>
+          <pre class="log-view" id="launcher-log-view">暂无启动日志</pre>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>备份与恢复</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="stack">
+              <div class="actions" style="justify-content:flex-start">
+                <button class="button soft" id="download-backup" type="button">下载完整备份</button>
+              </div>
+              <label>恢复备份 ZIP<input id="restore-backup-file" type="file" accept=".zip,application/zip" /></label>
+              <button class="button danger" id="restore-backup" type="button">恢复并重启</button>
+              <p class="hint">备份包含账号、策略、加密密钥和知识库。加密密钥只能由当前 Windows 用户解密。恢复会重启服务并替换当前数据。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>高级设置</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="setting-list" id="advanced-setting-list"></div>
+            <div class="stack" style="margin-top:16px">
+              <label>平台 API Key<input id="platform-api-key" type="password" placeholder="留空并保存可关闭 /v1/chat/completions" /></label>
+              <div class="actions">
+                <button class="button soft" id="save-platform-key" type="button">保存平台密钥</button>
+                <button class="button primary" id="save-advanced-settings" type="button">保存高级设置</button>
+              </div>
+              <p class="hint">高级设置保存后需要重启服务才会生效。修改端口后，EduGate 会在新地址重新打开教师控制台。</p>
+            </div>
+          </div>
+        </section>
+      </section>
+
       <div class="footer-note">
         <span>● 控制端只给教师/管理员使用。页面通过用户名/密码登录，不再要求手动粘贴管理 token。</span>
         <span>v1.1 · Knowledge Enabled</span>
@@ -578,6 +642,11 @@
       sources: [],
       files: [],
       teachers: [],
+      systemStatus: null,
+      dashboard: null,
+      requestLogs: [],
+      launcherLogs: [],
+      advancedSettings: [],
     };
 
     const el = {
@@ -622,6 +691,7 @@
       teacherRole: document.querySelector("#teacher-role"),
       teacherList: document.querySelector("#teacher-list"),
       teacherForm: document.querySelector("#teacher-form"),
+      sourceAdminList: document.querySelector("#source-admin-list"),
       classroomUrl: document.querySelector("#classroom-url"),
       currentPassword: document.querySelector("#current-password"),
       newPassword: document.querySelector("#new-password"),
@@ -629,6 +699,14 @@
       tabs: document.querySelectorAll(".tab"),
       controlView: document.querySelector("#control-view"),
       settingsView: document.querySelector("#settings-view"),
+      systemView: document.querySelector("#system-view"),
+      systemMetrics: document.querySelector("#system-metrics"),
+      dashboardMetrics: document.querySelector("#dashboard-metrics"),
+      requestLogList: document.querySelector("#request-log-list"),
+      launcherLogView: document.querySelector("#launcher-log-view"),
+      advancedSettingList: document.querySelector("#advanced-setting-list"),
+      platformApiKey: document.querySelector("#platform-api-key"),
+      restoreBackupFile: document.querySelector("#restore-backup-file"),
     };
 
     function api(path) {
@@ -661,6 +739,7 @@
           ? "● 管理员可管理教师账号、模型供应商、全局策略和知识库。"
           : "● 普通老师只能复制自己的 API，并管理以自己用户名开头的知识库。";
       }
+      if (el.systemView) el.systemView.hidden = !admin || state.activeTab !== "system";
     }
 
     async function request(path, options = {}) {
@@ -708,6 +787,7 @@
       });
       el.controlView.hidden = !state.adminToken || state.activeTab !== "control";
       el.settingsView.hidden = !state.adminToken || state.activeTab !== "settings";
+      el.systemView.hidden = !state.adminToken || !isAdmin() || state.activeTab !== "system";
       applyRoleUI();
     }
 
@@ -1019,6 +1099,18 @@
       if (writableSources.some((source) => source.id === activeSource)) {
         el.uploadSource.value = activeSource;
       }
+      el.sourceAdminList.innerHTML = writableSources.map((source) => `
+        <div class="row">
+          <div class="row-main">
+            <p class="row-title">${escapeHtml(source.name)}</p>
+            <div class="row-meta"><span class="badge">${escapeHtml(source.id)}</span><span>${source.file_count} 文件</span><span>${source.chunk_count} chunks</span></div>
+          </div>
+          ${source.id === "general" ? "" : `<button class="button danger" type="button" data-source-delete="${escapeHtml(source.id)}">删除</button>`}
+        </div>
+      `).join("") || `<div class="row"><div class="row-main"><p class="row-title">暂无可管理知识库</p></div></div>`;
+      el.sourceAdminList.querySelectorAll("[data-source-delete]").forEach((button) => {
+        button.addEventListener("click", () => deleteSource(button.dataset.sourceDelete));
+      });
     }
 
     function renderModels(activeModel) {
@@ -1071,6 +1163,7 @@
           <div class="actions">
             <button class="button soft" type="button" data-catalog-test="${escapeHtml(model.id)}">测试</button>
             <button class="button ghost" type="button" data-catalog-edit="${escapeHtml(model.id)}">填入表单</button>
+            <button class="button danger" type="button" data-catalog-delete="${escapeHtml(model.id)}">删除</button>
           </div>
         </div>
       `).join("");
@@ -1079,6 +1172,9 @@
       });
       el.catalogList.querySelectorAll("[data-catalog-test]").forEach((button) => {
         button.addEventListener("click", () => testModel(button.dataset.catalogTest));
+      });
+      el.catalogList.querySelectorAll("[data-catalog-delete]").forEach((button) => {
+        button.addEventListener("click", () => deleteModel(button.dataset.catalogDelete));
       });
     }
 
@@ -1143,6 +1239,92 @@
       el.teacherList.querySelectorAll("[data-teacher-delete]").forEach((button) => {
         button.addEventListener("click", () => deleteTeacher(button.dataset.teacherDelete));
       });
+    }
+
+    const settingLabels = {
+      EDUGATE_BACKEND_PORT: "服务端口",
+      SESSION_TTL_SECONDS: "登录会话有效期（秒）",
+      CLASSROOM_RATE_LIMIT_PER_MINUTE: "学生每分钟请求上限",
+      LOGIN_RATE_LIMIT_PER_5_MINUTES: "5 分钟登录尝试上限",
+      MODEL_MAX_CONCURRENCY: "模型最大并发",
+      REQUEST_TIMEOUT_SECONDS: "普通请求超时（秒）",
+      STREAM_READ_TIMEOUT_SECONDS: "流式读取超时（秒）",
+      STREAM_HEARTBEAT_SECONDS: "流式心跳间隔（秒）",
+      MAX_UPLOAD_BYTES: "单文件上传上限（字节）",
+      MAX_PDF_PAGES: "PDF 最大页数",
+      LOG_MAX_RECORDS: "请求日志保留条数",
+      LOG_MESSAGE_PREVIEW: "记录消息预览",
+      PYTHON_RUNNER_ENABLED: "启用 Python 运行器",
+      PYTHON_RUNNER_TIMEOUT_SECONDS: "Python 超时（秒）",
+      PYTHON_RUNNER_MAX_CODE_CHARS: "Python 代码字符上限",
+      PYTHON_RUNNER_MEMORY_MB: "Python 内存上限（MB）",
+      CORS_ORIGINS: "额外允许的跨域来源",
+    };
+
+    function formatBytes(value) {
+      const bytes = Number(value || 0);
+      if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+      if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+      return `${Math.ceil(bytes / 1024)} KB`;
+    }
+
+    function formatDuration(seconds) {
+      const value = Number(seconds || 0);
+      const hours = Math.floor(value / 3600);
+      const minutes = Math.floor((value % 3600) / 60);
+      return hours ? `${hours} 小时 ${minutes} 分` : `${minutes} 分钟`;
+    }
+
+    function renderSystem() {
+      const system = state.systemStatus || {};
+      const metrics = [
+        ["服务状态", system.status === "running" ? "运行中" : "未知"],
+        ["运行时间", formatDuration(system.uptime_seconds)],
+        ["局域网地址", system.lan_base_url || "-"],
+        ["数据目录", system.data_dir || "-"],
+        ["剩余磁盘", formatBytes(system.disk_free_bytes)],
+        ["进程 ID", system.pid || "-"],
+        ["监督模式", system.supervised ? "可重启/停止" : "仅查看"],
+        ["Python 运行器", system.python_runner_enabled ? "开启" : "关闭"],
+      ];
+      el.systemMetrics.innerHTML = metrics.map(([label, value]) => `
+        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      `).join("");
+
+      const dashboard = state.dashboard || {};
+      const dashboardItems = [
+        ["总请求", dashboard.total_requests ?? 0],
+        ["总 Tokens", dashboard.total_tokens ?? 0],
+        ["平均延迟", `${dashboard.average_latency_ms ?? 0} ms`],
+        ["错误数", dashboard.error_count ?? 0],
+      ];
+      el.dashboardMetrics.innerHTML = dashboardItems.map(([label, value]) => `
+        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      `).join("");
+
+      el.requestLogList.innerHTML = state.requestLogs.length ? state.requestLogs.map((log) => `
+        <div class="row">
+          <div class="row-main">
+            <p class="row-title">${escapeHtml(log.route)} · ${escapeHtml(log.model || "-")}</p>
+            <div class="row-meta"><span>${escapeHtml(log.created_at)}</span><span>${log.status_code}</span><span>${log.latency_ms} ms</span><span>${log.total_tokens ?? 0} tokens</span></div>
+            ${log.error ? `<div class="row-meta" style="color:var(--red)">${escapeHtml(log.error)}</div>` : ""}
+          </div>
+        </div>
+      `).join("") : `<div class="row"><div class="row-main"><p class="row-title">暂无请求日志</p></div></div>`;
+      el.launcherLogView.textContent = state.launcherLogs.join("\n") || "暂无启动日志";
+
+      el.advancedSettingList.innerHTML = state.advancedSettings.map((setting) => {
+        const label = settingLabels[setting.key] || setting.key;
+        if (setting.type === "bool") {
+          return `<label><span><input type="checkbox" data-setting-key="${escapeHtml(setting.key)}" style="width:auto;min-height:auto" ${setting.value ? "checked" : ""} /> ${escapeHtml(label)}</span></label>`;
+        }
+        const inputType = setting.type === "str" ? "text" : "number";
+        const step = setting.type === "float" ? "any" : "1";
+        return `<label>${escapeHtml(label)}<input type="${inputType}" step="${step}" data-setting-key="${escapeHtml(setting.key)}" value="${escapeHtml(setting.value)}" /></label>`;
+      }).join("");
+      el.platformApiKey.placeholder = system.platform_api_key_set
+        ? "平台密钥已设置；输入新值可替换，留空保存会关闭"
+        : "留空并保存可保持关闭";
     }
 
     async function login() {
@@ -1248,12 +1430,14 @@
         ["教师信息", loadTeachers],
         ["课堂链接", loadClassroom],
       ];
+      if (isAdmin()) steps.push(["系统状态", loadSystem]);
       const failures = [];
       for (const [label, loader] of steps) {
         try {
           await loader();
         } catch (error) {
           failures.push(`${label}: ${error.message}`);
+          if (!state.adminToken) break;
         }
       }
       if (failures.length) {
@@ -1298,6 +1482,22 @@
     async function loadTeachers() {
       state.teachers = await request("/admin/teachers");
       renderTeachers();
+    }
+
+    async function loadSystem() {
+      const [system, dashboard, logs, launcherLogs, advanced] = await Promise.all([
+        request("/admin/system/status"),
+        request("/admin/dashboard"),
+        request("/admin/logs?limit=50"),
+        request("/admin/system/launcher-logs?limit=300"),
+        request("/admin/system/settings"),
+      ]);
+      state.systemStatus = system;
+      state.dashboard = dashboard;
+      state.requestLogs = logs || [];
+      state.launcherLogs = launcherLogs.lines || [];
+      state.advancedSettings = advanced.settings || [];
+      renderSystem();
     }
 
     async function loadClassroom() {
@@ -1385,6 +1585,18 @@
       }
     }
 
+    async function deleteSource(sourceId) {
+      if (!confirm(`确定删除知识库 ${sourceId} 及其中所有文件吗？`)) return;
+      try {
+        await request(`/knowledge/sources/${encodeURIComponent(sourceId)}`, { method: "DELETE" });
+        localStorage.removeItem(mountedSourceStorageKey());
+        await Promise.all([loadSources(), loadFiles()]);
+        showToast("知识库已删除。");
+      } catch (error) {
+        showToast(`删除知识库失败：${error.message}`, true);
+      }
+    }
+
     function fillModelForm(modelId) {
       const model = state.catalog.find((item) => item.id === modelId);
       if (!model) return;
@@ -1440,6 +1652,17 @@
         showToast(`连接成功：供应商返回 ${result.model_count ?? 0} 个模型。`);
       } catch (error) {
         showToast(`连接测试失败：${error.message}`, true);
+      }
+    }
+
+    async function deleteModel(modelId) {
+      if (!confirm(`确定删除模型 ${modelId} 及其加密 API Key 吗？`)) return;
+      try {
+        await request(`/model-catalog/${encodeURIComponent(modelId)}`, { method: "DELETE" });
+        await loadModels();
+        showToast("模型已删除。");
+      } catch (error) {
+        showToast(`删除模型失败：${error.message}`, true);
       }
     }
 
@@ -1556,6 +1779,88 @@
       }
     }
 
+    async function requestSystemAction(action) {
+      const label = action === "restart" ? "重启" : "停止";
+      const warning = action === "restart"
+        ? "确定重启 EduGate 吗？页面会短暂断开并自动在正确地址重新打开。"
+        : "确定停止 EduGate 吗？停止后网页将不可用，再次使用需要双击启动脚本。";
+      if (!confirm(warning)) return;
+      try {
+        await request("/admin/system/action", { method: "POST", body: JSON.stringify({ action }) });
+        showToast(`已安排${label}服务。`);
+        setStatus(`${label}中`);
+      } catch (error) {
+        showToast(`${label}失败：${error.message}`, true);
+      }
+    }
+
+    async function saveAdvancedSettings() {
+      const values = {};
+      el.advancedSettingList.querySelectorAll("[data-setting-key]").forEach((input) => {
+        values[input.dataset.settingKey] = input.type === "checkbox" ? input.checked : input.value;
+      });
+      try {
+        await request("/admin/system/settings", {
+          method: "PUT",
+          body: JSON.stringify({ values }),
+        });
+        showToast("高级设置已保存，请重启服务使其生效。 ");
+      } catch (error) {
+        showToast(`保存高级设置失败：${error.message}`, true);
+      }
+    }
+
+    async function savePlatformKey() {
+      try {
+        const result = await request("/admin/system/platform-key", {
+          method: "PUT",
+          body: JSON.stringify({ api_key: el.platformApiKey.value.trim() || null }),
+        });
+        el.platformApiKey.value = "";
+        state.systemStatus.platform_api_key_set = result.platform_api_key_set;
+        renderSystem();
+        showToast(result.platform_api_key_set ? "平台 API Key 已加密保存。" : "平台兼容接口已关闭。");
+      } catch (error) {
+        showToast(`保存平台密钥失败：${error.message}`, true);
+      }
+    }
+
+    async function downloadBackup() {
+      try {
+        const response = await fetch(api("/admin/system/backup"), { headers: authHeaders(false) });
+        if (!response.ok) throw new Error(await response.text());
+        const blob = await response.blob();
+        const disposition = response.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename="?([^";]+)"?/i);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = match?.[1] || "EduGate-backup.zip";
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast("完整备份已生成。 ");
+      } catch (error) {
+        showToast(`下载备份失败：${error.message}`, true);
+      }
+    }
+
+    async function restoreBackup() {
+      const file = el.restoreBackupFile.files[0];
+      if (!file) {
+        showToast("请选择 EduGate 备份 ZIP。", true);
+        return;
+      }
+      if (!confirm("恢复会替换当前账号、策略和知识库并立即重启。确定继续吗？")) return;
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        await request("/admin/system/restore", { method: "POST", body: form, json: false });
+        setStatus("恢复并重启中");
+        showToast("备份已验证，EduGate 正在恢复并重启。 ");
+      } catch (error) {
+        showToast(`恢复失败：${error.message}`, true);
+      }
+    }
+
     el.loginButton.addEventListener("click", login);
     el.logoutButton.addEventListener("click", async () => {
       try {
@@ -1581,6 +1886,13 @@
       if (el.classroomUrl.value) copyText(el.classroomUrl.value, "学生课堂链接");
     });
     document.querySelector("#rotate-classroom-token").addEventListener("click", rotateClassroomToken);
+    document.querySelector("#refresh-system").addEventListener("click", loadSystem);
+    document.querySelector("#restart-system").addEventListener("click", () => requestSystemAction("restart"));
+    document.querySelector("#shutdown-system").addEventListener("click", () => requestSystemAction("shutdown"));
+    document.querySelector("#save-advanced-settings").addEventListener("click", saveAdvancedSettings);
+    document.querySelector("#save-platform-key").addEventListener("click", savePlatformKey);
+    document.querySelector("#download-backup").addEventListener("click", downloadBackup);
+    document.querySelector("#restore-backup").addEventListener("click", restoreBackup);
     document.querySelector("#upload-file").addEventListener("click", uploadFile);
     document.querySelector("#save-teacher").addEventListener("click", saveTeacher);
     el.aiEnabledSwitch.addEventListener("click", toggleAIEnabled);
@@ -1596,6 +1908,7 @@
         el.tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === name));
         el.controlView.hidden = name !== "control";
         el.settingsView.hidden = name !== "settings";
+        el.systemView.hidden = name !== "system";
       });
     });
 
