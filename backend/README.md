@@ -22,9 +22,10 @@ POST /auth/login
 POST /auth/logout
 POST /auth/password
 
-POST /chat                   X-Class-Token
-POST /chat/stream            X-Class-Token
-POST /run_python             X-Class-Token，默认关闭
+POST /classroom/join         X-Class-Token，换取匿名学生会话
+POST /chat                   X-Student-Token；兼容 X-Class-Token
+POST /chat/stream            X-Student-Token；兼容 X-Class-Token
+POST /run_python             X-Student-Token；默认关闭
 POST /v1/chat/completions    Bearer PLATFORM_API_KEY，未配置时关闭
 
 GET  /config                 X-Admin-Token
@@ -51,6 +52,8 @@ EDUGATE_BACKEND_PORT=8000
 EDUGATE_DATA_DIR=
 ADMIN_USERNAME=admin
 SESSION_TTL_SECONDS=28800
+STUDENT_SESSION_TTL_SECONDS=28800
+STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES=256
 CLASSROOM_RATE_LIMIT_PER_MINUTE=30
 LOGIN_RATE_LIMIT_PER_5_MINUTES=10
 MODEL_MAX_CONCURRENCY=4
@@ -68,6 +71,7 @@ LOG_MAX_RECORDS=5000
 PYTHON_RUNNER_ENABLED=false
 PYTHON_RUNNER_TIMEOUT_SECONDS=3
 PYTHON_RUNNER_MEMORY_MB=128
+PYTHON_RUNNER_EXECUTABLE=
 CORS_ORIGINS=
 ```
 
@@ -78,7 +82,7 @@ CORS_ORIGINS=
 从仓库根目录运行：
 
 ```powershell
-python -m pytest -q
+python -m pytest -q --basetemp=.pytest-tmp
 ```
 
-测试覆盖首次初始化、会话过期与失效、课堂令牌、限流边界、DPAPI 密钥、供应商探测、上传/PDF 限制、Python 运行器和流式心跳。
+测试覆盖首次初始化、匿名学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、DPAPI 密钥、供应商探测、备份恢复、上传/PDF 限制、Python 子进程隔离、无窗口分发契约和流式心跳。

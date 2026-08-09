@@ -20,6 +20,8 @@ from app.config import settings
 SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
     "EDUGATE_BACKEND_PORT": {"type": "int", "default": 8000, "min": 1024, "max": 65535, "restart": True},
     "SESSION_TTL_SECONDS": {"type": "int", "default": 28800, "min": 900, "max": 604800, "restart": True},
+    "STUDENT_SESSION_TTL_SECONDS": {"type": "int", "default": 28800, "min": 900, "max": 604800, "restart": True},
+    "STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES": {"type": "int", "default": 256, "min": 1, "max": 10000, "restart": True},
     "CLASSROOM_RATE_LIMIT_PER_MINUTE": {"type": "int", "default": 30, "min": 1, "max": 1000, "restart": True},
     "LOGIN_RATE_LIMIT_PER_5_MINUTES": {"type": "int", "default": 10, "min": 1, "max": 100, "restart": True},
     "MODEL_MAX_CONCURRENCY": {"type": "int", "default": 4, "min": 1, "max": 32, "restart": True},
@@ -34,6 +36,7 @@ SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
     "PYTHON_RUNNER_TIMEOUT_SECONDS": {"type": "float", "default": 3, "min": 0.2, "max": 30, "restart": True},
     "PYTHON_RUNNER_MAX_CODE_CHARS": {"type": "int", "default": 6000, "min": 100, "max": 50000, "restart": True},
     "PYTHON_RUNNER_MEMORY_MB": {"type": "int", "default": 128, "min": 32, "max": 1024, "restart": True},
+    "PYTHON_RUNNER_EXECUTABLE": {"type": "str", "default": "", "restart": True},
     "CORS_ORIGINS": {"type": "str", "default": "", "restart": True},
 }
 

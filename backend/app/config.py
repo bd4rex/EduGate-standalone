@@ -53,7 +53,7 @@ class Settings:
     litellm_base_url: str = _normalize_base_url(os.getenv("LITELLM_BASE_URL", "http://127.0.0.1:4000"))
     litellm_api_prefix: str = _normalize_prefix(os.getenv("LITELLM_API_PREFIX", "/v1"))
     litellm_api_key: str | None = os.getenv("LITELLM_API_KEY") or None
-    default_model: str = os.getenv("DEFAULT_MODEL", "deepseek-chat")
+    default_model: str = os.getenv("DEFAULT_MODEL", "deepseek-v4-flash")
     upstream_provider: str = os.getenv("UPSTREAM_PROVIDER", "OpenAI Compatible")
     upstream_base_url: str = _normalize_base_url(os.getenv("UPSTREAM_BASE_URL", ""))
     upstream_api_key: str | None = os.getenv("UPSTREAM_API_KEY") or None
@@ -66,6 +66,8 @@ class Settings:
     platform_api_key: str | None = os.getenv("PLATFORM_API_KEY") or None
     admin_username: str = os.getenv("ADMIN_USERNAME", "admin")
     session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "28800"))
+    student_session_ttl_seconds: int = int(os.getenv("STUDENT_SESSION_TTL_SECONDS", "28800"))
+    student_join_rate_limit: int = int(os.getenv("STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES", "256"))
     classroom_rate_limit: int = int(os.getenv("CLASSROOM_RATE_LIMIT_PER_MINUTE", "30"))
     login_rate_limit: int = int(os.getenv("LOGIN_RATE_LIMIT_PER_5_MINUTES", "10"))
     model_max_concurrency: int = int(os.getenv("MODEL_MAX_CONCURRENCY", "4"))
@@ -79,6 +81,7 @@ class Settings:
     python_runner_timeout_seconds: float = float(os.getenv("PYTHON_RUNNER_TIMEOUT_SECONDS", "3"))
     python_runner_max_code_chars: int = int(os.getenv("PYTHON_RUNNER_MAX_CODE_CHARS", "6000"))
     python_runner_memory_mb: int = int(os.getenv("PYTHON_RUNNER_MEMORY_MB", "128"))
+    python_runner_executable: str | None = os.getenv("PYTHON_RUNNER_EXECUTABLE") or None
     max_upload_bytes: int = int(os.getenv("MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
     max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "200"))
     log_message_preview: bool = _as_bool("LOG_MESSAGE_PREVIEW", False)

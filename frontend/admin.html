@@ -522,7 +522,7 @@
           </div>
           <div class="list-card" style="padding:18px">
             <div class="stack">
-              <label>模型 ID<input id="model-id" placeholder="例如 gpt-4o-mini 或 deepseek-chat" /></label>
+              <label>模型 ID<input id="model-id" placeholder="例如 gpt-4o-mini 或 deepseek-v4-flash" /></label>
               <label>显示名称<input id="model-name" placeholder="例如 GPT-4o Mini" /></label>
               <label>供应商名称<input id="model-provider" placeholder="例如 OpenAI / DeepSeek / 校内模型服务" /></label>
               <label>模型来源
@@ -1244,6 +1244,8 @@
     const settingLabels = {
       EDUGATE_BACKEND_PORT: "服务端口",
       SESSION_TTL_SECONDS: "登录会话有效期（秒）",
+      STUDENT_SESSION_TTL_SECONDS: "学生会话有效期（秒）",
+      STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES: "同一来源 5 分钟加入课堂上限",
       CLASSROOM_RATE_LIMIT_PER_MINUTE: "学生每分钟请求上限",
       LOGIN_RATE_LIMIT_PER_5_MINUTES: "5 分钟登录尝试上限",
       MODEL_MAX_CONCURRENCY: "模型最大并发",
@@ -1258,6 +1260,7 @@
       PYTHON_RUNNER_TIMEOUT_SECONDS: "Python 超时（秒）",
       PYTHON_RUNNER_MAX_CODE_CHARS: "Python 代码字符上限",
       PYTHON_RUNNER_MEMORY_MB: "Python 内存上限（MB）",
+      PYTHON_RUNNER_EXECUTABLE: "独立 Python 解释器路径",
       CORS_ORIGINS: "额外允许的跨域来源",
     };
 

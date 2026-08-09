@@ -134,7 +134,7 @@ def open_when_ready(health_url: str, admin_url: str) -> None:
 def healthcheck(url: str) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=0.8) as response:
-            return response.status == 200
+            return response.status == 200 and response.headers.get("X-EduGate-App") == "EduGate"
     except (urllib.error.URLError, TimeoutError, OSError):
         return False
 

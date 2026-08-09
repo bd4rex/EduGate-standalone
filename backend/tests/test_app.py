@@ -14,11 +14,13 @@ from app.main import (
     app,
     business_db,
     classroom_access,
+    knowledge_store,
     rate_limiter,
     runtime_config,
     secret_store,
     sessions,
     settings,
+    student_sessions,
 )
 
 
@@ -42,6 +44,7 @@ def isolate_runtime_config() -> Iterator[None]:
     snapshot = runtime_config.data.model_copy(deep=True)
     with rate_limiter._lock:
         rate_limiter._events.clear()
+    student_sessions.revoke_all()
     yield
     runtime_config.data = snapshot
     runtime_config.save()
@@ -59,7 +62,9 @@ def classroom_headers() -> dict[str, str]:
 
 
 def test_health_and_frontend_are_served_from_one_origin(client: TestClient) -> None:
-    assert client.get("/health").json() == {"status": "ok"}
+    health = client.get("/health")
+    assert health.json() == {"status": "ok"}
+    assert health.headers["X-EduGate-App"] == "EduGate"
     page = client.get("/student.html")
     assert page.status_code == 200
     assert "window.location.origin" in page.text
@@ -112,6 +117,49 @@ def test_logout_revokes_session(client: TestClient, admin_headers: dict[str, str
 def test_chat_requires_current_classroom_token(client: TestClient) -> None:
     response = client.post("/chat", json={"messages": [{"role": "user", "content": "hello"}]})
     assert response.status_code == 401
+
+
+def test_student_sessions_rate_limit_students_independently_behind_one_ip(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
+        return {"payload": payload}
+
+    monkeypatch.setattr("app.main.client.chat_completion", fake_chat_completion)
+    monkeypatch.setattr(settings, "classroom_rate_limit", 1)
+    class_headers = {"X-Class-Token": classroom_access.token()}
+    first = client.post("/classroom/join", headers=class_headers).json()["student_token"]
+    second = client.post("/classroom/join", headers=class_headers).json()["student_token"]
+    payload = {"messages": [{"role": "user", "content": "hello"}]}
+
+    first_response = client.post("/chat", headers={"X-Student-Token": first}, json=payload)
+    second_response = client.post("/chat", headers={"X-Student-Token": second}, json=payload)
+    repeated = client.post("/chat", headers={"X-Student-Token": first}, json=payload)
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert repeated.status_code == 429
+
+
+def test_classroom_rotation_invalidates_student_session(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    joined = client.post(
+        "/classroom/join",
+        headers={"X-Class-Token": classroom_access.token()},
+    ).json()
+    client.post("/admin/classroom/rotate", headers=admin_headers)
+
+    response = client.post(
+        "/chat",
+        headers={"X-Student-Token": joined["student_token"]},
+        json={"messages": [{"role": "user", "content": "hello"}]},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired student token"
 
 
 def test_rotating_classroom_token_invalidates_old_link(
@@ -361,6 +409,28 @@ def test_python_runner_blocks_imports(
     assert "Import" in response.json()["stderr"]
 
 
+def test_python_runner_unavailable_is_reported_as_503(
+    client: TestClient,
+    classroom_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.python_runner import PythonRunnerUnavailable
+
+    def unavailable(*args, **kwargs):
+        raise PythonRunnerUnavailable("separate interpreter required")
+
+    monkeypatch.setattr(settings, "python_runner_enabled", True)
+    monkeypatch.setattr("app.main.run_python_code", unavailable)
+    response = client.post(
+        "/run_python",
+        headers=classroom_headers,
+        json={"code": "print(1)"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "separate interpreter required"
+
+
 def test_stream_heartbeat_is_emitted(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
 
@@ -388,6 +458,73 @@ def test_runtime_config_is_valid_json_after_updates() -> None:
     )
     data = json.loads(Path(settings.runtime_config_path).read_text(encoding="utf-8"))
     assert data["teacher_policies"][settings.admin_username]["system_prompt"] == "atomic write test"
+
+
+def test_model_concurrency_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    import asyncio
+    import app.main as main_module
+
+    active = 0
+    peak = 0
+
+    async def fake_chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        await asyncio.sleep(0.02)
+        active -= 1
+        return payload
+
+    monkeypatch.setattr(main_module.client, "chat_completion", fake_chat_completion)
+
+    async def exercise() -> None:
+        monkeypatch.setattr(main_module, "model_semaphore", asyncio.Semaphore(2))
+        await asyncio.gather(
+            *(main_module._chat_completion({"model": "concurrency-test"}) for _ in range(64))
+        )
+
+    asyncio.run(exercise())
+    assert peak == 2
+
+
+def test_referenced_model_and_knowledge_source_cannot_be_deleted(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    model_id = "referenced-model"
+    source_id = "referenced-source"
+    runtime_config.upsert_model(
+        ModelCatalogItem(
+            id=model_id,
+            name="Referenced Model",
+            provider="Test",
+            source="openai_compatible",
+            base_url="https://provider.example/v1",
+            api_key="test-secret",
+        )
+    )
+    source_response = client.post(
+        "/knowledge/sources",
+        headers=admin_headers,
+        json={"id": source_id, "name": "Referenced Source"},
+    )
+    assert source_response.status_code == 200
+    runtime_config.update_teacher_policy(
+        settings.admin_username,
+        ScenarioUpdateRequest(model=model_id, knowledge_source_id=source_id),
+    )
+
+    model_response = client.delete(f"/model-catalog/{model_id}", headers=admin_headers)
+    source_response = client.delete(f"/knowledge/sources/{source_id}", headers=admin_headers)
+
+    assert model_response.status_code == 409
+    assert source_response.status_code == 409
+    runtime_config.update_teacher_policy(
+        settings.admin_username,
+        ScenarioUpdateRequest(model=settings.default_model, knowledge_source_id=None),
+    )
+    runtime_config.delete_model(model_id)
+    knowledge_store.delete_source(source_id)
 
 
 def test_system_management_requires_supervised_launcher(

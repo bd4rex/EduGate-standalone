@@ -401,6 +401,7 @@
     );
     const classToken = urlParams.get("class_token") || "";
     const teacherId = urlParams.get("teacher_id") || urlParams.get("teacher") || "";
+    let studentToken = "";
 
     const history = [];
 
@@ -418,6 +419,19 @@
       return bubble;
     }
 
+    async function ensureStudentSession() {
+      if (studentToken) return;
+      const joinUrl = new URL("/classroom/join", apiUrlEl.value.trim()).toString();
+      const response = await fetch(joinUrl, {
+        method: "POST",
+        headers: { "X-Class-Token": classToken }
+      });
+      if (!response.ok) throw new Error(`加入课堂失败，HTTP ${response.status}`);
+      const data = await response.json();
+      studentToken = data.student_token || "";
+      if (!studentToken) throw new Error("教师端没有返回学生会话令牌");
+    }
+
     async function sendMessage(content) {
       const text = content.trim();
       if (!text) return;
@@ -430,11 +444,12 @@
       setStatus("", "正在请求 AI 中台……");
 
       try {
+        await ensureStudentSession();
         const response = await fetch(apiUrlEl.value.trim(), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Class-Token": classToken
+            "X-Student-Token": studentToken
           },
           body: JSON.stringify({
             ...(teacherId

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Iterable, Literal
 
 import httpx
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -25,9 +25,9 @@ from app.db import BusinessDB, latest_user_preview, now_ms
 from app.knowledge import KnowledgeFile, KnowledgeSource, KnowledgeStore
 from app.litellm_client import LiteLLMClient
 from app.observability import LangfuseClient
-from app.python_runner import run_python_code
+from app.python_runner import PythonRunnerUnavailable, run_python_code
 from app.secret_store import SecretStore
-from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter
+from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter, StudentSessionStore
 from app.system_control import system_control
 from app.system_ops import (
     create_backup,
@@ -53,6 +53,7 @@ secret_store = SecretStore(settings.secret_store_path)
 langfuse = LangfuseClient()
 sessions = SessionStore(settings.session_ttl_seconds)
 classroom_access = ClassroomAccess()
+student_sessions = StudentSessionStore(settings.student_session_ttl_seconds)
 rate_limiter = SlidingWindowRateLimiter()
 model_semaphore = asyncio.Semaphore(settings.model_max_concurrency)
 python_semaphore = asyncio.Semaphore(1)
@@ -149,6 +150,7 @@ API_DOCS = {
     ("GET", "/models"): ("List upstream models", "Read models from the configured upstream provider when available."),
     ("POST", "/chat"): ("Student chat", "Without teacher_id this uses open default; with teacher_id it uses that teacher policy."),
     ("POST", "/chat/stream"): ("Student stream chat", "POST + text/event-stream chat API."),
+    ("POST", "/classroom/join"): ("Join classroom", "Exchange the classroom link token for an anonymous student session."),
     ("POST", "/v1/chat/completions"): ("OpenAI compatible chat", "Third-party client entry."),
     ("GET", "/config"): ("Get teacher config", "Read current login teacher policy."),
     ("POST", "/config/model"): ("Switch teacher model", "Switch current login teacher model."),
@@ -428,6 +430,12 @@ class PythonRunResponse(BaseModel):
     duration_ms: int
 
 
+class StudentJoinResponse(BaseModel):
+    student_token: str
+    student_session_id: str
+    expires_in: int
+
+
 class SystemActionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -680,14 +688,27 @@ def require_platform_key(authorization: str | None = Header(default=None)) -> No
 def require_classroom_access(
     request: Request,
     x_class_token: str | None = Header(default=None, alias="X-Class-Token"),
+    x_student_token: str | None = Header(default=None, alias="X-Student-Token"),
     class_token: str | None = None,
-) -> None:
+) -> str | None:
+    if x_student_token:
+        record = student_sessions.resolve(
+            x_student_token,
+            classroom_token=classroom_access.token(),
+        )
+        if record is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired student token")
+        key = f"chat:student:{record.student_id}"
+        if not rate_limiter.allow(key, limit=settings.classroom_rate_limit, window_seconds=60):
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom request limit exceeded")
+        return record.student_id
     token = x_class_token or class_token
     if not classroom_access.matches(token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid classroom token")
-    key = f"chat:{_client_ip(request)}"
+    key = f"chat:ip:{_client_ip(request)}"
     if not rate_limiter.allow(key, limit=settings.classroom_rate_limit, window_seconds=60):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom request limit exceeded")
+    return None
 
 
 def _resolve_chat_context(request: ChatRequest) -> tuple[str, TeachingScenario, dict[str, Any] | None]:
@@ -1218,7 +1239,8 @@ async def _stream_with_completion_log(
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
+async def health(response: Response) -> dict[str, str]:
+    response.headers["X-EduGate-App"] = "EduGate"
     return {"status": "ok"}
 
 
@@ -1592,6 +1614,35 @@ async def admin_system_action(request: SystemActionRequest) -> dict[str, Any]:
     return {"status": "scheduled", "action": request.action}
 
 
+@app.post("/classroom/join", response_model=StudentJoinResponse)
+async def classroom_join(
+    request: Request,
+    x_class_token: str | None = Header(default=None, alias="X-Class-Token"),
+    x_student_token: str | None = Header(default=None, alias="X-Student-Token"),
+    class_token: str | None = None,
+) -> StudentJoinResponse:
+    supplied_class_token = x_class_token or class_token
+    current_classroom_token = classroom_access.validated_token(supplied_class_token)
+    if current_classroom_token is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid classroom token")
+    join_key = f"classroom-join:{_client_ip(request)}"
+    if not rate_limiter.allow(
+        join_key,
+        limit=settings.student_join_rate_limit,
+        window_seconds=300,
+    ):
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom join limit exceeded")
+    token, record = student_sessions.issue(
+        current_classroom_token,
+        existing_token=x_student_token,
+    )
+    return StudentJoinResponse(
+        student_token=token,
+        student_session_id=record.student_id,
+        expires_in=max(0, int(record.expires_at - time.time())),
+    )
+
+
 @app.get("/admin/classroom", dependencies=[Depends(require_admin)])
 async def admin_classroom_access() -> dict[str, str]:
     return {"class_token": classroom_access.token()}
@@ -1599,7 +1650,9 @@ async def admin_classroom_access() -> dict[str, str]:
 
 @app.post("/admin/classroom/rotate", dependencies=[Depends(require_admin)])
 async def rotate_classroom_access() -> dict[str, str]:
-    return {"class_token": classroom_access.rotate()}
+    token = classroom_access.rotate()
+    student_sessions.revoke_all()
+    return {"class_token": token}
 
 
 @app.get("/admin/teachers")
@@ -1926,13 +1979,17 @@ async def delete_knowledge_file(
 async def run_python(request: PythonRunRequest) -> PythonRunResponse:
     if not settings.python_runner_enabled:
         raise HTTPException(status_code=503, detail="Python runner is disabled")
-    async with python_semaphore:
-        result = await run_in_threadpool(
-            run_python_code,
-            request.code,
-            timeout_seconds=settings.python_runner_timeout_seconds,
-            memory_limit_mb=settings.python_runner_memory_mb,
-        )
+    try:
+        async with python_semaphore:
+            result = await run_in_threadpool(
+                run_python_code,
+                request.code,
+                timeout_seconds=settings.python_runner_timeout_seconds,
+                memory_limit_mb=settings.python_runner_memory_mb,
+                executable=settings.python_runner_executable,
+            )
+    except PythonRunnerUnavailable as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
     return PythonRunResponse(
         stdout=result.stdout,
         stderr=result.stderr,

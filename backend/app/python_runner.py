@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 if os.name == "nt":
     import ctypes
@@ -114,21 +115,27 @@ class PythonRunResult:
     duration_ms: int
 
 
+class PythonRunnerUnavailable(RuntimeError):
+    pass
+
+
 def run_python_code(
     code: str,
     *,
     timeout_seconds: float = 3.0,
     output_limit: int = 12000,
     memory_limit_mb: int = 128,
+    executable: str | None = None,
 ) -> PythonRunResult:
     start = time.perf_counter()
+    python_executable = resolve_python_executable(executable)
     with tempfile.TemporaryDirectory(prefix="edugate-python-") as workdir:
         job_handle = None
         try:
-            env = os.environ.copy()
-            env.update({"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"})
+            env = _runner_environment(python_executable)
+            creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
             process = subprocess.Popen(
-                [sys.executable, "-I", "-S", "-c", RUNNER_SCRIPT],
+                [python_executable, "-I", "-S", "-c", RUNNER_SCRIPT],
                 text=True,
                 cwd=workdir,
                 env=env,
@@ -136,6 +143,7 @@ def run_python_code(
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 preexec_fn=_unix_memory_limit(memory_limit_mb),
+                creationflags=creationflags,
             )
             if os.name == "nt":
                 job_handle = _assign_windows_job(process, memory_limit_mb)
@@ -166,6 +174,57 @@ def run_python_code(
         finally:
             if job_handle is not None:
                 ctypes.windll.kernel32.CloseHandle(job_handle)
+
+
+def resolve_python_executable(configured: str | None = None) -> str:
+    candidates: list[Path] = []
+    if configured:
+        candidates.append(Path(configured).expanduser())
+    data_dir = Path(
+        os.getenv("EDUGATE_DATA_DIR")
+        or Path(os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or Path.home()) / "EduGate"
+    )
+    if os.name == "nt":
+        candidates.append(data_dir / "venv" / "Scripts" / "python.exe")
+    else:
+        candidates.append(data_dir / "venv" / "bin" / "python")
+    if not getattr(sys, "frozen", False):
+        candidates.append(Path(sys.executable))
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate.resolve())
+    raise PythonRunnerUnavailable(
+        "Python runner executable was not found. Configure PYTHON_RUNNER_EXECUTABLE "
+        "or run the standalone dependency installer first."
+    )
+
+
+def _runner_environment(python_executable: str | None = None) -> dict[str, str]:
+    allowed = (
+        "COMSPEC",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "LOCALAPPDATA",
+        "SYSTEMROOT",
+        "TEMP",
+        "TMP",
+        "USERPROFILE",
+        "WINDIR",
+    )
+    env = {key: os.environ[key] for key in allowed if os.environ.get(key)}
+    path_entries = []
+    if python_executable:
+        path_entries.append(str(Path(python_executable).resolve().parent))
+    if not getattr(sys, "frozen", False):
+        path_entries.append(str(Path(sys.base_prefix).resolve()))
+    system_root = env.get("SYSTEMROOT") or env.get("WINDIR")
+    if system_root:
+        path_entries.extend([str(Path(system_root) / "System32"), system_root])
+    if path_entries:
+        env["PATH"] = os.pathsep.join(dict.fromkeys(path_entries))
+    env.update({"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1"})
+    return env
 
 
 def _unix_memory_limit(memory_limit_mb: int):

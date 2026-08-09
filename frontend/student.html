@@ -556,6 +556,7 @@
     }
 
     const BACKEND_BASE_URL = defaultBackendBaseUrl();
+    const JOIN_URL = `${BACKEND_BASE_URL}/classroom/join`;
     const STREAM_URL = `${BACKEND_BASE_URL}/chat/stream`;
     const FALLBACK_URL = `${BACKEND_BASE_URL}/chat`;
     const SCENARIO_ID = "default";
@@ -566,13 +567,72 @@
     const CLASS_TOKEN = URL_PARAMS.get("class_token") || "";
 
     const MAX_MESSAGES_TO_SEND = 10;
-
-    let messages = [
+    const MAX_MESSAGES_TO_STORE = 50;
+    const DEFAULT_MESSAGES = [
       {
         role: "assistant",
         content: "你好，我是课堂中的 AI 学习助手。你可以问我：什么是 IP 地址、如何判断一个地址是否像 IPv4 地址、什么是公网和私网等问题。"
       }
     ];
+
+    function tokenFingerprint(value) {
+      let hash = 2166136261;
+      for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+      }
+      return (hash >>> 0).toString(16).padStart(8, "0");
+    }
+
+    const CLASSROOM_STORAGE_SCOPE = [
+      TEACHER_ID || SCENARIO_ID,
+      tokenFingerprint(CLASS_TOKEN)
+    ].join(":");
+    const HISTORY_STORAGE_KEY = `edugate-student-history:v1:${CLASSROOM_STORAGE_SCOPE}`;
+    const SESSION_STORAGE_KEY = `edugate-student-session:v1:${CLASSROOM_STORAGE_SCOPE}`;
+
+    function loadStoredMessages() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
+        if (!Array.isArray(stored)) return [...DEFAULT_MESSAGES];
+        const valid = stored.filter((message) =>
+          message &&
+          (message.role === "user" || message.role === "assistant") &&
+          typeof message.content === "string" &&
+          message.content.trim()
+        );
+        return valid.length ? valid.slice(-MAX_MESSAGES_TO_STORE) : [...DEFAULT_MESSAGES];
+      } catch {
+        return [...DEFAULT_MESSAGES];
+      }
+    }
+
+    function saveStoredMessages() {
+      try {
+        localStorage.setItem(
+          HISTORY_STORAGE_KEY,
+          JSON.stringify(messages.slice(-MAX_MESSAGES_TO_STORE))
+        );
+      } catch {}
+    }
+
+    function loadStoredStudentToken() {
+      try {
+        return sessionStorage.getItem(SESSION_STORAGE_KEY) || "";
+      } catch {
+        return "";
+      }
+    }
+
+    function saveStoredStudentToken(value) {
+      try {
+        sessionStorage.setItem(SESSION_STORAGE_KEY, value);
+      } catch {}
+    }
+
+    let messages = loadStoredMessages();
+    let studentToken = loadStoredStudentToken();
+    let classroomReady = false;
     let activeController = null;
 
     const chatHistoryEl = document.getElementById("chatHistory");
@@ -642,11 +702,11 @@
     }
 
     function setGeneratingState(isGenerating) {
-      sendBtnEl.disabled = isGenerating;
-      sendThinkingBtnEl.disabled = isGenerating;
+      sendBtnEl.disabled = isGenerating || !classroomReady;
+      sendThinkingBtnEl.disabled = isGenerating || !classroomReady;
       clearBtnEl.disabled = isGenerating;
       stopBtnEl.disabled = !isGenerating;
-      chatInputEl.disabled = isGenerating;
+      chatInputEl.disabled = isGenerating || !classroomReady;
       sendBtnEl.textContent = isGenerating ? "AI 正在生成……" : "发送问题";
     }
 
@@ -689,7 +749,23 @@
     }
 
     function classroomHeaders(extra = {}) {
+      if (studentToken) return { ...extra, "X-Student-Token": studentToken };
       return { ...extra, "X-Class-Token": CLASS_TOKEN };
+    }
+
+    async function joinClassroom() {
+      const headers = { "X-Class-Token": CLASS_TOKEN };
+      if (studentToken) headers["X-Student-Token"] = studentToken;
+      const response = await fetch(JOIN_URL, { method: "POST", headers });
+      if (!response.ok) {
+        throw new Error("加入课堂失败，HTTP 状态码：" + response.status);
+      }
+      const data = await response.json();
+      studentToken = data.student_token || "";
+      if (!studentToken) throw new Error("教师端没有返回学生会话令牌。");
+      saveStoredStudentToken(studentToken);
+      classroomReady = true;
+      setGeneratingState(false);
     }
 
     async function sendWithFallback(signal) {
@@ -729,6 +805,7 @@
         role: "user",
         content: cleanText
       });
+      saveStoredMessages();
 
       renderMessages();
       chatInputEl.value = "";
@@ -837,6 +914,7 @@
           role: "assistant",
           content: fullAssistantReply
         });
+        saveStoredMessages();
 
         renderMessages();
         setStatus("回答完成，已加入本地对话历史。", "ok");
@@ -859,6 +937,7 @@
             role: "assistant",
             content: fallbackText
           });
+          saveStoredMessages();
 
           renderMessages();
           setStatus("流式失败，已自动使用普通接口完成回复。", "warn");
@@ -921,12 +1000,8 @@
     });
 
     clearBtnEl.addEventListener("click", () => {
-      messages = [
-        {
-          role: "assistant",
-          content: "你好，我是课堂中的 AI 学习助手。你可以继续提问关于 IP 地址、IPv4、公网与私网、内网地址等问题。"
-        }
-      ];
+      messages = [...DEFAULT_MESSAGES];
+      saveStoredMessages();
       renderMessages();
       setStatus("本地对话历史已清空。", "ok");
     });
@@ -941,10 +1016,20 @@
     });
 
     renderMessages();
+    setGeneratingState(false);
     if (!CLASS_TOKEN) {
       setStatus("课堂链接缺少访问令牌，请重新打开老师提供的完整链接。", "error");
-    } else if (TEACHER_ID) {
-      setStatus("已使用教师策略：" + TEACHER_ID, "ok");
+    } else {
+      setStatus("正在加入课堂……", "warn");
+      joinClassroom()
+        .then(() => {
+          setStatus(TEACHER_ID ? "已使用教师策略：" + TEACHER_ID : "已加入课堂。", "ok");
+        })
+        .catch((error) => {
+          classroomReady = false;
+          setGeneratingState(false);
+          setStatus(error.message + "，请重新打开老师提供的课堂链接。", "error");
+        });
     }
   </script>
 </body>

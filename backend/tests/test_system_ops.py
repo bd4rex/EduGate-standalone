@@ -7,7 +7,8 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
-from fastapi import UploadFile
+import pytest
+from fastapi import HTTPException, UploadFile
 
 from app.config import settings
 from app.system_control import SystemControl
@@ -84,3 +85,38 @@ def test_restore_upload_is_validated_and_staged(tmp_path: Path, monkeypatch) -> 
 
     assert target == tmp_path / "pending-restore.zip"
     assert target.exists()
+
+
+@pytest.mark.parametrize(
+    ("entry", "detail"),
+    [
+        ("../outside.txt", "Unsafe backup path"),
+        ("unexpected.exe", "Unsupported backup entry"),
+    ],
+)
+def test_restore_rejects_unsafe_or_unknown_entries(
+    tmp_path: Path,
+    monkeypatch,
+    entry: str,
+    detail: str,
+) -> None:
+    monkeypatch.setattr(settings, "data_dir", str(tmp_path))
+    content = BytesIO()
+    with zipfile.ZipFile(content, "w") as archive:
+        archive.writestr(entry, "not allowed")
+    upload = UploadFile(filename="backup.zip", file=BytesIO(content.getvalue()))
+
+    with pytest.raises(HTTPException, match=detail):
+        asyncio.run(save_restore_archive(upload))
+
+    assert not (tmp_path / "pending-restore.zip").exists()
+    assert not (tmp_path / "pending-restore.tmp").exists()
+
+
+def test_advanced_settings_reject_unknown_and_out_of_range_values(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "data_dir", str(tmp_path))
+
+    with pytest.raises(HTTPException, match="Unsupported settings"):
+        update_advanced_settings({"UNRECOGNIZED": "value"})
+    with pytest.raises(HTTPException, match="MODEL_MAX_CONCURRENCY must be at most 32"):
+        update_advanced_settings({"MODEL_MAX_CONCURRENCY": 64})
