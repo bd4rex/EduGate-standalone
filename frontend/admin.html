@@ -99,10 +99,11 @@
 
     .tabs {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       border-bottom: 1px solid var(--line);
       background: var(--soft);
     }
+    .tabs.teacher-tabs { grid-template-columns: repeat(3, 1fr); }
 
     .tab {
       min-height: 76px;
@@ -294,6 +295,37 @@
     .log-view { max-height: 360px; overflow: auto; margin: 0; padding: 14px; border-radius: 8px; background: #111827; color: #d7e0ef; white-space: pre-wrap; word-break: break-word; font: 12px/1.6 Consolas, monospace; }
     .setting-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 
+    .record-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.6fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .record-session-list { max-height: 680px; overflow: auto; border: 1px solid var(--line); }
+    .record-session-button {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 16px;
+      text-align: left;
+      color: var(--ink);
+      background: #fff;
+      cursor: pointer;
+    }
+    .record-session-button:last-child { border-bottom: 0; }
+    .record-session-button.active { background: var(--violet-soft); }
+    .record-session-button strong { display: block; margin-bottom: 7px; font-size: 16px; }
+    .record-session-button span { display: block; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .record-detail { min-width: 0; }
+    .record-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 14px; }
+    .record-toolbar label { min-width: 170px; flex: 1 1 170px; }
+    .record-turn { padding: 16px 0; border-top: 1px solid var(--line); }
+    .record-turn:first-child { border-top: 0; }
+    .record-turn-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .record-content { margin: 6px 0 0; padding: 12px; overflow: auto; border-left: 3px solid var(--line-dark); background: var(--soft); white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.65 "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .record-output { border-left-color: var(--green); }
+    .recording-note { padding: 14px 16px; border: 1px solid var(--line); background: var(--soft); color: var(--muted); line-height: 1.6; }
+
     .toast {
       position: fixed;
       right: 22px;
@@ -345,6 +377,8 @@
       .connection { padding: 14px; border-radius: 18px; }
       .classroom-link { grid-template-columns: 1fr; }
       .system-grid, .setting-list { grid-template-columns: 1fr; }
+      .record-layout { grid-template-columns: 1fr; }
+      .record-session-list { max-height: 320px; }
       .session-card { padding: 20px; border-radius: 22px; }
       .row {
         align-items: stretch;
@@ -374,8 +408,9 @@
       <div class="status-pill" id="system-status"><span class="dot"></span><span>未连接</span></div>
     </header>
 
-    <nav class="tabs">
+    <nav class="tabs" id="main-tabs">
       <button class="tab active" data-tab="control">控制 (Control)</button>
+      <button class="tab" data-tab="records">记录 (Records)</button>
       <button class="tab" data-tab="settings">资源 (Resources)</button>
       <button class="tab" data-tab="system" data-admin-only>系统 (System)</button>
     </nav>
@@ -476,6 +511,48 @@
               <p class="hint">保存后，学生端通过教师 ID 调用时会使用这套模型、提示词、知识库和参数。</p>
             </div>
           </aside>
+        </div>
+      </section>
+
+      <section id="records-view" hidden>
+        <section class="section">
+          <div class="section-title">
+            <div>
+              <h2>课堂记录</h2>
+              <p class="hint" style="margin:6px 0 0">按课堂查看匿名学生的 AI 对话和 Python 运行记录。</p>
+            </div>
+            <button class="button soft" id="refresh-records" type="button">刷新记录</button>
+          </div>
+          <div class="recording-note" id="recording-note">正在读取本机记录设置。</div>
+          <div class="system-grid" id="record-summary" style="margin-top:14px"></div>
+        </section>
+
+        <div class="record-layout">
+          <section class="section">
+            <div class="section-title"><h2>课堂列表</h2></div>
+            <div class="record-session-list" id="record-session-list"></div>
+          </section>
+
+          <section class="section record-detail">
+            <div class="section-title">
+              <div>
+                <h2 id="record-detail-title">选择一节课堂</h2>
+                <p class="hint" id="record-detail-meta" style="margin:6px 0 0">选择左侧课堂后查看记录。</p>
+              </div>
+              <button class="button danger" id="delete-record" type="button" hidden>删除本节记录</button>
+            </div>
+            <div class="record-toolbar">
+              <label>记录类型
+                <select id="record-kind-filter">
+                  <option value="all">全部</option>
+                  <option value="chat">AI 对话</option>
+                  <option value="python">Python 运行</option>
+                </select>
+              </label>
+              <label>匿名学生<select id="record-student-filter"><option value="all">全部学生</option></select></label>
+            </div>
+            <div id="record-turn-list"></div>
+          </section>
         </div>
       </section>
 
@@ -630,7 +707,7 @@
 
       <div class="footer-note">
         <span>● 控制端只给教师/管理员使用。页面通过用户名/密码登录，不再要求手动粘贴管理 token。</span>
-        <span>v1.1 · Knowledge Enabled</span>
+        <span>v1.4 · Classroom Records</span>
       </div>
     </main>
   </div>
@@ -665,6 +742,9 @@
       requestLogs: [],
       launcherLogs: [],
       advancedSettings: [],
+      classroomRecords: [],
+      classroomRecordConfig: { recording_enabled: false, retention_days: 30 },
+      selectedClassroomRecord: null,
     };
 
     const el = {
@@ -715,7 +795,9 @@
       newPassword: document.querySelector("#new-password"),
       toast: document.querySelector("#toast"),
       tabs: document.querySelectorAll(".tab"),
+      tabNav: document.querySelector("#main-tabs"),
       controlView: document.querySelector("#control-view"),
+      recordsView: document.querySelector("#records-view"),
       settingsView: document.querySelector("#settings-view"),
       systemView: document.querySelector("#system-view"),
       systemMetrics: document.querySelector("#system-metrics"),
@@ -725,6 +807,15 @@
       advancedSettingList: document.querySelector("#advanced-setting-list"),
       platformApiKey: document.querySelector("#platform-api-key"),
       restoreBackupFile: document.querySelector("#restore-backup-file"),
+      recordingNote: document.querySelector("#recording-note"),
+      recordSummary: document.querySelector("#record-summary"),
+      recordSessionList: document.querySelector("#record-session-list"),
+      recordDetailTitle: document.querySelector("#record-detail-title"),
+      recordDetailMeta: document.querySelector("#record-detail-meta"),
+      recordTurnList: document.querySelector("#record-turn-list"),
+      recordKindFilter: document.querySelector("#record-kind-filter"),
+      recordStudentFilter: document.querySelector("#record-student-filter"),
+      deleteRecord: document.querySelector("#delete-record"),
     };
 
     function api(path) {
@@ -743,6 +834,7 @@
 
     function applyRoleUI() {
       const admin = isAdmin();
+      el.tabNav.classList.toggle("teacher-tabs", !admin);
       document.querySelectorAll("[data-admin-only]").forEach((node) => {
         node.hidden = !admin;
       });
@@ -758,6 +850,7 @@
           : "● 普通老师只能复制自己的 API，并管理以自己用户名开头的知识库。";
       }
       if (el.systemView) el.systemView.hidden = !admin || state.activeTab !== "system";
+      if (el.recordsView) el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
     }
 
     async function request(path, options = {}) {
@@ -787,6 +880,8 @@
       state.currentTeacher = null;
       state.sessionExpiresAt = 0;
       state.classroomToken = "";
+      state.classroomRecords = [];
+      state.selectedClassroomRecord = null;
       sessionStorage.removeItem("edugate-admin-session");
       localStorage.removeItem("edugate-admin-session");
       el.classroomUrl.value = "";
@@ -804,6 +899,7 @@
         tab.classList.toggle("active", tab.dataset.tab === state.activeTab);
       });
       el.controlView.hidden = !state.adminToken || state.activeTab !== "control";
+      el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
       el.settingsView.hidden = !state.adminToken || state.activeTab !== "settings";
       el.systemView.hidden = !state.adminToken || !isAdmin() || state.activeTab !== "system";
       applyRoleUI();
@@ -1279,6 +1375,13 @@
       PYTHON_RUNNER_MAX_CODE_CHARS: "Python 代码字符上限",
       PYTHON_RUNNER_MEMORY_MB: "Python 内存上限（MB）",
       PYTHON_RUNNER_EXECUTABLE: "独立 Python 解释器路径",
+      PYTHON_RUNNER_MAX_CONCURRENCY: "Python 并发槽位（建议 4–8）",
+      PYTHON_RUNNER_MAX_QUEUE: "Python 最大排队任务数",
+      PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS: "Python 排队超时（秒）",
+      CLASSROOM_RECORDING_ENABLED: "保存课堂内容记录到本机",
+      CLASSROOM_RECORD_RETENTION_DAYS: "课堂记录保留天数",
+      CLASSROOM_RECORD_MAX_RECORDS: "课堂互动记录总上限",
+      CLASSROOM_RECORD_MAX_CONTENT_CHARS: "单条课堂内容字符上限",
       CORS_ORIGINS: "额外允许的跨域来源",
     };
 
@@ -1298,6 +1401,7 @@
 
     function renderSystem() {
       const system = state.systemStatus || {};
+      const pool = system.python_runner_pool || {};
       const metrics = [
         ["服务状态", system.status === "running" ? "运行中" : "未知"],
         ["运行时间", formatDuration(system.uptime_seconds)],
@@ -1307,6 +1411,8 @@
         ["进程 ID", system.pid || "-"],
         ["监督模式", system.supervised ? "可重启/停止" : "仅查看"],
         ["Python 运行器", system.python_runner_enabled ? "开启" : "关闭"],
+        ["Python 执行槽位", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
+        ["Python 排队任务", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
       ];
       el.systemMetrics.innerHTML = metrics.map(([label, value]) => `
         <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
@@ -1346,6 +1452,102 @@
       el.platformApiKey.placeholder = system.platform_api_key_set
         ? "平台密钥已设置；输入新值可替换，留空保存会关闭"
         : "留空并保存可保持关闭";
+    }
+
+    function formatRecordTime(value) {
+      if (!value) return "-";
+      const normalized = /Z$|[+-]\d\d:\d\d$/.test(value) ? value : `${value.replace(" ", "T")}Z`;
+      const date = new Date(normalized);
+      return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function renderClassroomRecords() {
+      const records = state.classroomRecords || [];
+      const totals = records.reduce((result, record) => {
+        result.students += Number(record.student_count || 0);
+        result.turns += Number(record.turn_count || 0);
+        result.python += Number(record.python_count || 0);
+        return result;
+      }, { students: 0, turns: 0, python: 0 });
+      el.recordingNote.textContent = state.classroomRecordConfig.recording_enabled
+        ? `课堂内容仅保存在这台教师电脑中；学生使用匿名编号，不记录 IP。记录默认保留 ${state.classroomRecordConfig.retention_days} 天。`
+        : "课堂内容记录当前已关闭。管理员可在“系统 -> 高级设置”中启用。";
+      const summary = [
+        ["课堂数", records.length],
+        ["匿名学生合计", totals.students],
+        ["互动记录", totals.turns],
+        ["Python 运行", totals.python],
+      ];
+      el.recordSummary.innerHTML = summary.map(([label, value]) => `
+        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      `).join("");
+
+      const selectedId = state.selectedClassroomRecord?.session?.id || "";
+      el.recordSessionList.innerHTML = records.length ? records.map((record) => `
+        <button class="record-session-button ${record.id === selectedId ? "active" : ""}" type="button" data-record-id="${escapeHtml(record.id)}">
+          <strong>${escapeHtml(record.title)}</strong>
+          <span>${escapeHtml(record.teacher_display_name || record.teacher_username)} · ${escapeHtml(formatRecordTime(record.started_at))}</span>
+          <span>${record.student_count} 名匿名学生 · ${record.chat_count} 次对话 · ${record.python_count} 次 Python</span>
+        </button>
+      `).join("") : `<div class="row"><div class="row-main"><p class="row-title">暂无课堂记录</p><div class="row-meta">学生开始对话或运行 Python 后会出现在这里。</div></div></div>`;
+      el.recordSessionList.querySelectorAll("[data-record-id]").forEach((button) => {
+        button.addEventListener("click", () => loadClassroomRecord(button.dataset.recordId));
+      });
+    }
+
+    function renderClassroomRecordDetail() {
+      const detail = state.selectedClassroomRecord;
+      if (!detail?.session) {
+        el.recordDetailTitle.textContent = "选择一节课堂";
+        el.recordDetailMeta.textContent = "选择左侧课堂后查看记录。";
+        el.recordStudentFilter.innerHTML = `<option value="all">全部学生</option>`;
+        el.recordTurnList.innerHTML = `<div class="recording-note">暂无可显示的课堂内容。</div>`;
+        el.deleteRecord.hidden = true;
+        return;
+      }
+
+      const session = detail.session;
+      const turns = detail.turns || [];
+      const studentIds = [...new Set(turns.map((turn) => turn.student_session_id))];
+      const studentLabels = new Map(studentIds.map((id, index) => [id, `学生 ${String(index + 1).padStart(2, "0")}`]));
+      const previousStudent = el.recordStudentFilter.value;
+      el.recordStudentFilter.innerHTML = [
+        `<option value="all">全部学生</option>`,
+        ...studentIds.map((id) => `<option value="${escapeHtml(id)}">${escapeHtml(studentLabels.get(id))}</option>`),
+      ].join("");
+      if (studentIds.includes(previousStudent)) el.recordStudentFilter.value = previousStudent;
+
+      el.recordDetailTitle.textContent = session.title;
+      el.recordDetailMeta.textContent = `${session.teacher_display_name || session.teacher_username} · ${formatRecordTime(session.started_at)} 至 ${session.ended_at ? formatRecordTime(session.ended_at) : "当前课堂"}`;
+      el.deleteRecord.hidden = false;
+      const kind = el.recordKindFilter.value;
+      const student = el.recordStudentFilter.value;
+      const visibleTurns = turns.filter((turn) => (
+        (kind === "all" || turn.kind === kind)
+        && (student === "all" || turn.student_session_id === student)
+      ));
+      el.recordTurnList.innerHTML = visibleTurns.length ? visibleTurns.map((turn) => {
+        const typeLabel = turn.kind === "python" ? "Python" : "AI 对话";
+        const inputLabel = turn.kind === "python" ? "提交代码" : "学生问题";
+        const outputLabel = turn.kind === "python" ? "运行输出" : "AI 回答";
+        const statusClass = Number(turn.status_code) >= 400 || turn.timed_out ? "" : "green";
+        const timing = turn.kind === "python" && turn.queue_wait_ms != null
+          ? `${turn.latency_ms} ms（排队 ${turn.queue_wait_ms} ms）`
+          : `${turn.latency_ms} ms`;
+        return `
+          <article class="record-turn">
+            <div class="record-turn-heading">
+              <span class="badge">${escapeHtml(studentLabels.get(turn.student_session_id) || "匿名学生")}</span>
+              <span class="badge ${statusClass}">${escapeHtml(typeLabel)}</span>
+              <span class="subtle">${escapeHtml(formatRecordTime(turn.created_at))} · ${escapeHtml(timing)}</span>
+            </div>
+            <strong>${escapeHtml(inputLabel)}</strong>
+            <pre class="record-content">${escapeHtml(turn.input_content || "（空）")}</pre>
+            <strong>${escapeHtml(outputLabel)}</strong>
+            <pre class="record-content record-output">${escapeHtml(turn.output_content || "（无输出）")}</pre>
+          </article>
+        `;
+      }).join("") : `<div class="recording-note">当前筛选条件下没有记录。</div>`;
     }
 
     async function login() {
@@ -1449,6 +1651,7 @@
         ["知识库", loadSources],
         ["知识库文件", loadFiles],
         ["教师信息", loadTeachers],
+        ["课堂记录", loadClassroomRecords],
         ["课堂链接", loadClassroom],
       ];
       if (isAdmin()) steps.push(["系统状态", loadSystem]);
@@ -1519,6 +1722,46 @@
       state.launcherLogs = launcherLogs.lines || [];
       state.advancedSettings = advanced.settings || [];
       renderSystem();
+    }
+
+    async function loadClassroomRecords(preferredId = "") {
+      const data = await request("/teacher/classroom-records?limit=100");
+      state.classroomRecordConfig = {
+        recording_enabled: Boolean(data.recording_enabled),
+        retention_days: Number(data.retention_days || 30),
+      };
+      state.classroomRecords = data.records || [];
+      const currentId = preferredId || state.selectedClassroomRecord?.session?.id || "";
+      const targetId = state.classroomRecords.some((record) => record.id === currentId)
+        ? currentId
+        : state.classroomRecords[0]?.id || "";
+      renderClassroomRecords();
+      if (targetId) {
+        await loadClassroomRecord(targetId);
+      } else {
+        state.selectedClassroomRecord = null;
+        renderClassroomRecordDetail();
+      }
+    }
+
+    async function loadClassroomRecord(recordId) {
+      state.selectedClassroomRecord = await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}?limit=2000`);
+      renderClassroomRecords();
+      renderClassroomRecordDetail();
+    }
+
+    async function deleteSelectedClassroomRecord() {
+      const recordId = state.selectedClassroomRecord?.session?.id;
+      if (!recordId) return;
+      if (!confirm("确定永久删除这节课堂的全部本地记录吗？此操作无法撤销。")) return;
+      try {
+        await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}`, { method: "DELETE" });
+        state.selectedClassroomRecord = null;
+        await loadClassroomRecords();
+        showToast("课堂记录已删除。");
+      } catch (error) {
+        showToast(`删除课堂记录失败：${error.message}`, true);
+      }
     }
 
     async function loadClassroom() {
@@ -1898,6 +2141,7 @@
     document.querySelector("#reload-files").addEventListener("click", loadFiles);
     document.querySelector("#reload-catalog").addEventListener("click", loadModels);
     document.querySelector("#reload-teachers").addEventListener("click", loadTeachers);
+    document.querySelector("#refresh-records").addEventListener("click", () => loadClassroomRecords());
     document.querySelector("#save-scenario").addEventListener("click", saveScenario);
     document.querySelector("#save-source").addEventListener("click", saveSource);
     document.querySelector("#save-model").addEventListener("click", saveModel);
@@ -1914,6 +2158,9 @@
     document.querySelector("#save-platform-key").addEventListener("click", savePlatformKey);
     document.querySelector("#download-backup").addEventListener("click", downloadBackup);
     document.querySelector("#restore-backup").addEventListener("click", restoreBackup);
+    el.deleteRecord.addEventListener("click", deleteSelectedClassroomRecord);
+    el.recordKindFilter.addEventListener("change", renderClassroomRecordDetail);
+    el.recordStudentFilter.addEventListener("change", renderClassroomRecordDetail);
     document.querySelector("#upload-file").addEventListener("click", uploadFile);
     document.querySelector("#save-teacher").addEventListener("click", saveTeacher);
     el.aiEnabledSwitch.addEventListener("click", toggleAIEnabled);
@@ -1928,8 +2175,10 @@
         state.activeTab = name;
         el.tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === name));
         el.controlView.hidden = name !== "control";
+        el.recordsView.hidden = name !== "records";
         el.settingsView.hidden = name !== "settings";
-        el.systemView.hidden = name !== "system";
+        el.systemView.hidden = name !== "system" || !isAdmin();
+        if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
       });
     });
 

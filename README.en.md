@@ -35,6 +35,8 @@ The student page stores the latest 50 messages for the current classroom in that
 
 The **System** view provides runtime status and logs, full backup download, restore, advanced configuration, restart, and shutdown. After shutdown, the web page becomes unavailable until the launcher is started again.
 
+The **Records** view groups anonymous student AI conversations and Python results by classroom. Teachers can filter by anonymous student or activity type and permanently delete a class record. Content remains on the teacher computer, never stores student IP addresses, and is retained for 30 days by default. Administrators can disable recording or change the retention period in advanced settings.
+
 API keys are encrypted with Windows DPAPI for the current Windows user. Runtime data is stored in:
 
 ```text
@@ -56,9 +58,9 @@ Keep this directory when uninstalling if classroom data should be retained. `sec
 - Teacher sessions expire after eight hours by default. Signing out, changing a password, or disabling an account revokes the session immediately.
 - `/chat`, `/chat/stream`, and `/run_python` require an anonymous student session or the backward-compatible temporary classroom token and are rate-limited per student.
 - `/v1/chat/completions` is disabled until `PLATFORM_API_KEY` is configured.
-- The Python runner is disabled by default. When enabled, it applies syntax, timeout, memory, and concurrency limits and launches subprocesses with a minimal environment that excludes model credentials.
+- The Python runner is disabled by default. When enabled, it uses four isolated execution slots and a bounded queue of 64 tasks. `/run_python/stream` emits queued, running, output, and completion events in real time. Every task still applies syntax, timeout, and memory limits and uses a minimal environment that excludes model credentials.
 - Uploads are limited to 25 MB and PDF documents to 200 pages by default.
-- Request logs omit teacher and student message bodies by default and retain at most 5,000 entries.
+- Technical request logs omit teacher and student message bodies by default and retain at most 5,000 entries. The separate local classroom-content history is retained for 30 days by default and can be disabled or deleted per class.
 
 ## Development and verification
 
@@ -74,4 +76,4 @@ desktop\build_windows.bat
 
 The output is written to `dist\EduGate-Standalone`. The build script also uses the Tsinghua PyPI mirror.
 
-See the [English regression test matrix](docs/Regression-Test-Matrix.md) for automated and release checks. The detailed [installation guide](docs/安装与故障排查.txt), [user guide](docs/使用手册.txt), and [acceptance checklist](docs/单机版验收清单.txt) are currently maintained in Chinese. Return to the [Chinese project documentation](README.md) at any time.
+See the [execution and classroom records design](docs/Execution-and-Classroom-Records-Design.md) and [English regression test matrix](docs/Regression-Test-Matrix.md). The detailed [installation guide](docs/安装与故障排查.txt), [user guide](docs/使用手册.txt), and [acceptance checklist](docs/单机版验收清单.txt) are currently maintained in Chinese. Return to the [Chinese project documentation](README.md) at any time.

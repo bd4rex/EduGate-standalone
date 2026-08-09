@@ -37,6 +37,13 @@ SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
     "PYTHON_RUNNER_MAX_CODE_CHARS": {"type": "int", "default": 6000, "min": 100, "max": 50000, "restart": True},
     "PYTHON_RUNNER_MEMORY_MB": {"type": "int", "default": 128, "min": 32, "max": 1024, "restart": True},
     "PYTHON_RUNNER_EXECUTABLE": {"type": "str", "default": "", "restart": True},
+    "PYTHON_RUNNER_MAX_CONCURRENCY": {"type": "int", "default": 4, "min": 1, "max": 8, "restart": True},
+    "PYTHON_RUNNER_MAX_QUEUE": {"type": "int", "default": 64, "min": 1, "max": 256, "restart": True},
+    "PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS": {"type": "float", "default": 30, "min": 1, "max": 300, "restart": True},
+    "CLASSROOM_RECORDING_ENABLED": {"type": "bool", "default": True, "restart": True},
+    "CLASSROOM_RECORD_RETENTION_DAYS": {"type": "int", "default": 30, "min": 1, "max": 365, "restart": True},
+    "CLASSROOM_RECORD_MAX_RECORDS": {"type": "int", "default": 20000, "min": 100, "max": 200000, "restart": True},
+    "CLASSROOM_RECORD_MAX_CONTENT_CHARS": {"type": "int", "default": 12000, "min": 500, "max": 50000, "restart": True},
     "CORS_ORIGINS": {"type": "str", "default": "", "restart": True},
 }
 

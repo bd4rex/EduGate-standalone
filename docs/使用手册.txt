@@ -66,8 +66,12 @@ API Key 不会回显，也不会写入 runtime_config.json。它由当前 Window
 
 八、Python 课堂演示
 
-/run_python 默认关闭。确有需要时，可在“系统 -> 高级设置”启用 Python 运行器并重启。即使启用，它也只适合短小基础语法演示，禁止 import/open/eval 等操作，并有时间、内存和并发限制，不能视为完整在线判题沙箱。
+/run_python 默认关闭。确有需要时，可在“系统 -> 高级设置”启用 Python 运行器并重启。默认有 4 个独立执行槽位和 64 个排队位置；同一学生只能有一个排队或运行任务。/run_python/stream 会实时返回 queued、running、stdout/stderr、done 事件。
+
+即使启用，它也只适合短小基础语法演示，禁止 import/open/eval 等操作，并有时间、内存和并发限制，不能视为完整在线判题沙箱。8 核教师电脑可将 PYTHON_RUNNER_MAX_CONCURRENCY 调整到 4–8；不要通过无限增加槽位绕过 CPU 和内存边界。
 
 九、隐私与日志
 
-默认不记录师生消息正文，只记录路由、模型、耗时、token 数量和错误。日志最多保留 5000 条。只有明确设置 LOG_MESSAGE_PREVIEW=true 时才会保存短消息预览。
+“记录”页会按课堂保存匿名学生的 AI 问答和 Python 运行内容，默认只保存在教师电脑 30 天，不保存学生 IP。教师只能查看自己的记录，管理员可以查看全部记录；可按课堂删除，也可在高级设置中关闭 CLASSROOM_RECORDING_ENABLED。
+
+技术请求日志与课堂记录相互独立。请求日志默认不保存师生消息正文，只记录路由、模型、耗时、token 数量和错误，最多保留 5000 条；只有明确设置 LOG_MESSAGE_PREVIEW=true 时才会保存短消息预览。

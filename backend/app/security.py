@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import secrets
 import threading
 import time
@@ -135,14 +136,31 @@ class ClassroomAccess:
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._token = secrets.token_urlsafe(24)
+        self._classroom_id = secrets.token_urlsafe(12)
+        self._identity_secret = secrets.token_bytes(32)
 
     def token(self) -> str:
         with self._lock:
             return self._token
 
+    def classroom_id(self) -> str:
+        with self._lock:
+            return self._classroom_id
+
+    def legacy_student_id(self, client_identity: str) -> str:
+        with self._lock:
+            digest = hashlib.blake2b(
+                client_identity.encode("utf-8"),
+                key=self._identity_secret,
+                digest_size=10,
+            ).hexdigest()
+        return f"legacy-{digest}"
+
     def rotate(self) -> str:
         with self._lock:
             self._token = secrets.token_urlsafe(24)
+            self._classroom_id = secrets.token_urlsafe(12)
+            self._identity_secret = secrets.token_bytes(32)
             return self._token
 
     def matches(self, candidate: str | None) -> bool:

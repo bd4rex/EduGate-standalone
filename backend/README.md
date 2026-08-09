@@ -26,12 +26,16 @@ POST /classroom/join         X-Class-Token，换取匿名学生会话
 POST /chat                   X-Student-Token；兼容 X-Class-Token
 POST /chat/stream            X-Student-Token；兼容 X-Class-Token
 POST /run_python             X-Student-Token；默认关闭
+POST /run_python/stream      X-Student-Token；排队状态与输出 SSE
 POST /v1/chat/completions    Bearer PLATFORM_API_KEY，未配置时关闭
 
 GET  /config                 X-Admin-Token
 PUT  /config/scenarios/{id}  X-Admin-Token
 GET  /admin/classroom        X-Admin-Token
 POST /admin/classroom/rotate X-Admin-Token
+GET  /teacher/classroom-records       X-Admin-Token，教师仅可看自己的记录
+GET  /teacher/classroom-records/{id}  X-Admin-Token
+DELETE /teacher/classroom-records/{id} X-Admin-Token
 POST /admin/models           管理员
 POST /admin/providers/{id}/test 管理员
 GET  /admin/system/status      管理员
@@ -72,6 +76,13 @@ PYTHON_RUNNER_ENABLED=false
 PYTHON_RUNNER_TIMEOUT_SECONDS=3
 PYTHON_RUNNER_MEMORY_MB=128
 PYTHON_RUNNER_EXECUTABLE=
+PYTHON_RUNNER_MAX_CONCURRENCY=4
+PYTHON_RUNNER_MAX_QUEUE=64
+PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS=30
+CLASSROOM_RECORDING_ENABLED=true
+CLASSROOM_RECORD_RETENTION_DAYS=30
+CLASSROOM_RECORD_MAX_RECORDS=20000
+CLASSROOM_RECORD_MAX_CONTENT_CHARS=12000
 CORS_ORIGINS=
 ```
 
@@ -85,4 +96,4 @@ CORS_ORIGINS=
 python -m pytest -q --basetemp=.pytest-tmp
 ```
 
-测试覆盖首次初始化、匿名学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、DPAPI 密钥、供应商探测、备份恢复、上传/PDF 限制、Python 子进程隔离、无窗口分发契约和流式心跳。
+测试覆盖首次初始化、匿名学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、课堂记录权限与保留策略、DPAPI 密钥、供应商探测、备份恢复、上传/PDF 限制、Python 多槽位任务池、实时输出、子进程隔离、无窗口分发契约和流式心跳。

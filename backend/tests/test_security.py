@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.security import SessionStore, SlidingWindowRateLimiter, StudentSessionStore
+from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter, StudentSessionStore
 
 
 def test_session_expires_and_can_be_revoked(monkeypatch) -> None:
@@ -52,3 +52,13 @@ def test_student_session_expires(monkeypatch) -> None:
 
     now = 1_011.0
     assert store.resolve(token, classroom_token="classroom") is None
+
+
+def test_legacy_student_identity_is_private_and_rotates_with_classroom() -> None:
+    access = ClassroomAccess()
+    first = access.legacy_student_id("192.168.1.25")
+
+    assert first == access.legacy_student_id("192.168.1.25")
+    assert "192.168.1.25" not in first
+    access.rotate()
+    assert access.legacy_student_id("192.168.1.25") != first

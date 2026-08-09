@@ -47,13 +47,19 @@ Python 与平台接口
 -----------------
 [ ] 默认 /run_python 返回“disabled”。
 [ ] 启用后仍要求课堂令牌，import 被拒绝，死循环会超时。
+[ ] 4 个默认槽位可并行执行，超过槽位的任务进入有界队列，队列满返回 429。
+[ ] 同一匿名学生不能同时占用多个排队/运行任务。
+[ ] /run_python/stream 在任务结束前返回 queued、running 和 stdout/stderr，最终返回 done。
 [ ] Python 子进程无法继承 UPSTREAM_API_KEY 等模型密钥，且运行时不弹出控制台窗口。
 [ ] 未配置 PLATFORM_API_KEY 时 /v1/chat/completions 不可用。
 
 数据与升级
 ----------
 [ ] 数据生成在 %LOCALAPPDATA%\EduGate。
-[ ] 默认日志不含消息正文，并按 LOG_MAX_RECORDS 清理旧记录。
+[ ] 技术请求日志默认不含消息正文，并按 LOG_MAX_RECORDS 清理旧记录。
+[ ] “记录”页按课堂展示 AI/Python 内容，普通教师只能看到自己的课堂，管理员可查看全部。
+[ ] 课堂记录只显示匿名学生编号，不保存学生 IP，并按默认 30 天和总量上限清理。
+[ ] 关闭 CLASSROOM_RECORDING_ENABLED 后不再新增课堂内容，按课堂删除可立即清除详情。
 [ ] 更新或替换程序目录后，账号、知识库和策略仍存在。
 [ ] desktop\build_windows.bat 可生成 dist\EduGate-Standalone。
 [ ] “系统”页可显示监督状态、启动日志和请求统计。

@@ -82,6 +82,13 @@ class Settings:
     python_runner_max_code_chars: int = int(os.getenv("PYTHON_RUNNER_MAX_CODE_CHARS", "6000"))
     python_runner_memory_mb: int = int(os.getenv("PYTHON_RUNNER_MEMORY_MB", "128"))
     python_runner_executable: str | None = os.getenv("PYTHON_RUNNER_EXECUTABLE") or None
+    python_runner_max_concurrency: int = int(os.getenv("PYTHON_RUNNER_MAX_CONCURRENCY", "4"))
+    python_runner_max_queue: int = int(os.getenv("PYTHON_RUNNER_MAX_QUEUE", "64"))
+    python_runner_queue_timeout_seconds: float = float(os.getenv("PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS", "30"))
+    classroom_recording_enabled: bool = _as_bool("CLASSROOM_RECORDING_ENABLED", True)
+    classroom_record_retention_days: int = int(os.getenv("CLASSROOM_RECORD_RETENTION_DAYS", "30"))
+    classroom_record_max_records: int = int(os.getenv("CLASSROOM_RECORD_MAX_RECORDS", "20000"))
+    classroom_record_max_content_chars: int = int(os.getenv("CLASSROOM_RECORD_MAX_CONTENT_CHARS", "12000"))
     max_upload_bytes: int = int(os.getenv("MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
     max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "200"))
     log_message_preview: bool = _as_bool("LOG_MESSAGE_PREVIEW", False)

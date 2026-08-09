@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import codecs
 import ipaddress
 import json
+import logging
 import os
 import secrets
 import threading
@@ -25,7 +27,15 @@ from app.db import BusinessDB, latest_user_preview, now_ms
 from app.knowledge import KnowledgeFile, KnowledgeSource, KnowledgeStore
 from app.litellm_client import LiteLLMClient
 from app.observability import LangfuseClient
-from app.python_runner import PythonRunnerUnavailable, run_python_code
+from app.python_runner import (
+    PythonExecutionPool,
+    PythonJob,
+    PythonQueueFull,
+    PythonQueueTimeout,
+    PythonRunnerUnavailable,
+    PythonStudentBusy,
+    run_python_code,
+)
 from app.secret_store import SecretStore
 from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter, StudentSessionStore
 from app.system_control import system_control
@@ -41,6 +51,7 @@ from app.system_ops import (
 from starlette.background import BackgroundTask
 
 
+logger = logging.getLogger(__name__)
 client = LiteLLMClient()
 knowledge_store = KnowledgeStore(
     settings.knowledge_db_path,
@@ -48,7 +59,13 @@ knowledge_store = KnowledgeStore(
     max_upload_bytes=settings.max_upload_bytes,
     max_pdf_pages=settings.max_pdf_pages,
 )
-business_db = BusinessDB(settings.sqlite_db_path, log_max_records=settings.log_max_records)
+business_db = BusinessDB(
+    settings.sqlite_db_path,
+    log_max_records=settings.log_max_records,
+    classroom_record_retention_days=settings.classroom_record_retention_days,
+    classroom_record_max_records=settings.classroom_record_max_records,
+    classroom_record_max_content_chars=settings.classroom_record_max_content_chars,
+)
 secret_store = SecretStore(settings.secret_store_path)
 langfuse = LangfuseClient()
 sessions = SessionStore(settings.session_ttl_seconds)
@@ -56,7 +73,12 @@ classroom_access = ClassroomAccess()
 student_sessions = StudentSessionStore(settings.student_session_ttl_seconds)
 rate_limiter = SlidingWindowRateLimiter()
 model_semaphore = asyncio.Semaphore(settings.model_max_concurrency)
-python_semaphore = asyncio.Semaphore(1)
+python_pool = PythonExecutionPool(
+    max_workers=settings.python_runner_max_concurrency,
+    max_queue_size=settings.python_runner_max_queue,
+    queue_timeout_seconds=settings.python_runner_queue_timeout_seconds,
+)
+python_record_tasks: set[asyncio.Task[None]] = set()
 
 STRICT_KNOWLEDGE_MISS_MESSAGE = (
     "\u6839\u636e\u6559\u5e08\u5f53\u524d\u6302\u8f7d\u7684\u77e5\u8bc6\u5e93\uff0c\u6211\u6ca1\u6709\u627e\u5230\u4e0e\u8fd9\u4e2a\u95ee\u9898\u76f8\u5173\u7684\u8bfe\u5802\u8d44\u6599\u4f9d\u636e\u3002"
@@ -138,6 +160,7 @@ OPENAPI_TAGS = [
     {"name": "Student Chat", "description": "Student chat APIs."},
     {"name": "OpenAI Compatible", "description": "OpenAI style APIs."},
     {"name": "Teacher Config", "description": "Teacher policy APIs."},
+    {"name": "Classroom Records", "description": "Teacher-owned local classroom history."},
     {"name": "Admin", "description": "Admin management APIs."},
     {"name": "Model Catalog", "description": "Model catalog APIs."},
     {"name": "Knowledge", "description": "Knowledge base APIs."},
@@ -182,6 +205,10 @@ API_DOCS = {
     ("POST", "/knowledge/files"): ("Upload knowledge file", "Upload txt, md, pdf and other files."),
     ("DELETE", "/knowledge/files/{file_id}"): ("Delete knowledge file", "Delete file and chunks."),
     ("POST", "/run_python"): ("Run Python", "Run small classroom Python examples."),
+    ("POST", "/run_python/stream"): ("Stream Python", "Queue a classroom Python task and stream status and output as SSE."),
+    ("GET", "/teacher/classroom-records"): ("Classroom records", "List local classroom sessions visible to the signed-in teacher."),
+    ("GET", "/teacher/classroom-records/{run_id}"): ("Classroom record detail", "Read anonymous student turns for one classroom."),
+    ("DELETE", "/teacher/classroom-records/{run_id}"): ("Delete classroom record", "Permanently delete one visible classroom record."),
 }
 
 
@@ -196,13 +223,15 @@ def _tag_for_path(path: str) -> str:
         return "OpenAI Compatible"
     if path.startswith("/config") or path == "/models":
         return "Teacher Config"
+    if path.startswith("/teacher/classroom-records"):
+        return "Classroom Records"
     if path.startswith("/admin/"):
         return "Admin"
     if path.startswith("/model-catalog"):
         return "Model Catalog"
     if path.startswith("/knowledge/"):
         return "Knowledge"
-    if path == "/run_python":
+    if path in {"/run_python", "/run_python/stream"}:
         return "Other"
     return "System"
 
@@ -210,9 +239,13 @@ def _tag_for_path(path: str) -> str:
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     business_db.init()
+    await python_pool.start()
     try:
         yield
     finally:
+        await python_pool.stop()
+        if python_record_tasks:
+            await asyncio.gather(*list(python_record_tasks), return_exceptions=True)
         await client.close()
 
 
@@ -223,7 +256,7 @@ app = FastAPI(
         "EduGate sits between student pages or third-party clients and the teacher-selected upstream model provider. "
         "Requests without teacher_id use open default. Requests with teacher_id use that teacher policy."
     ),
-    version="1.3.0",
+    version="1.4.0",
     lifespan=lifespan,
     openapi_tags=OPENAPI_TAGS,
 )
@@ -420,9 +453,13 @@ class PythonRunRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     code: str = Field(..., min_length=1, max_length=settings.python_runner_max_code_chars)
+    teacher_id: str | None = Field(default=None, min_length=1)
 
 
 class PythonRunResponse(BaseModel):
+    job_id: str
+    worker_id: int
+    queue_wait_ms: int
     stdout: str
     stderr: str
     exit_code: int
@@ -690,7 +727,7 @@ def require_classroom_access(
     x_class_token: str | None = Header(default=None, alias="X-Class-Token"),
     x_student_token: str | None = Header(default=None, alias="X-Student-Token"),
     class_token: str | None = None,
-) -> str | None:
+) -> str:
     if x_student_token:
         record = student_sessions.resolve(
             x_student_token,
@@ -708,7 +745,7 @@ def require_classroom_access(
     key = f"chat:ip:{_client_ip(request)}"
     if not rate_limiter.allow(key, limit=settings.classroom_rate_limit, window_seconds=60):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom request limit exceeded")
-    return None
+    return classroom_access.legacy_student_id(_client_ip(request))
 
 
 def _resolve_chat_context(request: ChatRequest) -> tuple[str, TeachingScenario, dict[str, Any] | None]:
@@ -1068,6 +1105,104 @@ def _message_preview(messages: list[Any]) -> str | None:
     return latest_user_preview(messages)
 
 
+def _latest_user_content(messages: list[Any]) -> str:
+    return latest_user_preview(messages, limit=settings.classroom_record_max_content_chars)
+
+
+def _chat_response_content(response: dict[str, Any] | None) -> str:
+    if not response:
+        return ""
+    choice = (response.get("choices") or [{}])[0]
+    content = (choice.get("message") or {}).get("content")
+    if not isinstance(content, str):
+        content = choice.get("text") if isinstance(choice.get("text"), str) else ""
+    return content[: settings.classroom_record_max_content_chars]
+
+
+def _record_classroom_turn(
+    *,
+    teacher_id: str | None,
+    student_id: str,
+    kind: str,
+    input_content: str,
+    output_content: str,
+    status_code: int,
+    latency_ms: int,
+    queue_wait_ms: int | None = None,
+    timed_out: bool | None = None,
+) -> None:
+    if not settings.classroom_recording_enabled or not teacher_id or not student_id:
+        return
+    try:
+        business_db.record_classroom_turn(
+            classroom_instance_id=classroom_access.classroom_id(),
+            teacher_username=teacher_id,
+            student_session_id=student_id,
+            kind=kind,
+            input_content=input_content,
+            output_content=output_content,
+            status_code=status_code,
+            latency_ms=latency_ms,
+            queue_wait_ms=queue_wait_ms,
+            timed_out=timed_out,
+        )
+    except Exception as error:
+        logger.warning("Failed to write classroom record: %s", error)
+
+
+def _consume_sse_events(
+    buffer: str,
+) -> tuple[str, list[str], bool, list[dict[str, Any]]]:
+    content: list[str] = []
+    stream_done = False
+    errors: list[dict[str, Any]] = []
+    while True:
+        boundary_index = buffer.find("\n\n")
+        boundary_length = 2
+        crlf_index = buffer.find("\r\n\r\n")
+        if crlf_index >= 0 and (boundary_index < 0 or crlf_index < boundary_index):
+            boundary_index = crlf_index
+            boundary_length = 4
+        if boundary_index < 0:
+            break
+        block = buffer[:boundary_index]
+        buffer = buffer[boundary_index + boundary_length :]
+        data = "\n".join(
+            line.split(":", 1)[1].lstrip()
+            for line in block.splitlines()
+            if line.startswith("data:")
+        )
+        event_name = next(
+            (
+                line.split(":", 1)[1].strip()
+                for line in block.splitlines()
+                if line.startswith("event:")
+            ),
+            "",
+        )
+        if not data:
+            continue
+        if data == "[DONE]":
+            stream_done = True
+            continue
+        try:
+            payload = json.loads(data)
+        except json.JSONDecodeError:
+            continue
+        if event_name == "error":
+            errors.append(payload if isinstance(payload, dict) else {"detail": payload})
+            continue
+        choice = (payload.get("choices") or [{}])[0]
+        value = (choice.get("delta") or {}).get("content")
+        if not isinstance(value, str):
+            value = (choice.get("message") or {}).get("content")
+        if not isinstance(value, str):
+            value = choice.get("text")
+        if isinstance(value, str):
+            content.append(value)
+    return buffer, content, stream_done, errors
+
+
 async def _trace_chat_result(
     *,
     route: str,
@@ -1173,6 +1308,7 @@ async def _stream_with_completion_log(
     scenario: TeachingScenario,
     effective_scenario_id: str,
     teacher_id: str | None,
+    student_id: str,
 ):
     start = time.perf_counter()
     stream_chunks = 0
@@ -1181,6 +1317,44 @@ async def _stream_with_completion_log(
     status_code = 200
     finish_reason = "ended_without_done"
     error_text: str | None = None
+    decoder = codecs.getincrementaldecoder("utf-8")("replace")
+    event_buffer = ""
+    assistant_parts: list[str] = []
+    assistant_length = 0
+    decoder_finalized = False
+
+    def collect_events(decoded_text: str) -> None:
+        nonlocal event_buffer, assistant_length, stream_done
+        nonlocal status_code, finish_reason, error_text
+        event_buffer += decoded_text
+        event_buffer, extracted, observed_done, errors = _consume_sse_events(event_buffer)
+        for content in extracted:
+            remaining = settings.classroom_record_max_content_chars - assistant_length
+            if remaining <= 0:
+                break
+            accepted = content[:remaining]
+            assistant_parts.append(accepted)
+            assistant_length += len(accepted)
+        if observed_done:
+            stream_done = True
+            status_code = 200
+            finish_reason = "done"
+        for event in errors:
+            try:
+                status_code = int(event.get("status_code", 502))
+            except (TypeError, ValueError):
+                status_code = 502
+            finish_reason = "upstream_error"
+            detail = event.get("detail", event)
+            error_text = detail if isinstance(detail, str) else json.dumps(detail, ensure_ascii=False)
+            error_text = error_text[:1000]
+
+    def flush_pending_events() -> None:
+        nonlocal decoder_finalized
+        if decoder_finalized:
+            return
+        decoder_finalized = True
+        collect_events(decoder.decode(b"", final=True) + "\n\n")
 
     def write_log() -> None:
         business_db.log_request(
@@ -1199,37 +1373,41 @@ async def _stream_with_completion_log(
             stream_finish_reason=finish_reason,
             error=error_text,
         )
+        output = "".join(assistant_parts)
+        if not output and error_text:
+            output = error_text
+        _record_classroom_turn(
+            teacher_id=teacher_id,
+            student_id=student_id,
+            kind="chat",
+            input_content=_latest_user_content(request.messages),
+            output_content=output,
+            status_code=status_code,
+            latency_ms=now_ms(start),
+        )
 
     try:
         async for chunk in _iterate_stream_bytes(source):
             stream_chunks += 1
             stream_bytes += len(chunk)
-            if b"data: [DONE]" in chunk or b"data:[DONE]" in chunk:
-                stream_done = True
-                finish_reason = "done"
-            elif b"event: error" in chunk:
-                status_code = 502
-                finish_reason = "upstream_error"
-                error_text = chunk.decode("utf-8", errors="replace")[:1000]
-                try:
-                    data_part = error_text.split("data:", 1)[1].strip()
-                    status_code = int(json.loads(data_part).get("status_code", status_code))
-                except (IndexError, TypeError, ValueError, json.JSONDecodeError):
-                    pass
+            collect_events(decoder.decode(chunk))
             yield chunk
     except asyncio.CancelledError:
         status_code = 499
         finish_reason = "client_disconnected"
         error_text = "Streaming response was cancelled before EduGate observed [DONE]."
+        flush_pending_events()
         write_log()
         raise
     except Exception as error:
         status_code = 500
         finish_reason = "server_exception"
         error_text = f"{type(error).__name__}: {error!s}"
+        flush_pending_events()
         write_log()
         raise
     else:
+        flush_pending_events()
         if stream_done:
             finish_reason = "done"
             status_code = 200
@@ -1356,8 +1534,11 @@ async def models() -> dict[str, Any]:
         ) from error
 
 
-@app.post("/chat", dependencies=[Depends(require_classroom_access)])
-async def chat(request: ChatRequest) -> dict[str, Any]:
+@app.post("/chat")
+async def chat(
+    request: ChatRequest,
+    student_id: str = Depends(require_classroom_access),
+) -> dict[str, Any]:
     effective_scenario_id, scenario, teacher = _resolve_chat_context(request)
     teacher_id = teacher["username"] if teacher else request.teacher_id
     start = time.perf_counter()
@@ -1383,6 +1564,15 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
             status_code=200,
             latency_ms=now_ms(start),
         )
+        _record_classroom_turn(
+            teacher_id=teacher_id,
+            student_id=student_id,
+            kind="chat",
+            input_content=_latest_user_content(request.messages),
+            output_content=_chat_response_content(response),
+            status_code=200,
+            latency_ms=now_ms(start),
+        )
         return response
     except httpx.HTTPStatusError as error:
         latency = now_ms(start)
@@ -1396,6 +1586,15 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
             status_code=error.response.status_code,
             latency_ms=latency,
             error=str(error),
+        )
+        _record_classroom_turn(
+            teacher_id=teacher_id,
+            student_id=student_id,
+            kind="chat",
+            input_content=_latest_user_content(request.messages),
+            output_content=str(error),
+            status_code=error.response.status_code,
+            latency_ms=latency,
         )
         raise _to_http_exception(error) from error
     except httpx.HTTPError as error:
@@ -1411,14 +1610,26 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
             latency_ms=latency,
             error=str(error),
         )
+        _record_classroom_turn(
+            teacher_id=teacher_id,
+            student_id=student_id,
+            kind="chat",
+            input_content=_latest_user_content(request.messages),
+            output_content=str(error),
+            status_code=502,
+            latency_ms=latency,
+        )
         raise HTTPException(
             status_code=502,
             detail=f"Upstream provider connection failed: {type(error).__name__}: {error!s}",
         ) from error
 
 
-@app.post("/chat/stream", dependencies=[Depends(require_classroom_access)])
-async def chat_stream(request: ChatRequest) -> StreamingResponse:
+@app.post("/chat/stream")
+async def chat_stream(
+    request: ChatRequest,
+    student_id: str = Depends(require_classroom_access),
+) -> StreamingResponse:
     effective_scenario_id, scenario, teacher = _resolve_chat_context(request)
     teacher_id = teacher["username"] if teacher else request.teacher_id
     should_block, strict_topic_related = await _strict_miss_decision(request, scenario)
@@ -1431,6 +1642,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 scenario=scenario,
                 effective_scenario_id=effective_scenario_id,
                 teacher_id=teacher_id,
+                student_id=student_id,
             ),
             media_type="text/event-stream",
         )
@@ -1448,6 +1660,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             scenario=scenario,
             effective_scenario_id=effective_scenario_id,
             teacher_id=teacher_id,
+            student_id=student_id,
         ),
         media_type="text/event-stream",
     )
@@ -1476,7 +1689,7 @@ async def v1_chat_completions(request: V1ChatCompletionRequest):
             strict_topic_related=strict_topic_related,
         )
         return StreamingResponse(_stream_with_errors(payload), media_type="text/event-stream")
-    return await chat(chat_request)
+    return await chat(chat_request, student_id="")
 
 
 def _config_response(current_teacher: dict[str, Any]) -> ConfigResponse:
@@ -1554,11 +1767,14 @@ async def admin_logs(limit: int = 50) -> list[dict[str, Any]]:
 
 @app.get("/admin/system/status", dependencies=[Depends(require_super_admin)])
 async def admin_system_status() -> dict[str, Any]:
-    return system_status(
+    return {
+        **system_status(
         supervised=system_control.supervised,
         started_at=system_control.started_at,
         platform_key_set=secret_store.has("system:platform_api_key") or bool(settings.platform_api_key),
-    )
+        ),
+        "python_runner_pool": python_pool.stats(),
+    }
 
 
 @app.get("/admin/system/launcher-logs", dependencies=[Depends(require_super_admin)])
@@ -1644,15 +1860,70 @@ async def classroom_join(
 
 
 @app.get("/admin/classroom", dependencies=[Depends(require_admin)])
-async def admin_classroom_access() -> dict[str, str]:
-    return {"class_token": classroom_access.token()}
+async def admin_classroom_access() -> dict[str, Any]:
+    return {
+        "class_token": classroom_access.token(),
+        "classroom_id": classroom_access.classroom_id(),
+        "recording_enabled": settings.classroom_recording_enabled,
+        "record_retention_days": settings.classroom_record_retention_days,
+    }
 
 
 @app.post("/admin/classroom/rotate", dependencies=[Depends(require_admin)])
-async def rotate_classroom_access() -> dict[str, str]:
+async def rotate_classroom_access() -> dict[str, Any]:
+    business_db.end_classroom_instance(classroom_access.classroom_id())
     token = classroom_access.rotate()
     student_sessions.revoke_all()
-    return {"class_token": token}
+    return {"class_token": token, "classroom_id": classroom_access.classroom_id()}
+
+
+def _record_teacher_scope(current_teacher: dict[str, Any]) -> str | None:
+    return None if _is_super_admin(current_teacher) else current_teacher["username"]
+
+
+@app.get("/teacher/classroom-records")
+async def list_classroom_records(
+    limit: int = 50,
+    current_teacher: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    return {
+        "recording_enabled": settings.classroom_recording_enabled,
+        "retention_days": settings.classroom_record_retention_days,
+        "records": business_db.list_classroom_records(
+            teacher_username=_record_teacher_scope(current_teacher),
+            limit=limit,
+        ),
+    }
+
+
+@app.get("/teacher/classroom-records/{run_id}")
+async def get_classroom_record(
+    run_id: str,
+    limit: int = 1000,
+    current_teacher: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    record = business_db.get_classroom_record(
+        run_id,
+        teacher_username=_record_teacher_scope(current_teacher),
+        limit=limit,
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Classroom record not found")
+    return record
+
+
+@app.delete("/teacher/classroom-records/{run_id}")
+async def delete_classroom_record(
+    run_id: str,
+    current_teacher: dict[str, Any] = Depends(require_admin),
+) -> dict[str, str]:
+    deleted = business_db.delete_classroom_record(
+        run_id,
+        teacher_username=_record_teacher_scope(current_teacher),
+    )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Classroom record not found")
+    return {"status": "deleted"}
 
 
 @app.get("/admin/teachers")
@@ -1971,31 +2242,142 @@ async def delete_knowledge_file(
     return {"status": "deleted"}
 
 
-@app.post(
-    "/run_python",
-    response_model=PythonRunResponse,
-    dependencies=[Depends(require_classroom_access)],
-)
-async def run_python(request: PythonRunRequest) -> PythonRunResponse:
+def _python_http_error(error: Exception) -> HTTPException:
+    if isinstance(error, PythonStudentBusy):
+        return HTTPException(status_code=409, detail=str(error))
+    if isinstance(error, (PythonQueueFull, PythonQueueTimeout)):
+        return HTTPException(status_code=429, detail=str(error))
+    return HTTPException(status_code=503, detail=str(error))
+
+
+async def _python_sse_events(job: PythonJob):
+    iterator = python_pool.iter_events(job).__aiter__()
+    pending: asyncio.Task[dict[str, Any]] | None = None
+    try:
+        pending = asyncio.create_task(iterator.__anext__())
+        while True:
+            done, _ = await asyncio.wait({pending}, timeout=settings.stream_heartbeat_seconds)
+            if not done:
+                yield b": edugate-python-keep-alive\n\n"
+                continue
+            try:
+                item = pending.result()
+            except StopAsyncIteration:
+                break
+            event_name = item["event"]
+            payload = json.dumps(item["data"], ensure_ascii=False)
+            yield f"event: {event_name}\ndata: {payload}\n\n".encode("utf-8")
+            if event_name in {"done", "error"}:
+                break
+            pending = asyncio.create_task(iterator.__anext__())
+    finally:
+        if pending and not pending.done():
+            pending.cancel()
+            with suppress(asyncio.CancelledError, StopAsyncIteration):
+                await pending
+
+
+async def _submit_python_job(request: PythonRunRequest, student_id: str) -> PythonJob:
     if not settings.python_runner_enabled:
         raise HTTPException(status_code=503, detail="Python runner is disabled")
     try:
-        async with python_semaphore:
-            result = await run_in_threadpool(
-                run_python_code,
-                request.code,
-                timeout_seconds=settings.python_runner_timeout_seconds,
-                memory_limit_mb=settings.python_runner_memory_mb,
-                executable=settings.python_runner_executable,
+        job = await python_pool.submit(
+            request.code,
+            student_id=student_id,
+            runner=run_python_code,
+            timeout_seconds=settings.python_runner_timeout_seconds,
+            memory_limit_mb=settings.python_runner_memory_mb,
+            executable=settings.python_runner_executable,
+        )
+        _track_python_record(job, request=request, student_id=student_id)
+        return job
+    except (PythonRunnerUnavailable, PythonStudentBusy, PythonQueueFull, PythonQueueTimeout) as error:
+        raise _python_http_error(error) from error
+
+
+def _track_python_record(job: PythonJob, *, request: PythonRunRequest, student_id: str) -> None:
+    if not settings.classroom_recording_enabled or not request.teacher_id:
+        return
+    teacher = business_db.get_teacher(request.teacher_id)
+    if not teacher or not teacher.get("is_active"):
+        return
+
+    async def monitor() -> None:
+        try:
+            pooled = await asyncio.shield(job.future)
+        except Exception as error:
+            if isinstance(error, PythonRunnerUnavailable):
+                status_code = 503
+            elif isinstance(error, (PythonQueueFull, PythonQueueTimeout, PythonStudentBusy)):
+                status_code = 429
+            else:
+                status_code = 500
+            _record_classroom_turn(
+                teacher_id=request.teacher_id,
+                student_id=student_id,
+                kind="python",
+                input_content=request.code,
+                output_content=str(error),
+                status_code=status_code,
+                latency_ms=int((time.monotonic() - job.submitted_at) * 1000),
             )
-    except PythonRunnerUnavailable as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
+            return
+        result = pooled.result
+        output_parts = []
+        if result.stdout:
+            output_parts.append(result.stdout)
+        if result.stderr:
+            output_parts.append(result.stderr)
+        _record_classroom_turn(
+            teacher_id=request.teacher_id,
+            student_id=student_id,
+            kind="python",
+            input_content=request.code,
+            output_content="\n".join(output_parts),
+            status_code=200,
+            latency_ms=result.duration_ms + pooled.queue_wait_ms,
+            queue_wait_ms=pooled.queue_wait_ms,
+            timed_out=result.timed_out,
+        )
+
+    task = asyncio.create_task(monitor(), name=f"record-python-{job.id}")
+    python_record_tasks.add(task)
+    task.add_done_callback(python_record_tasks.discard)
+
+
+@app.post("/run_python", response_model=PythonRunResponse)
+async def run_python(
+    request: PythonRunRequest,
+    student_id: str = Depends(require_classroom_access),
+) -> PythonRunResponse:
+    job = await _submit_python_job(request, student_id)
+    try:
+        pooled = await job.future
+    except (PythonRunnerUnavailable, PythonStudentBusy, PythonQueueFull, PythonQueueTimeout) as error:
+        raise _python_http_error(error) from error
+    result = pooled.result
     return PythonRunResponse(
+        job_id=pooled.job_id,
+        worker_id=pooled.worker_id,
+        queue_wait_ms=pooled.queue_wait_ms,
         stdout=result.stdout,
         stderr=result.stderr,
         exit_code=result.exit_code,
         timed_out=result.timed_out,
         duration_ms=result.duration_ms,
+    )
+
+
+@app.post("/run_python/stream")
+async def run_python_stream(
+    request: PythonRunRequest,
+    student_id: str = Depends(require_classroom_access),
+) -> StreamingResponse:
+    job = await _submit_python_job(request, student_id)
+    return StreamingResponse(
+        _python_sse_events(job),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

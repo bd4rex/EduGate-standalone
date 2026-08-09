@@ -21,6 +21,12 @@ This document records risks that appeared during development or were confirmed d
 | Student conversation history disappears after refresh | Validate and restore local history, while sending only the latest 10 messages | `test_student_page_persists_history_and_uses_anonymous_session` |
 | Python subprocesses can read model credentials | Child processes inherit only a minimal environment allowlist | `test_python_runner_does_not_inherit_application_secrets` |
 | A packaged executable treats itself as a Python interpreter | Frozen builds require a separate interpreter and return an explicit HTTP 503 when unavailable | `test_frozen_bundle_requires_a_separate_python_executable`, `test_python_runner_unavailable_is_reported_as_503` |
+| One Python lane serializes code execution for all 64 students | Use four isolated slots and a bounded queue of 64 tasks while enforcing the configured peak concurrency | `test_python_pool_runs_multiple_isolated_jobs_with_bounded_concurrency` |
+| The Python queue grows without bounds or one student occupies multiple slots | Reject a full queue with HTTP 429 and allow only one queued or running task per student | `test_python_pool_rejects_queue_overflow_and_duplicate_student_jobs` |
+| Python output appears only after the process exits | Deliver child-process stdout/stderr before completion and expose the full task lifecycle over SSE | `test_python_runner_emits_output_before_process_completion`, `test_python_pool_streams_queue_state_output_and_completion`, `test_python_runner_stream_reports_queue_output_and_result` |
+| A regular teacher can read another teacher's classroom content | Scope records by teacher, allow global administrator access, expose anonymous student IDs, and never store IP addresses | `test_teacher_can_view_only_owned_anonymous_classroom_records` |
+| Classroom content is retained indefinitely or individual entries are unbounded | Enforce retention, total-record, and content limits; support disabling recording and deleting a class | `test_classroom_record_retention_and_content_limits_are_enforced`, `test_classroom_content_recording_can_be_disabled` |
+| A streaming response creates fragments or duplicate classroom turns | Merge one complete streamed answer into exactly one classroom turn | `test_streamed_chat_is_saved_as_one_classroom_turn` |
 | The default DeepSeek model alias is retired | The default uses the current `deepseek-v4-flash` model | `test_current_deepseek_default_is_not_retired_alias` |
 | Regular teachers can access system administration | The System tab and view remain administrator-only | `test_system_view_remains_admin_only` |
 | Brand icons or bilingual documentation links disappear in a release | Web pages, the Windows bundle, and Chinese/English documentation retain shared assets and reciprocal links | `test_brand_assets_are_used_by_docs_web_and_windows_bundle`, `test_chinese_and_english_project_docs_link_to_each_other` |
@@ -34,7 +40,8 @@ This document records risks that appeared during development or were confirmed d
 5. Refresh the student page repeatedly and confirm current-class history is restored; rotate the classroom link and confirm the new class does not load old history.
 6. Run a 30-minute load test with 64 clients and 24 to 32 upstream requests, monitoring HTTP 429 responses, time to first token, memory, and SQLite lock waits.
 7. Download a backup, modify configuration and knowledge files, restore the backup, and confirm the restored state after restart.
-8. Configure a separate interpreter before enabling the Python runner and verify basic code, forbidden imports, timeout, output truncation, and windowless execution.
+8. Configure a separate interpreter before enabling the Python runner and verify 4–8 concurrent slots, queue saturation, duplicate-student rejection, live output, forbidden imports, timeout, truncation, and windowless execution.
+9. Open Records as both a regular teacher and an administrator; verify ownership isolation, anonymous-student and activity filters, rotation finalization, and deletion.
 
 ## Run locally
 

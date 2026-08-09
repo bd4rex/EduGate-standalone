@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -429,6 +430,199 @@ def test_python_runner_unavailable_is_reported_as_503(
 
     assert response.status_code == 503
     assert response.json()["detail"] == "separate interpreter required"
+
+
+def test_python_runner_stream_reports_queue_output_and_result(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.python_runner import PythonRunResult
+
+    def fake_runner(code: str, *, on_output=None, **kwargs) -> PythonRunResult:
+        assert on_output is not None
+        on_output("stdout", "2\n")
+        return PythonRunResult("2\n", "", 0, False, 5)
+
+    monkeypatch.setattr(settings, "python_runner_enabled", True)
+    monkeypatch.setattr("app.main.run_python_code", fake_runner)
+    joined = client.post(
+        "/classroom/join",
+        headers={"X-Class-Token": classroom_access.token()},
+    ).json()
+    response = client.post(
+        "/run_python/stream",
+        headers={"X-Student-Token": joined["student_token"]},
+        json={"code": "print(1 + 1)", "teacher_id": settings.admin_username},
+    )
+
+    assert response.status_code == 200
+    assert "event: queued" in response.text
+    assert "event: running" in response.text
+    assert "event: stdout" in response.text
+    assert '"content": "2\\n"' in response.text
+    assert "event: done" in response.text
+    matching_turns = []
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline and not matching_turns:
+        records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
+        for record in records:
+            detail = client.get(
+                f"/teacher/classroom-records/{record['id']}",
+                headers=admin_headers,
+            ).json()
+            matching_turns.extend(
+                turn for turn in detail["turns"] if turn["input_content"] == "print(1 + 1)"
+            )
+        if not matching_turns:
+            time.sleep(0.01)
+    assert len(matching_turns) == 1
+    assert matching_turns[0]["kind"] == "python"
+    assert matching_turns[0]["output_content"] == "2\n"
+
+
+def test_teacher_can_view_only_owned_anonymous_classroom_records(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    teacher_username = "record-teacher"
+    business_db.upsert_teacher(
+        username=teacher_username,
+        password="record-teacher-password",
+        display_name="Record Teacher",
+        role="teacher",
+    )
+    runtime_config.update_teacher_policy(
+        teacher_username,
+        ScenarioUpdateRequest(model="record-model", system_prompt="record policy"),
+    )
+
+    async def fake_chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
+        return {"choices": [{"message": {"content": "记录里的回答"}}]}
+
+    monkeypatch.setattr("app.main.client.chat_completion", fake_chat_completion)
+    joined = client.post(
+        "/classroom/join",
+        headers={"X-Class-Token": classroom_access.token()},
+    ).json()
+    response = client.post(
+        "/chat",
+        headers={"X-Student-Token": joined["student_token"]},
+        json={
+            "teacher_id": teacher_username,
+            "messages": [{"role": "user", "content": "记录里的问题"}],
+        },
+    )
+    assert response.status_code == 200
+
+    teacher_headers = {"X-Admin-Token": sessions.issue(teacher_username)}
+    own_records = client.get("/teacher/classroom-records", headers=teacher_headers).json()["records"]
+    assert own_records
+    assert {record["teacher_username"] for record in own_records} == {teacher_username}
+    detail = client.get(
+        f"/teacher/classroom-records/{own_records[0]['id']}",
+        headers=teacher_headers,
+    ).json()
+    assert detail["turns"][-1]["input_content"] == "记录里的问题"
+    assert detail["turns"][-1]["output_content"] == "记录里的回答"
+    assert detail["turns"][-1]["student_session_id"] == joined["student_session_id"]
+    assert "127.0.0.1" not in json.dumps(detail, ensure_ascii=False)
+
+    admin_records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
+    assert any(record["teacher_username"] == teacher_username for record in admin_records)
+    other_teacher = business_db.upsert_teacher(
+        username="record-other",
+        password="record-other-password",
+        display_name="Other",
+        role="teacher",
+    )
+    assert other_teacher
+    other_headers = {"X-Admin-Token": sessions.issue("record-other")}
+    assert client.get(
+        f"/teacher/classroom-records/{own_records[0]['id']}",
+        headers=other_headers,
+    ).status_code == 404
+    assert client.delete(
+        f"/teacher/classroom-records/{own_records[0]['id']}",
+        headers=teacher_headers,
+    ).status_code == 200
+    assert client.get(
+        f"/teacher/classroom-records/{own_records[0]['id']}",
+        headers=teacher_headers,
+    ).status_code == 404
+
+
+def test_classroom_content_recording_can_be_disabled(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    teacher_username = "recording-disabled"
+    business_db.upsert_teacher(
+        username=teacher_username,
+        password="recording-disabled-password",
+        display_name="Disabled Recording",
+        role="teacher",
+    )
+
+    async def fake_chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
+        return {"choices": [{"message": {"content": "不应保存"}}]}
+
+    monkeypatch.setattr(settings, "classroom_recording_enabled", False)
+    monkeypatch.setattr("app.main.client.chat_completion", fake_chat_completion)
+    response = client.post(
+        "/chat",
+        headers={"X-Class-Token": classroom_access.token()},
+        json={
+            "teacher_id": teacher_username,
+            "messages": [{"role": "user", "content": "不要保存"}],
+        },
+    )
+    assert response.status_code == 200
+    teacher_headers = {"X-Admin-Token": sessions.issue(teacher_username)}
+    assert client.get("/teacher/classroom-records", headers=teacher_headers).json()["records"] == []
+
+
+def test_streamed_chat_is_saved_as_one_classroom_turn(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_stream(payload: dict[str, Any]):
+        first_event = 'data: {"choices":[{"delta":{"content":"实时"}}]}\n\n'.encode()
+        split_at = first_event.index("实".encode()) + 1
+        yield first_event[:split_at]
+        yield first_event[split_at:]
+        yield 'data: {"choices":[{"delta":{"content":"回答"}}]}\n\n'.encode()
+        yield b"data: [DO"
+        yield b"NE]\n\n"
+
+    monkeypatch.setattr("app.main._stream_chat_completion", fake_stream)
+    joined = client.post(
+        "/classroom/join",
+        headers={"X-Class-Token": classroom_access.token()},
+    ).json()
+    response = client.post(
+        "/chat/stream",
+        headers={"X-Student-Token": joined["student_token"]},
+        json={
+            "teacher_id": settings.admin_username,
+            "messages": [{"role": "user", "content": "流式问题"}],
+        },
+    )
+    assert response.status_code == 200
+    records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
+    matching_turns = []
+    for record in records:
+        detail = client.get(
+            f"/teacher/classroom-records/{record['id']}",
+            headers=admin_headers,
+        ).json()
+        matching_turns.extend(
+            turn for turn in detail["turns"] if turn["input_content"] == "流式问题"
+        )
+    assert len(matching_turns) == 1
+    assert matching_turns[0]["output_content"] == "实时回答"
 
 
 def test_stream_heartbeat_is_emitted(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -87,6 +87,8 @@ def test_chinese_and_english_project_docs_link_to_each_other() -> None:
     english = _read("README.en.md")
     chinese_matrix = _read("docs/回归测试矩阵.md")
     english_matrix = _read("docs/Regression-Test-Matrix.md")
+    chinese_design = _read("docs/并发执行与课堂记录设计.md")
+    english_design = _read("docs/Execution-and-Classroom-Records-Design.md")
 
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in chinese
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in english
@@ -94,3 +96,19 @@ def test_chinese_and_english_project_docs_link_to_each_other() -> None:
     assert 'href="README.md"' in english
     assert "[English](Regression-Test-Matrix.md)" in chinese_matrix
     assert "[中文](回归测试矩阵.md)" in english_matrix
+    assert "[English](Execution-and-Classroom-Records-Design.md)" in chinese_design
+    assert "[中文](并发执行与课堂记录设计.md)" in english_design
+
+
+def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
+    page = _read("frontend/admin.html")
+    example = _read("backend/.env.example")
+
+    assert 'data-tab="records"' in page
+    assert 'id="records-view"' in page
+    assert "/teacher/classroom-records" in page
+    assert "PYTHON_RUNNER_MAX_CONCURRENCY" in page
+    assert "CLASSROOM_RECORDING_ENABLED" in page
+    assert "PYTHON_RUNNER_MAX_CONCURRENCY=4" in example
+    assert "PYTHON_RUNNER_MAX_QUEUE=64" in example
+    assert "CLASSROOM_RECORDING_ENABLED=true" in example

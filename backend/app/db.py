@@ -16,9 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class BusinessDB:
-    def __init__(self, sqlite_path: str = "edugate.sqlite3", *, log_max_records: int = 5000) -> None:
+    def __init__(
+        self,
+        sqlite_path: str = "edugate.sqlite3",
+        *,
+        log_max_records: int = 5000,
+        classroom_record_retention_days: int = 30,
+        classroom_record_max_records: int = 20000,
+        classroom_record_max_content_chars: int = 12000,
+    ) -> None:
         self.sqlite_path = sqlite_path
         self.log_max_records = max(100, log_max_records)
+        self.classroom_record_retention_days = max(1, classroom_record_retention_days)
+        self.classroom_record_max_records = max(100, classroom_record_max_records)
+        self.classroom_record_max_content_chars = max(500, classroom_record_max_content_chars)
         self.enabled = True
 
     def init(self) -> None:
@@ -86,7 +97,42 @@ class BusinessDB:
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
+
+                CREATE TABLE IF NOT EXISTS classroom_runs (
+                    id TEXT PRIMARY KEY,
+                    classroom_instance_id TEXT NOT NULL,
+                    teacher_username TEXT NOT NULL REFERENCES edugate_teachers(username) ON DELETE CASCADE,
+                    title TEXT NOT NULL,
+                    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    ended_at TEXT,
+                    last_activity_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(classroom_instance_id, teacher_username)
+                );
+
+                CREATE TABLE IF NOT EXISTS classroom_turns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    classroom_run_id TEXT NOT NULL REFERENCES classroom_runs(id) ON DELETE CASCADE,
+                    student_session_id TEXT NOT NULL,
+                    kind TEXT NOT NULL CHECK(kind IN ('chat', 'python')),
+                    input_content TEXT NOT NULL,
+                    output_content TEXT NOT NULL DEFAULT '',
+                    status_code INTEGER NOT NULL,
+                    latency_ms INTEGER NOT NULL DEFAULT 0,
+                    queue_wait_ms INTEGER,
+                    timed_out INTEGER,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_classroom_runs_teacher_activity
+                    ON classroom_runs(teacher_username, last_activity_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_classroom_turns_run_id
+                    ON classroom_turns(classroom_run_id, id);
+                CREATE INDEX IF NOT EXISTS idx_classroom_turns_student
+                    ON classroom_turns(student_session_id, id);
                 """
+            )
+            conn.execute(
+                "UPDATE classroom_runs SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP) WHERE ended_at IS NULL"
             )
 
     def is_admin_initialized(self, username: str) -> bool:
@@ -298,6 +344,7 @@ class BusinessDB:
             row = self._teacher_row(conn, username)
             if not row:
                 return None
+            conn.execute("DELETE FROM classroom_runs WHERE teacher_username = ?", (username,))
             conn.execute("DELETE FROM edugate_teaching_sessions WHERE teacher_username = ?", (username,))
             conn.execute("DELETE FROM edugate_teachers WHERE username = ?", (username,))
         return _json_ready(row)
@@ -415,6 +462,208 @@ class BusinessDB:
                 (session_id,),
             ).fetchone()
         return _json_ready(row) if row else None
+
+    def record_classroom_turn(
+        self,
+        *,
+        classroom_instance_id: str,
+        teacher_username: str,
+        student_session_id: str,
+        kind: str,
+        input_content: str,
+        output_content: str,
+        status_code: int,
+        latency_ms: int,
+        queue_wait_ms: int | None = None,
+        timed_out: bool | None = None,
+    ) -> str:
+        if kind not in {"chat", "python"}:
+            raise ValueError(f"unsupported classroom turn kind: {kind}")
+        run_id = hashlib.sha256(
+            f"{classroom_instance_id}:{teacher_username}".encode("utf-8")
+        ).hexdigest()[:32]
+        title = f"课堂记录 {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        input_content = input_content[: self.classroom_record_max_content_chars]
+        output_content = output_content[: self.classroom_record_max_content_chars]
+        with self._connect() as conn:
+            teacher = conn.execute(
+                "SELECT username FROM edugate_teachers WHERE username = ? AND is_active = 1",
+                (teacher_username,),
+            ).fetchone()
+            if not teacher:
+                raise ValueError(f"unknown or inactive teacher: {teacher_username}")
+            conn.execute(
+                """
+                INSERT INTO classroom_runs (
+                    id, classroom_instance_id, teacher_username, title, ended_at
+                )
+                VALUES (?, ?, ?, ?, NULL)
+                ON CONFLICT(id) DO UPDATE SET
+                    last_activity_at = CURRENT_TIMESTAMP,
+                    ended_at = NULL
+                """,
+                (run_id, classroom_instance_id, teacher_username, title),
+            )
+            conn.execute(
+                """
+                INSERT INTO classroom_turns (
+                    classroom_run_id, student_session_id, kind, input_content,
+                    output_content, status_code, latency_ms, queue_wait_ms, timed_out
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    student_session_id,
+                    kind,
+                    input_content,
+                    output_content,
+                    status_code,
+                    latency_ms,
+                    queue_wait_ms,
+                    _optional_bool(timed_out),
+                ),
+            )
+            conn.execute(
+                "UPDATE classroom_runs SET last_activity_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (run_id,),
+            )
+            self._cleanup_classroom_records(conn)
+        return run_id
+
+    def end_classroom_instance(self, classroom_instance_id: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE classroom_runs
+                SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
+                    last_activity_at = CURRENT_TIMESTAMP
+                WHERE classroom_instance_id = ?
+                """,
+                (classroom_instance_id,),
+            )
+
+    def list_classroom_records(
+        self,
+        *,
+        teacher_username: str | None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        where = "WHERE r.teacher_username = ?" if teacher_username else ""
+        params: list[Any] = [teacher_username] if teacher_username else []
+        params.append(min(max(limit, 1), 200))
+        with self._connect() as conn:
+            self._cleanup_classroom_records(conn)
+            rows = conn.execute(
+                f"""
+                SELECT
+                    r.id,
+                    r.teacher_username,
+                    t.display_name AS teacher_display_name,
+                    r.title,
+                    r.started_at,
+                    r.ended_at,
+                    r.last_activity_at,
+                    COUNT(ct.id) AS turn_count,
+                    COUNT(DISTINCT ct.student_session_id) AS student_count,
+                    COALESCE(SUM(CASE WHEN ct.kind = 'chat' THEN 1 ELSE 0 END), 0) AS chat_count,
+                    COALESCE(SUM(CASE WHEN ct.kind = 'python' THEN 1 ELSE 0 END), 0) AS python_count,
+                    COALESCE(SUM(CASE WHEN ct.status_code >= 400 THEN 1 ELSE 0 END), 0) AS error_count
+                FROM classroom_runs r
+                JOIN edugate_teachers t ON t.username = r.teacher_username
+                LEFT JOIN classroom_turns ct ON ct.classroom_run_id = r.id
+                {where}
+                GROUP BY r.id
+                ORDER BY r.last_activity_at DESC, r.id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [_json_ready(row) for row in rows]
+
+    def get_classroom_record(
+        self,
+        run_id: str,
+        *,
+        teacher_username: str | None,
+        limit: int = 1000,
+    ) -> dict[str, Any] | None:
+        where = "r.id = ?"
+        params: list[Any] = [run_id]
+        if teacher_username:
+            where += " AND r.teacher_username = ?"
+            params.append(teacher_username)
+        with self._connect() as conn:
+            self._cleanup_classroom_records(conn)
+            session = conn.execute(
+                f"""
+                SELECT r.id, r.teacher_username, t.display_name AS teacher_display_name,
+                       r.title, r.started_at, r.ended_at, r.last_activity_at
+                FROM classroom_runs r
+                JOIN edugate_teachers t ON t.username = r.teacher_username
+                WHERE {where}
+                """,
+                params,
+            ).fetchone()
+            if session is None:
+                return None
+            turns = conn.execute(
+                """
+                SELECT id, student_session_id, kind, input_content, output_content,
+                       status_code, latency_ms, queue_wait_ms, timed_out, created_at
+                FROM classroom_turns
+                WHERE classroom_run_id = ?
+                ORDER BY id ASC
+                LIMIT ?
+                """,
+                (run_id, min(max(limit, 1), 5000)),
+            ).fetchall()
+        return {
+            "session": _json_ready(session),
+            "turns": [_json_ready(row) for row in turns],
+        }
+
+    def delete_classroom_record(
+        self,
+        run_id: str,
+        *,
+        teacher_username: str | None,
+    ) -> bool:
+        where = "id = ?"
+        params: list[Any] = [run_id]
+        if teacher_username:
+            where += " AND teacher_username = ?"
+            params.append(teacher_username)
+        with self._connect() as conn:
+            cursor = conn.execute(f"DELETE FROM classroom_runs WHERE {where}", params)
+        return cursor.rowcount > 0
+
+    def _cleanup_classroom_records(self, conn: sqlite3.Connection) -> None:
+        conn.execute(
+            """
+            DELETE FROM classroom_runs
+            WHERE last_activity_at < datetime('now', ?)
+            """,
+            (f"-{self.classroom_record_retention_days} days",),
+        )
+        conn.execute(
+            """
+            DELETE FROM classroom_turns
+            WHERE id NOT IN (
+                SELECT id FROM classroom_turns ORDER BY id DESC LIMIT ?
+            )
+            """,
+            (self.classroom_record_max_records,),
+        )
+        conn.execute(
+            """
+            DELETE FROM classroom_runs
+            WHERE ended_at IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM classroom_turns WHERE classroom_turns.classroom_run_id = classroom_runs.id
+              )
+            """
+        )
 
     def log_request(
         self,
@@ -601,7 +850,7 @@ def _json_ready(row: Any) -> dict[str, Any]:
     for key, value in dict(row).items():
         if isinstance(value, datetime):
             output[key] = value.astimezone(timezone.utc).isoformat()
-        elif key in {"is_active", "stream_done"} and value is not None:
+        elif key in {"is_active", "stream_done", "timed_out"} and value is not None:
             output[key] = bool(value)
         else:
             output[key] = value
