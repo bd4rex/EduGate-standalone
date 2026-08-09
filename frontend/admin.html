@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EduGate 教师端控制台</title>
+  <link rel="icon" href="assets/brand/edugate-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/brand/edugate-icon-1024.png" />
   <style>
     :root {
       --bg: #eef0f6;
@@ -62,9 +64,22 @@
     }
 
     h1, h2, h3, p { margin-top: 0; }
-    h1 { margin-bottom: 6px; font-size: clamp(25px, 3vw, 36px); letter-spacing: -0.04em; }
+    h1 { margin-bottom: 6px; font-size: clamp(25px, 3vw, 36px); letter-spacing: 0; }
     .subtle { color: var(--muted); }
     .topbar p { margin-bottom: 0; }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 58px;
+      height: 58px;
+      flex: 0 0 58px;
+    }
 
     .status-pill {
       display: inline-flex;
@@ -349,9 +364,12 @@
 <body>
   <div class="shell">
     <header class="topbar">
-      <div>
-        <h1>EduGate 教师端控制台</h1>
-        <p class="subtle">Central Control · AI 教学网关</p>
+      <div class="brand-lockup">
+        <img class="brand-mark" src="assets/brand/edugate-icon.svg" alt="" />
+        <div>
+          <h1>EduGate 教师端控制台</h1>
+          <p class="subtle">Central Control · 本地 AI 教学网关</p>
+        </div>
       </div>
       <div class="status-pill" id="system-status"><span class="dot"></span><span>未连接</span></div>
     </header>

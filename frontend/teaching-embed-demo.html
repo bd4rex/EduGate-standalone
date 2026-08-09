@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EduGate 嵌入测试页</title>
+  <link rel="icon" href="assets/brand/edugate-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/brand/edugate-icon-1024.png" />
   <style>
     :root {
       --paper: #f7f3ea;
@@ -160,6 +162,21 @@
       font-size: 22px;
     }
 
+    .assistant-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .assistant-heading h2 { margin: 0; }
+
+    .assistant-brand-mark {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+    }
+
     .assistant-header p {
       margin: 0;
       color: var(--muted);
@@ -313,7 +330,7 @@
   <main class="shell">
     <section class="lesson">
       <header class="lesson-header">
-        <p class="eyebrow">Grade 5 · Mathematics</p>
+        <p class="eyebrow">EduGate · Grade 5 · Mathematics</p>
         <h1>分数加法：先理解，再计算</h1>
       </header>
 
@@ -348,7 +365,10 @@
 
     <aside class="assistant-panel">
       <header class="assistant-header">
-        <h2>课堂 AI 助手</h2>
+        <div class="assistant-heading">
+          <img class="assistant-brand-mark" src="assets/brand/edugate-icon.svg" alt="EduGate" />
+          <h2>课堂 AI 助手</h2>
+        </div>
         <p>教师配置场景：<strong>default</strong>。学生不能在这里选择模型或改 system prompt。</p>
         <span class="status"><span class="dot" id="status-dot"></span><span id="status-text">尚未连接</span></span>
         <div class="config">

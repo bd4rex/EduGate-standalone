@@ -39,6 +39,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=str(root / "desktop" / "assets" / "edugate.ico"),
     disable_windowed_traceback=False,
 )
 

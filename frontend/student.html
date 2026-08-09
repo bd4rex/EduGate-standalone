@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IP 地址学习单 + AI 助手</title>
+  <link rel="icon" href="assets/brand/edugate-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/brand/edugate-icon-1024.png" />
   <style>
     :root {
       --bg: #f3f6fb;
@@ -55,6 +57,18 @@
       font-weight: 700;
       margin-bottom: 6px;
       letter-spacing: 0.5px;
+    }
+
+    .topbar-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-brand-mark {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
     }
 
     .topbar-subtitle {
@@ -395,7 +409,10 @@
 <body>
   <div class="page">
     <div class="topbar card">
-      <div class="topbar-title">信息科技课堂学习单：认识 IP 地址</div>
+      <div class="topbar-heading">
+        <img class="topbar-brand-mark" src="assets/brand/edugate-icon.svg" alt="EduGate" />
+        <div class="topbar-title">信息科技课堂学习单：认识 IP 地址</div>
+      </div>
       <div class="topbar-subtitle">
         左侧是课堂学习单，右侧是嵌入式 AI 学习助手。页面会优先调用流式接口，实现边生成边显示；若失败，则自动回退到普通接口。
       </div>

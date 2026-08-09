@@ -1,4 +1,12 @@
-# EduGate Standalone
+<p align="center">
+  <img src="frontend/assets/brand/edugate-logo-horizontal.svg" width="680" alt="EduGate - Local AI Teaching Gateway" />
+</p>
+
+# EduGate 单机课堂版
+
+<p align="center">
+  <strong>中文</strong> · <a href="README.en.md">English</a>
+</p>
 
 EduGate 单机课堂版运行在教师电脑上，面向单教师、单节课或小型课堂。它向上连接 OpenAI-compatible 模型公司 API，向下提供受课堂令牌保护的学生页面和 EduGate API。
 
@@ -66,4 +74,4 @@ desktop\build_windows.bat
 
 输出位于 `dist\EduGate-Standalone`。打包脚本同样使用清华 PyPI 镜像。
 
-详细说明见 [安装与故障排查](docs/安装与故障排查.txt)、[使用手册](docs/使用手册.txt)、[验收清单](docs/单机版验收清单.txt) 和 [回归测试矩阵](docs/回归测试矩阵.md)。
+详细说明见 [安装与故障排查](docs/安装与故障排查.txt)、[使用手册](docs/使用手册.txt)、[验收清单](docs/单机版验收清单.txt) 和 [回归测试矩阵](docs/回归测试矩阵.md)。英文读者可从 [English README](README.en.md) 开始。

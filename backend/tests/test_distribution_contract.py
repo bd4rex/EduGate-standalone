@@ -59,3 +59,38 @@ def test_system_view_remains_admin_only() -> None:
 
     assert '<button class="tab" data-tab="system" data-admin-only>' in page
     assert '<section id="system-view" hidden data-admin-only>' in page
+
+
+def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
+    brand_dir = ROOT / "frontend" / "assets" / "brand"
+    expected_assets = {
+        "edugate-icon-mono.svg",
+        "edugate-icon.svg",
+        "edugate-logo-horizontal.svg",
+        "edugate-icon-1024.png",
+        "edugate-logo-horizontal.png",
+    }
+
+    assert expected_assets <= {path.name for path in brand_dir.iterdir()}
+    assert (ROOT / "desktop" / "assets" / "edugate.ico").stat().st_size > 0
+    for page_name in ("admin.html", "student.html", "teaching-embed-demo.html"):
+        page = _read(f"frontend/{page_name}")
+        assert 'rel="icon" href="assets/brand/edugate-icon.svg"' in page
+        assert 'src="assets/brand/edugate-icon.svg"' in page
+    assert 'icon=str(root / "desktop" / "assets" / "edugate.ico")' in _read(
+        "desktop/edugate_standalone.spec"
+    )
+
+
+def test_chinese_and_english_project_docs_link_to_each_other() -> None:
+    chinese = _read("README.md")
+    english = _read("README.en.md")
+    chinese_matrix = _read("docs/回归测试矩阵.md")
+    english_matrix = _read("docs/Regression-Test-Matrix.md")
+
+    assert "frontend/assets/brand/edugate-logo-horizontal.svg" in chinese
+    assert "frontend/assets/brand/edugate-logo-horizontal.svg" in english
+    assert 'href="README.en.md"' in chinese
+    assert 'href="README.md"' in english
+    assert "[English](Regression-Test-Matrix.md)" in chinese_matrix
+    assert "[中文](回归测试矩阵.md)" in english_matrix
