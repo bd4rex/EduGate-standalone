@@ -2,8 +2,9 @@ name: Regression tests
 
 on:
   push:
-    branches: [main, "codex/**", "agent/**"]
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   windows-tests:
