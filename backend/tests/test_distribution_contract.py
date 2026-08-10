@@ -28,6 +28,50 @@ def test_teacher_install_and_build_scripts_use_tsinghua_mirror() -> None:
     assert expected in _read("desktop/build_windows.bat")
 
 
+def test_windows_bundle_is_a_copyable_portable_classroom_folder() -> None:
+    launcher = _read("desktop/edugate_standalone.py")
+    build = _read("desktop/build_windows.bat")
+    example = _read("backend/.env.example")
+    page = _read("frontend/admin.html")
+
+    assert "APP_DIR / \"data\"" in launcher
+    assert "APP_DIR / \"config\" / \"edugate.env\"" in launcher
+    assert "migrate_legacy_data()" in launcher
+    assert "build_portable_runtime.py" in build
+    assert "runtime\\python" in build
+    assert "ADMIN_PASSWORD=edugate" in example
+    assert "PORTABLE_AUTO_LOGIN=true" in example
+    assert 'id="end-class"' in page
+    assert "/auth/local-session" in page
+
+
+def test_portable_teacher_console_omits_multi_teacher_management_and_uses_prominent_branding() -> None:
+    page = _read("frontend/admin.html")
+    student = _read("frontend/student.html")
+
+    assert 'id="teacher-admin-section"' not in page
+    assert "/admin/teachers" not in page
+    assert "修改我的密码" not in page
+    assert "width: 112px" in page
+    assert "width: 72px" in student
+
+
+def test_teacher_console_classroom_controls_and_ipad_touch_layout_are_distributed() -> None:
+    page = _read("frontend/admin.html")
+
+    assert page.index('<div class="control-grid">') < page.index('id="classroom-entry"')
+    assert page.index('id="classroom-entry"') < page.index('id="class-controls"')
+    assert 'id="class-controls"' not in page.split("</header>", 1)[0]
+    assert 'id="start-class"' in page
+    assert 'id="end-class"' in page
+    assert 'request("/admin/classroom/start"' in page
+    assert 'request("/admin/classroom/end"' in page
+    assert 'el.endClass.addEventListener("click", () => requestSystemAction("shutdown"))' not in page
+    assert "touch-action: manipulation" in page
+    assert "@media (hover: none), (pointer: coarse)" in page
+    assert "@media (max-width: 1100px)" in page
+
+
 def test_current_deepseek_default_is_not_retired_alias() -> None:
     config = _read("backend/app/config.py")
     example = _read("backend/.env.example")
@@ -43,7 +87,7 @@ def test_default_join_budget_covers_reloads_for_64_students() -> None:
     assert "STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES=256" in example
 
 
-def test_student_page_persists_history_and_uses_anonymous_session() -> None:
+def test_student_page_persists_history_and_collects_computer_identity() -> None:
     page = _read("frontend/student.html")
 
     assert "POST" in page and "/classroom/join" in page
@@ -52,13 +96,96 @@ def test_student_page_persists_history_and_uses_anonymous_session() -> None:
     assert "localStorage.setItem(" in page
     assert "messages.slice(-MAX_MESSAGES_TO_SEND)" in page
     assert "sessionStorage.setItem(SESSION_STORAGE_KEY" in page
+    assert "COMPUTER_NAME_STORAGE_KEY" in page
+    assert 'JSON.stringify({ computer_name: cleanComputerName })' in page
+    assert 'id="computerNameInput"' in page
+    assert 'id="identityClientIp"' in page
 
 
 def test_system_view_remains_admin_only() -> None:
     page = _read("frontend/admin.html")
 
-    assert '<button class="tab" data-tab="system" data-admin-only>' in page
+    assert 'data-tab="system" role="tab" aria-selected="false" aria-controls="system-view" data-admin-only' in page
     assert '<section id="system-view" hidden data-admin-only>' in page
+
+
+def test_system_view_prioritizes_classroom_operations() -> None:
+    page = _read("frontend/admin.html")
+    resources = page.split('<section id="settings-view" hidden>', 1)[1].split(
+        '<section id="system-view" hidden data-admin-only>', 1
+    )[0]
+    system = page.split('<section id="system-view" hidden data-admin-only>', 1)[1]
+
+    shutdown = page.index('id="shutdown-system"')
+    open_directory = page.index('id="open-app-directory"')
+    assert shutdown < open_directory
+    assert 'request("/admin/system/open-app-dir"' in page
+    assert 'id="copy-lan-url"' in page
+    assert '["数据目录", system.data_dir' not in page
+    assert '["剩余磁盘",' not in page
+    assert '["进程 ID",' not in page
+    assert '["监督模式",' not in page
+    assert '["服务状态",' not in page
+    assert '["运行时间",' not in page
+    assert 'id="system-uptime"' in page
+    assert '已运行 ${formatDuration(system.uptime_seconds)}' in page
+    assert 'id="model-api-panel"' not in resources
+    assert 'id="model-api-panel"' in system
+    assert system.index('id="dashboard-metrics"') < system.index('id="model-api-panel"')
+    assert system.index('id="model-api-panel"') < system.index('id="system-log-panel"')
+    assert 'id="model-api-panel" open' not in page
+    assert "模型与供应商管理" not in page
+    assert "下游 API 密钥" in page
+    system_log = page.index('id="system-log-panel"')
+    model_api = page.index('id="model-api-panel"')
+    advanced = page.index('id="advanced-settings-panel"')
+    assert model_api < system_log < advanced
+    assert '<details class="collapsible-panel system-log-panel" id="system-log-panel">' in page
+    assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">' in page
+    assert 'id="system-log-panel" open' not in page
+    assert 'id="advanced-settings-panel" open' not in page
+    assert '<details class="collapsible-panel" id="backup-panel">' in page
+    assert 'id="backup-panel" open' not in page
+    backup = page.split('id="backup-panel"', 1)[1].split("</details>", 1)[0]
+    backup_actions = backup.split('<div class="actions" style="justify-content:flex-start">', 1)[1].split(
+        "</div>", 1
+    )[0]
+    assert 'id="download-backup"' in backup_actions
+    assert 'id="restore-backup"' in backup_actions
+
+
+def test_resource_view_exposes_complete_folder_management() -> None:
+    page = _read("frontend/admin.html")
+    resources = page.split('<section id="settings-view" hidden>', 1)[1].split(
+        '<section id="system-view" hidden data-admin-only>', 1
+    )[0]
+
+    assert "知识库管理" in resources
+    assert 'id="source-editor-panel"' in resources
+    assert 'id="source-editor-panel" open' not in resources
+    assert 'data-source-open=' in page
+    assert 'data-source-scan=' in page
+    assert 'data-source-edit=' in page
+    assert 'data-source-delete=' in page
+    assert '/open-folder`' in page
+    assert '/scan`' in page
+    assert "默认知识库，不可删除" in page
+
+
+def test_teacher_tabs_and_primary_status_copy_are_chinese_first() -> None:
+    page = _read("frontend/admin.html")
+
+    for label in ("控制", "记录", "资源", "系统"):
+        assert f">{label}</button>" in page
+    assert "(Control)" not in page
+    assert "(Records)" not in page
+    assert "(Resources)" not in page
+    assert "(System)" not in page
+    assert "Current Teacher Policy" not in page
+    assert 'setStatus("运行中", true)' in page
+    assert "window.scrollTo({ top: 0 });" in page
+    assert '.tabs { position: sticky; top: 0; z-index: 5; }' in page
+    assert 'role="status" aria-live="polite"' in page
 
 
 def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
@@ -112,3 +239,6 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
     assert "PYTHON_RUNNER_MAX_CONCURRENCY=4" in example
     assert "PYTHON_RUNNER_MAX_QUEUE=64" in example
     assert "CLASSROOM_RECORDING_ENABLED=true" in example
+    assert "turn.computer_name" in page
+    assert "turn.client_ip" in page
+    assert "匿名学生" not in page

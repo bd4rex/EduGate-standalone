@@ -2,8 +2,15 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-set "VENV_PYTHON=%LOCALAPPDATA%\EduGate\venv\Scripts\python.exe"
-set "VENV_PYTHONW=%LOCALAPPDATA%\EduGate\venv\Scripts\pythonw.exe"
+set "PROJECT_ROOT=%~dp0.."
+set "PACKAGED_EXE=%PROJECT_ROOT%\dist\EduGate-Standalone\EduGate-Standalone.exe"
+if exist "%PACKAGED_EXE%" (
+  start "" "%PACKAGED_EXE%"
+  exit /b 0
+)
+
+set "VENV_PYTHON=%PROJECT_ROOT%\runtime\venv\Scripts\python.exe"
+set "VENV_PYTHONW=%PROJECT_ROOT%\runtime\venv\Scripts\pythonw.exe"
 if not exist "%VENV_PYTHON%" (
   echo EduGate has not been installed on this computer yet.
   echo The first-time installer will now open and use the Tsinghua PyPI mirror.

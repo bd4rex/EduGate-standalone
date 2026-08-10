@@ -8,59 +8,54 @@
   <a href="README.md">简体中文</a> · <strong>English</strong>
 </p>
 
-EduGate Standalone runs entirely on a teacher's Windows computer. It is designed for one teacher, one class session, or a small classroom rather than a school-wide deployment. EduGate connects to OpenAI-compatible model APIs upstream and provides students with a classroom-token-protected web page and API downstream.
+EduGate Standalone runs on a teacher's 64-bit Windows computer for one teacher and a single class or small classroom. It connects to OpenAI-compatible model APIs upstream and serves a classroom-token-protected student page and API downstream. The teacher uses one complete web console; there is no separate Windows control window.
 
-## First-time setup on Windows
+## Teacher quick start
 
-1. Install Python 3.9 or later and select `Add python.exe to PATH`.
-2. Double-click `desktop\install_backend_deps.bat`. The installer always uses the Tsinghua PyPI mirror and creates `%LOCALAPPDATA%\EduGate\venv`; it does not modify the system Python environment.
-3. Double-click `desktop\run_standalone.bat`.
-4. Create the administrator password in the teacher web console that opens automatically. There is no default password.
-5. Open **Resources -> Models and providers**, enter the model ID, base URL, and API key, save the configuration, and select **Test connection**.
+1. Extract or copy the complete `EduGate-Standalone` folder. Do not copy only the EXE.
+2. Double-click `EduGate-Standalone.exe`. The browser opens the teacher console and signs in locally.
+3. Open **System -> Upstream Model API Management**, enter the model ID, base URL, and API key, then save and test the connection.
+4. Select **Start class**, then copy the student link from the bottom of **Control** and share it with students.
+5. Select **End class** after the lesson. Student links and sessions are revoked while the teacher console stays online. Use **System -> Stop service** only when exiting EduGate.
 
-For later classes, only `desktop\run_standalone.bat` is needed. The teacher console, student page, and API are served from the same port, `8000` by default. No separate web server or CORS setup is required.
+The bundle includes independent Python runtimes for EduGate and student code execution. A teacher computer does not need a preinstalled Python or an online dependency installation. If port `8000` is busy, the launcher selects a nearby available port and opens the correct page.
 
-EduGate does not open a separate Windows control window. The launcher runs a supervised background process and opens the teacher console in the browser. Classroom controls, resources, logs, statistics, backup and restore, advanced settings, restart, and shutdown are all available from the web console.
+Copy the entire folder to another Windows computer or removable drive to retain models, knowledge, policies, credentials, and classroom records:
 
-The installer handles a known Python 3.9 virtual-environment problem in Windows profile paths containing spaces. Startup diagnostics are written to `%LOCALAPPDATA%\EduGate\launcher.log`.
+```text
+EduGate-Standalone\
+  EduGate-Standalone.exe
+  README.txt
+  config\edugate.env       # startup settings and initial password
+  data\                     # databases, knowledge, credentials, logs
+  runtime\python\           # isolated student-code interpreter
+  _internal\                # EduGate application resources
+```
+
+The first run creates `config` and `data`. The portable administrator is `admin`, with initial password `edugate` stored in `config\edugate.env`. The local browser signs in automatically, so the password is normally only a fallback. Student devices connecting over the LAN cannot call the local automatic-login endpoint.
+
+Portable `data\secrets.json` is deliberately not tied to a Windows account so API keys survive copying the folder. Keys are not echoed in the web UI, but anyone with access to the folder can read its local credentials.
 
 ## Classroom workflow
 
-1. Sign in to the teacher console and select the model, knowledge base, and classroom policy.
-2. Copy the complete **Student classroom link** and share it with the class.
-3. The temporary classroom token in the link is exchanged for an anonymous student session. Each student therefore receives an independent rate-limit identity even when the class shares one proxy IP.
-4. Select **Generate a new link** whenever all previously shared links must be revoked.
+Start and end controls sit beside the student entry at the bottom of Control. Starting creates a fresh student link; ending revokes that link and all student sessions without stopping the teacher console. On first entry, students supply a computer name or seat label, while the teacher service records the request IP. Each classroom token still creates an independent session, so rate limits remain per session even behind a shared proxy IP. The student page keeps the latest 50 local messages per classroom and sends only the latest 10 to the model. Generating a new classroom link revokes old links and sessions.
 
-The student page stores the latest 50 messages for the current classroom in that browser. A page refresh can therefore continue the conversation, while only the latest 10 messages are sent to the model to keep the request bounded. A newly generated classroom link uses a separate history scope.
+The **Records** view groups AI conversations and Python results by student computer name and IP. These records remain on the teacher computer and are retained for 30 days by default. The **System** view provides status, a copyable LAN address, direct access to the program folder, logs, backup and restore, collapsed-by-default advanced settings, restart, and shutdown.
 
-The **System** view provides runtime status and logs, full backup download, restore, advanced configuration, restart, and shutdown. After shutdown, the web page becomes unavailable until the launcher is started again.
+The **Resources** view puts the knowledge-base list first. Each source can be edited, opened in the teacher computer's file explorer, and incrementally synchronized from that folder. A scan adds new supported files, reindexes changed files, and removes indexes for files deleted from the folder. The default `general` source cannot be deleted; other sources can be removed when no classroom policy uses them. The lower-frequency create/edit form is collapsed by default.
 
-The **Records** view groups anonymous student AI conversations and Python results by classroom. Teachers can filter by anonymous student or activity type and permanently delete a class record. Content remains on the teacher computer, never stores student IP addresses, and is retained for 30 days by default. Administrators can disable recording or change the retention period in advanced settings.
+The Python runner defaults to four isolated execution slots with a bounded queue of 64 tasks. `/run_python/stream` emits queued, running, output, and completion events. This is a controlled task queue, not a cache: every task receives a fresh restricted subprocess and shares no student interpreter state. Advanced settings allow up to eight slots.
 
-API keys are encrypted with Windows DPAPI for the current Windows user. Runtime data is stored in:
+## Running from source
+
+Source users install Python 3.9 or later, then run:
 
 ```text
-%LOCALAPPDATA%\EduGate
-  .env
-  edugate.sqlite3
-  knowledge.sqlite3
-  knowledge_files\
-  runtime_config.json
-  secrets.json
-  venv\
+desktop\install_backend_deps.bat
+desktop\run_standalone.bat
 ```
 
-Keep this directory when uninstalling if classroom data should be retained. `secrets.json` cannot be decrypted after it is copied to another computer, so model API keys must be entered again on the new machine.
-
-## Secure defaults
-
-- The first administrator can only be created from the teacher computer, and passwords must contain at least 10 characters.
-- Teacher sessions expire after eight hours by default. Signing out, changing a password, or disabling an account revokes the session immediately.
-- `/chat`, `/chat/stream`, and `/run_python` require an anonymous student session or the backward-compatible temporary classroom token and are rate-limited per student.
-- `/v1/chat/completions` is disabled until `PLATFORM_API_KEY` is configured.
-- The Python runner is disabled by default. When enabled, it uses four isolated execution slots and a bounded queue of 64 tasks. `/run_python/stream` emits queued, running, output, and completion events in real time. Every task still applies syntax, timeout, and memory limits and uses a minimal environment that excludes model credentials.
-- Uploads are limited to 25 MB and PDF documents to 200 pages by default.
-- Technical request logs omit teacher and student message bodies by default and retain at most 5,000 entries. The separate local classroom-content history is retained for 30 days by default and can be disabled or deleted per class.
+The installer always uses the Tsinghua PyPI mirror and creates `runtime\venv` inside the project. Source-mode configuration and data also stay in the project's `config` and `data` directories.
 
 ## Development and verification
 
@@ -68,12 +63,6 @@ Keep this directory when uninstalling if classroom data should be retained. `sec
 python -m pytest -q --basetemp=.pytest-tmp
 ```
 
-Build the Windows bundle with:
+Build the Windows bundle with `desktop\build_windows.bat`. Output is written to `dist\EduGate-Standalone`; the build uses the Tsinghua mirror and adds the standalone student-code Python runtime.
 
-```text
-desktop\build_windows.bat
-```
-
-The output is written to `dist\EduGate-Standalone`. The build script also uses the Tsinghua PyPI mirror.
-
-See the [execution and classroom records design](docs/Execution-and-Classroom-Records-Design.md) and [English regression test matrix](docs/Regression-Test-Matrix.md). The detailed [installation guide](docs/安装与故障排查.txt), [user guide](docs/使用手册.txt), and [acceptance checklist](docs/单机版验收清单.txt) are currently maintained in Chinese. Return to the [Chinese project documentation](README.md) at any time.
+See the [execution and classroom records design](docs/Execution-and-Classroom-Records-Design.md) and [English regression test matrix](docs/Regression-Test-Matrix.md). The detailed [installation guide](docs/安装与故障排查.txt), [user guide](docs/使用手册.txt), and [acceptance checklist](docs/单机版验收清单.txt) are maintained primarily in Chinese. Return to the [Chinese project documentation](README.md) at any time.

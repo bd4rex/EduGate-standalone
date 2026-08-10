@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from app.main import (
     ModelCatalogItem,
     ScenarioUpdateRequest,
+    _sync_portable_admin_password,
     _stream_with_heartbeat,
     app,
     business_db,
@@ -45,8 +46,11 @@ def isolate_runtime_config() -> Iterator[None]:
     snapshot = runtime_config.data.model_copy(deep=True)
     with rate_limiter._lock:
         rate_limiter._events.clear()
+    classroom_access.start()
     student_sessions.revoke_all()
     yield
+    classroom_access.start()
+    student_sessions.revoke_all()
     runtime_config.data = snapshot
     runtime_config.save()
 
@@ -103,6 +107,49 @@ def test_login_uses_database_password_and_returns_expiring_session(client: TestC
     assert data["access_token"]
     assert data["expires_in"] == settings.session_ttl_seconds
     assert data["teacher"]["role"] == "admin"
+
+
+def test_portable_local_session_opens_teacher_console_without_password(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "portable_mode", True)
+    monkeypatch.setattr(settings, "portable_auto_login", True)
+    monkeypatch.setattr("app.main._is_loopback", lambda _: True)
+
+    response = client.post("/auth/local-session")
+
+    assert response.status_code == 200
+    assert response.json()["access_token"]
+    assert response.json()["teacher"]["username"] == settings.admin_username
+
+
+def test_portable_local_session_is_rejected_for_student_devices(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "portable_mode", True)
+    monkeypatch.setattr(settings, "portable_auto_login", True)
+    monkeypatch.setattr("app.main._is_loopback", lambda _: False)
+
+    response = client.post("/auth/local-session")
+
+    assert response.status_code == 403
+
+
+def test_portable_primary_password_is_kept_in_the_folder_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "config" / "edugate.env"
+    monkeypatch.setattr(settings, "portable_mode", True)
+    monkeypatch.setattr(settings, "config_path", str(config_path))
+    monkeypatch.setattr(settings, "admin_password", "old-password")
+
+    _sync_portable_admin_password(settings.admin_username, "new classroom password")
+
+    assert "ADMIN_PASSWORD='new classroom password'" in config_path.read_text(encoding="utf-8")
+    assert settings.admin_password == "new classroom password"
 
 
 def test_config_requires_teacher_session(client: TestClient) -> None:
@@ -177,6 +224,46 @@ def test_rotating_classroom_token_invalidates_old_link(
         json={"messages": [{"role": "user", "content": "hello"}]},
     )
     assert rejected.status_code == 401
+
+
+def test_classroom_start_and_end_control_student_access_without_stopping_service(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    started = client.post("/admin/classroom/start", headers=admin_headers)
+    assert started.status_code == 200
+    started_data = started.json()
+    assert started_data["active"] is True
+    class_token = started_data["class_token"]
+
+    joined = client.post(
+        "/classroom/join",
+        headers={"X-Class-Token": class_token},
+    )
+    assert joined.status_code == 200
+    student_token = joined.json()["student_token"]
+
+    ended = client.post("/admin/classroom/end", headers=admin_headers)
+    assert ended.status_code == 200
+    assert ended.json()["active"] is False
+    status_response = client.get("/admin/classroom", headers=admin_headers)
+    assert status_response.status_code == 200
+    assert status_response.json()["class_token"] == ""
+
+    old_link = client.post("/classroom/join", headers={"X-Class-Token": class_token})
+    assert old_link.status_code == 403
+    assert old_link.json()["detail"] == "Classroom is not active"
+    old_session = client.post(
+        "/chat",
+        headers={"X-Student-Token": student_token},
+        json={"messages": [{"role": "user", "content": "hello"}]},
+    )
+    assert old_session.status_code == 403
+
+    restarted = client.post("/admin/classroom/start", headers=admin_headers)
+    assert restarted.status_code == 200
+    assert restarted.json()["class_token"] != class_token
+    assert client.get("/health").status_code == 200
 
 
 def test_student_cannot_override_model_or_system_prompt(
@@ -481,7 +568,7 @@ def test_python_runner_stream_reports_queue_output_and_result(
     assert matching_turns[0]["output_content"] == "2\n"
 
 
-def test_teacher_can_view_only_owned_anonymous_classroom_records(
+def test_teacher_can_view_only_owned_identified_classroom_records(
     client: TestClient,
     admin_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
@@ -502,10 +589,16 @@ def test_teacher_can_view_only_owned_anonymous_classroom_records(
         return {"choices": [{"message": {"content": "记录里的回答"}}]}
 
     monkeypatch.setattr("app.main.client.chat_completion", fake_chat_completion)
-    joined = client.post(
+    monkeypatch.setattr("app.main._client_ip", lambda _: "192.168.10.27")
+    join_response = client.post(
         "/classroom/join",
         headers={"X-Class-Token": classroom_access.token()},
-    ).json()
+        json={"computer_name": "LAB-PC-27"},
+    )
+    assert join_response.status_code == 200
+    joined = join_response.json()
+    assert joined["computer_name"] == "LAB-PC-27"
+    assert joined["client_ip"] == "192.168.10.27"
     response = client.post(
         "/chat",
         headers={"X-Student-Token": joined["student_token"]},
@@ -527,7 +620,8 @@ def test_teacher_can_view_only_owned_anonymous_classroom_records(
     assert detail["turns"][-1]["input_content"] == "记录里的问题"
     assert detail["turns"][-1]["output_content"] == "记录里的回答"
     assert detail["turns"][-1]["student_session_id"] == joined["student_session_id"]
-    assert "127.0.0.1" not in json.dumps(detail, ensure_ascii=False)
+    assert detail["turns"][-1]["computer_name"] == "LAB-PC-27"
+    assert detail["turns"][-1]["client_ip"] == "192.168.10.27"
 
     admin_records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
     assert any(record["teacher_username"] == teacher_username for record in admin_records)
@@ -735,6 +829,75 @@ def test_system_management_requires_supervised_launcher(
     assert status_response.status_code == 200
     assert status_response.json()["supervised"] is False
     assert action_response.status_code == 409
+
+
+def test_admin_can_open_fixed_application_directory(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    opened: list[bool] = []
+
+    def fake_open_app_directory() -> dict[str, str]:
+        opened.append(True)
+        return {"status": "opened", "path": "C:\\EduGate"}
+
+    monkeypatch.setattr("app.main.open_app_directory", fake_open_app_directory)
+    response = client.post("/admin/system/open-app-dir", headers=admin_headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "opened", "path": "C:\\EduGate"}
+    assert opened == [True]
+
+
+def test_admin_can_open_fixed_knowledge_source_directory(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source_dir = tmp_path / "general"
+    source_dir.mkdir()
+    opened: list[Path] = []
+
+    monkeypatch.setattr(knowledge_store, "source_directory", lambda source_id: source_dir)
+
+    def fake_open_local_directory(path: Path, *, missing_detail: str) -> dict[str, str]:
+        opened.append(path)
+        return {"status": "opened", "path": str(path)}
+
+    monkeypatch.setattr("app.main.open_local_directory", fake_open_local_directory)
+    response = client.post("/knowledge/sources/general/open-folder", headers=admin_headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "opened", "path": str(source_dir)}
+    assert opened == [source_dir]
+
+
+def test_admin_can_scan_knowledge_source_directory(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        knowledge_store,
+        "scan_source",
+        lambda source_id: {
+            "source_id": source_id,
+            "added": 2,
+            "updated": 1,
+            "removed": 0,
+            "unchanged": 3,
+            "skipped": 1,
+            "errors": [],
+        },
+    )
+
+    response = client.post("/knowledge/sources/general/scan", headers=admin_headers)
+
+    assert response.status_code == 200
+    assert response.json()["added"] == 2
+    assert response.json()["unchanged"] == 3
 
 
 def test_platform_key_is_managed_in_encrypted_store(

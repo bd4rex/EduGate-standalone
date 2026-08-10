@@ -72,8 +72,11 @@ def system_status(*, supervised: bool, started_at: float, platform_key_set: bool
         "status": "running",
         "supervised": supervised,
         "pid": os.getpid(),
+        "portable_mode": settings.portable_mode,
+        "app_dir": settings.app_dir,
         "uptime_seconds": max(0, int(time.time() - started_at)),
         "data_dir": str(data_dir),
+        "config_path": settings.config_path,
         "frontend_dir": settings.frontend_dir,
         "port": port,
         "local_ip": ip,
@@ -85,8 +88,29 @@ def system_status(*, supervised: bool, started_at: float, platform_key_set: bool
     }
 
 
+def open_app_directory() -> dict[str, str]:
+    return open_local_directory(
+        Path(settings.app_dir),
+        missing_detail="EduGate application directory does not exist",
+    )
+
+
+def open_local_directory(path: Path, *, missing_detail: str = "Directory does not exist") -> dict[str, str]:
+    directory = path.resolve()
+    if not directory.is_dir():
+        raise HTTPException(status_code=404, detail=missing_detail)
+    startfile = getattr(os, "startfile", None)
+    if os.name != "nt" or not callable(startfile):
+        raise HTTPException(status_code=501, detail="Opening the application directory requires Windows")
+    try:
+        startfile(str(directory))
+    except OSError as error:
+        raise HTTPException(status_code=500, detail="Could not open the directory") from error
+    return {"status": "opened", "path": str(directory)}
+
+
 def read_advanced_settings() -> dict[str, Any]:
-    env_path = Path(settings.data_dir) / ".env"
+    env_path = Path(settings.config_path)
     values = dotenv_values(env_path)
     output = []
     for key, schema in SETTINGS_SCHEMA.items():
@@ -100,7 +124,7 @@ def update_advanced_settings(values: dict[str, Any]) -> dict[str, Any]:
     unknown = sorted(set(values) - set(SETTINGS_SCHEMA))
     if unknown:
         raise HTTPException(status_code=400, detail=f"Unsupported settings: {', '.join(unknown)}")
-    env_path = Path(settings.data_dir) / ".env"
+    env_path = Path(settings.config_path)
     env_path.parent.mkdir(parents=True, exist_ok=True)
     env_path.touch(exist_ok=True)
     normalized: dict[str, Any] = {}
@@ -137,7 +161,10 @@ def create_backup() -> Path:
             db_snapshots[name] = snapshot
 
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name in (".env", "runtime_config.json", "secrets.json"):
+        config_path = Path(settings.config_path)
+        if config_path.exists():
+            archive.write(config_path, "config/edugate.env")
+        for name in ("runtime_config.json", "secrets.json"):
             path = data_dir / name
             if path.exists():
                 archive.write(path, name)
@@ -150,7 +177,7 @@ def create_backup() -> Path:
                     archive.write(path, Path("knowledge_files") / path.relative_to(knowledge_dir))
         archive.writestr(
             "backup-info.json",
-            json.dumps({"version": 1, "created_at": time.time()}, ensure_ascii=False),
+            json.dumps({"version": 2, "portable": settings.portable_mode, "created_at": time.time()}, ensure_ascii=False),
         )
     return archive_path
 
@@ -192,7 +219,7 @@ def _validate_backup(path: Path) -> None:
                 if member_path.is_absolute() or ".." in member_path.parts:
                     raise HTTPException(status_code=400, detail=f"Unsafe backup path: {member.filename}")
                 allowed = (
-                    member.filename in {".env", "edugate.sqlite3", "knowledge.sqlite3", "runtime_config.json", "secrets.json", "backup-info.json"}
+                    member.filename in {".env", "config/edugate.env", "edugate.sqlite3", "knowledge.sqlite3", "runtime_config.json", "secrets.json", "backup-info.json"}
                     or member.filename.startswith("knowledge_files/")
                 )
                 if not allowed:

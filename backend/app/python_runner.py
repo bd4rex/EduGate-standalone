@@ -497,7 +497,15 @@ def _append_runner_output(
 def resolve_python_executable(configured: str | None = None) -> str:
     candidates: list[Path] = []
     if configured:
-        candidates.append(Path(configured).expanduser())
+        configured_path = Path(configured).expanduser()
+        if not configured_path.is_absolute() and os.getenv("EDUGATE_APP_DIR"):
+            configured_path = Path(os.environ["EDUGATE_APP_DIR"]) / configured_path
+        candidates.append(configured_path)
+    app_dir = Path(os.getenv("EDUGATE_APP_DIR") or Path(sys.executable).resolve().parent)
+    if os.name == "nt":
+        candidates.append(app_dir / "runtime" / "python" / "python.exe")
+    else:
+        candidates.append(app_dir / "runtime" / "python" / "bin" / "python")
     data_dir = Path(
         os.getenv("EDUGATE_DATA_DIR")
         or Path(os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or Path.home()) / "EduGate"
@@ -513,7 +521,7 @@ def resolve_python_executable(configured: str | None = None) -> str:
             return str(candidate.resolve())
     raise PythonRunnerUnavailable(
         "Python runner executable was not found. Configure PYTHON_RUNNER_EXECUTABLE "
-        "or run the standalone dependency installer first."
+        "or use a portable bundle that includes runtime/python."
     )
 
 

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import html
+import hashlib
+import mimetypes
+import os
 import re
 import shutil
 import sqlite3
@@ -11,7 +14,7 @@ from typing import Any
 
 from fastapi import HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 SUPPORTED_EXTENSIONS = {
@@ -51,6 +54,18 @@ class KnowledgeFile(BaseModel):
     created_at: str
 
 
+class KnowledgeScanResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_id: str
+    added: int = 0
+    updated: int = 0
+    removed: int = 0
+    unchanged: int = 0
+    skipped: int = 0
+    errors: list[str] = Field(default_factory=list)
+
+
 class KnowledgeHit(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -87,6 +102,12 @@ class KnowledgeStore:
         conn.execute("PRAGMA busy_timeout = 10000")
         return conn
 
+    def checkpoint(self) -> None:
+        if not Path(self.db_path).exists():
+            return
+        with self._connect() as conn:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
     def _init_db(self) -> None:
         with self._connect() as conn:
             conn.executescript(
@@ -105,6 +126,7 @@ class KnowledgeStore:
                     content_type TEXT,
                     size_bytes INTEGER NOT NULL,
                     path TEXT NOT NULL,
+                    content_hash TEXT NOT NULL DEFAULT '',
                     created_at TEXT NOT NULL
                 );
 
@@ -117,6 +139,9 @@ class KnowledgeStore:
                 );
                 """
             )
+            file_columns = {row["name"] for row in conn.execute("PRAGMA table_info(files)").fetchall()}
+            if "content_hash" not in file_columns:
+                conn.execute("ALTER TABLE files ADD COLUMN content_hash TEXT NOT NULL DEFAULT ''")
             conn.execute(
                 """
                 INSERT OR IGNORE INTO sources (id, name, description, created_at)
@@ -165,6 +190,7 @@ class KnowledgeStore:
                 """,
                 (source_id, name, description, _now()),
             )
+        self.source_directory(source_id)
         return self.get_source(source_id)
 
     def get_source(self, source_id: str) -> KnowledgeSource:
@@ -184,6 +210,16 @@ class KnowledgeStore:
             conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
         for row in files:
             Path(row["path"]).unlink(missing_ok=True)
+        shutil.rmtree(self.storage_dir / source_id, ignore_errors=True)
+
+    def source_directory(self, source_id: str) -> Path:
+        source = self.get_source(source_id)
+        storage_root = self.storage_dir.resolve()
+        directory = (storage_root / source.id).resolve()
+        if storage_root not in directory.parents:
+            raise HTTPException(status_code=400, detail="Invalid knowledge source directory")
+        directory.mkdir(parents=True, exist_ok=True)
+        return directory
 
     async def add_file(self, source_id: str, upload: UploadFile) -> KnowledgeFile:
         self.get_source(source_id)
@@ -196,9 +232,9 @@ class KnowledgeStore:
             )
 
         file_id = uuid.uuid4().hex
-        target_dir = self.storage_dir / source_id
-        target_dir.mkdir(parents=True, exist_ok=True)
-        target_path = target_dir / f"{file_id}{extension}"
+        target_dir = self.source_directory(source_id)
+        stored_filename = _safe_filename(filename)
+        target_path = _unique_target_path(target_dir / stored_filename)
 
         size = 0
         with target_path.open("wb") as out:
@@ -227,14 +263,24 @@ class KnowledgeStore:
             raise HTTPException(status_code=400, detail="No readable text was extracted from the file")
 
         created_at = _now()
+        content_hash = _file_hash(target_path)
         try:
             with self._connect() as conn:
                 conn.execute(
                     """
-                    INSERT INTO files (id, source_id, filename, content_type, size_bytes, path, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO files (id, source_id, filename, content_type, size_bytes, path, content_hash, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (file_id, source_id, filename, upload.content_type, size, str(target_path), created_at),
+                    (
+                        file_id,
+                        source_id,
+                        target_path.name,
+                        upload.content_type,
+                        size,
+                        str(target_path),
+                        content_hash,
+                        created_at,
+                    ),
                 )
                 conn.executemany(
                     """
@@ -251,6 +297,108 @@ class KnowledgeStore:
             raise
 
         return self.get_file(file_id)
+
+    def scan_source(self, source_id: str) -> KnowledgeScanResult:
+        source_dir = self.source_directory(source_id)
+        result = KnowledgeScanResult(source_id=source_id)
+        with self._connect() as conn:
+            indexed_rows = conn.execute(
+                """
+                SELECT id, filename, path, size_bytes, content_hash
+                FROM files
+                WHERE source_id = ?
+                """,
+                (source_id,),
+            ).fetchall()
+        indexed = {_path_key(Path(row["path"])): row for row in indexed_rows}
+        discovered: set[str] = set()
+
+        for path in sorted(source_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+                result.skipped += 1
+                continue
+            key = _path_key(path)
+            discovered.add(key)
+            relative_name = path.relative_to(source_dir).as_posix()
+            try:
+                size = path.stat().st_size
+                if size > self.max_upload_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"File exceeds the {self.max_upload_bytes // (1024 * 1024)} MB upload limit",
+                    )
+                content_hash = _file_hash(path)
+                existing = indexed.get(key)
+                if (
+                    existing is not None
+                    and existing["content_hash"] == content_hash
+                    and existing["size_bytes"] == size
+                ):
+                    result.unchanged += 1
+                    continue
+                text = extract_text(path, max_pdf_pages=self.max_pdf_pages)
+                chunks = chunk_text(text)
+                if not chunks:
+                    raise HTTPException(status_code=400, detail="No readable text was extracted from the file")
+                file_id = existing["id"] if existing is not None else uuid.uuid4().hex
+                filename = existing["filename"] if existing is not None else relative_name
+                content_type = mimetypes.guess_type(path.name)[0]
+                with self._connect() as conn:
+                    if existing is None:
+                        conn.execute(
+                            """
+                            INSERT INTO files (
+                                id, source_id, filename, content_type, size_bytes, path, content_hash, created_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                file_id,
+                                source_id,
+                                filename,
+                                content_type,
+                                size,
+                                str(path),
+                                content_hash,
+                                _now(),
+                            ),
+                        )
+                    else:
+                        conn.execute("DELETE FROM chunks WHERE file_id = ?", (file_id,))
+                        conn.execute(
+                            """
+                            UPDATE files
+                            SET content_type = ?, size_bytes = ?, content_hash = ?
+                            WHERE id = ?
+                            """,
+                            (content_type, size, content_hash, file_id),
+                        )
+                    conn.executemany(
+                        """
+                        INSERT INTO chunks (id, file_id, source_id, chunk_index, text)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        [
+                            (uuid.uuid4().hex, file_id, source_id, index, chunk)
+                            for index, chunk in enumerate(chunks)
+                        ],
+                    )
+                if existing is None:
+                    result.added += 1
+                else:
+                    result.updated += 1
+            except Exception as error:
+                detail = error.detail if isinstance(error, HTTPException) else str(error)
+                result.errors.append(f"{relative_name}: {detail}")
+
+        missing_ids = [row["id"] for key, row in indexed.items() if key not in discovered]
+        if missing_ids:
+            with self._connect() as conn:
+                conn.executemany("DELETE FROM chunks WHERE file_id = ?", [(file_id,) for file_id in missing_ids])
+                conn.executemany("DELETE FROM files WHERE id = ?", [(file_id,) for file_id in missing_ids])
+            result.removed = len(missing_ids)
+        return result
 
     def list_files(self, source_id: str | None = None) -> list[KnowledgeFile]:
         params: tuple[Any, ...] = ()
@@ -398,6 +546,33 @@ def normalize_text(text: str) -> str:
 
 def _safe_id(value: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]+", "-", value.strip()).strip("-").lower()
+
+
+def _safe_filename(value: str) -> str:
+    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", Path(value).name).strip(" .")
+    return cleaned or "upload.txt"
+
+
+def _unique_target_path(target: Path) -> Path:
+    if not target.exists():
+        return target
+    for index in range(2, 10000):
+        candidate = target.with_name(f"{target.stem} ({index}){target.suffix}")
+        if not candidate.exists():
+            return candidate
+    raise HTTPException(status_code=409, detail="Too many files share this filename")
+
+
+def _file_hash(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _path_key(path: Path) -> str:
+    return os.path.normcase(str(path.resolve()))
 
 
 def _now() -> str:

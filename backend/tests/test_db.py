@@ -74,7 +74,9 @@ def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: 
     first_run_id = db.record_classroom_turn(
         classroom_instance_id="classroom-one",
         teacher_username="teacher-a",
-        student_session_id="anonymous-student-1",
+        student_session_id="student-session-1",
+        computer_name="LAB-PC-01",
+        client_ip="192.168.10.31",
         kind="chat",
         input_content="为什么要通分？",
         output_content="因为需要相同的计数单位。",
@@ -84,7 +86,9 @@ def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: 
     second_turn_run_id = db.record_classroom_turn(
         classroom_instance_id="classroom-one",
         teacher_username="teacher-a",
-        student_session_id="anonymous-student-2",
+        student_session_id="student-session-2",
+        computer_name="LAB-PC-02",
+        client_ip="192.168.10.32",
         kind="python",
         input_content="print(1 + 1)",
         output_content="2\n",
@@ -96,7 +100,9 @@ def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: 
     db.record_classroom_turn(
         classroom_instance_id="classroom-one",
         teacher_username="teacher-b",
-        student_session_id="anonymous-student-3",
+        student_session_id="student-session-3",
+        computer_name="LAB-PC-03",
+        client_ip="192.168.10.33",
         kind="chat",
         input_content="另一个老师的问题",
         output_content="另一个老师的回答",
@@ -115,7 +121,9 @@ def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: 
     detail = db.get_classroom_record(first_run_id, teacher_username="teacher-a")
     assert detail is not None
     assert [turn["kind"] for turn in detail["turns"]] == ["chat", "python"]
-    assert detail["turns"][0]["student_session_id"] == "anonymous-student-1"
+    assert detail["turns"][0]["student_session_id"] == "student-session-1"
+    assert detail["turns"][0]["computer_name"] == "LAB-PC-01"
+    assert detail["turns"][0]["client_ip"] == "192.168.10.31"
     assert db.get_classroom_record(first_run_id, teacher_username="teacher-b") is None
 
     db.end_classroom_instance("classroom-one")
@@ -123,6 +131,41 @@ def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: 
     assert ended is not None and ended["session"]["ended_at"] is not None
     assert db.delete_classroom_record(first_run_id, teacher_username="teacher-b") is False
     assert db.delete_classroom_record(first_run_id, teacher_username="teacher-a") is True
+
+
+def test_classroom_record_schema_adds_computer_identity_without_deleting_old_data(tmp_path: Path) -> None:
+    path = tmp_path / "old-records.sqlite3"
+    with sqlite3.connect(path) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE classroom_turns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                classroom_run_id TEXT NOT NULL,
+                student_session_id TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                input_content TEXT NOT NULL,
+                output_content TEXT NOT NULL DEFAULT '',
+                status_code INTEGER NOT NULL,
+                latency_ms INTEGER NOT NULL DEFAULT 0,
+                queue_wait_ms INTEGER,
+                timed_out INTEGER,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO classroom_turns (
+                classroom_run_id, student_session_id, kind, input_content, status_code
+            ) VALUES ('old-run', 'old-session', 'chat', 'old question', 200);
+            """
+        )
+
+    BusinessDB(str(path)).init()
+
+    with sqlite3.connect(path) as conn:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(classroom_turns)")}
+        old_row = conn.execute(
+            "SELECT computer_name, client_ip FROM classroom_turns WHERE id = 1"
+        ).fetchone()
+    assert {"computer_name", "client_ip"} <= columns
+    assert old_row == ("", "")
 
 
 def test_classroom_record_retention_and_content_limits_are_enforced(tmp_path: Path) -> None:

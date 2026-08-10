@@ -30,7 +30,10 @@ def test_system_control_schedules_supervisor_action() -> None:
 
 def test_advanced_settings_round_trip(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(settings, "data_dir", str(tmp_path))
-    (tmp_path / ".env").write_text("PYTHON_RUNNER_ENABLED=false\n", encoding="utf-8")
+    config_path = tmp_path / "config" / "edugate.env"
+    config_path.parent.mkdir()
+    config_path.write_text("PYTHON_RUNNER_ENABLED=false\n", encoding="utf-8")
+    monkeypatch.setattr(settings, "config_path", str(config_path))
 
     result = update_advanced_settings(
         {"PYTHON_RUNNER_ENABLED": True, "MODEL_MAX_CONCURRENCY": 6}
@@ -58,6 +61,7 @@ def test_backup_contains_consistent_databases_and_knowledge(tmp_path: Path, monk
     monkeypatch.setattr(settings, "sqlite_db_path", str(data_dir / "edugate.sqlite3"))
     monkeypatch.setattr(settings, "knowledge_db_path", str(data_dir / "knowledge.sqlite3"))
     monkeypatch.setattr(settings, "knowledge_dir", str(knowledge_dir))
+    monkeypatch.setattr(settings, "config_path", str(data_dir / ".env"))
 
     archive = create_backup()
     try:
@@ -115,6 +119,7 @@ def test_restore_rejects_unsafe_or_unknown_entries(
 
 def test_advanced_settings_reject_unknown_and_out_of_range_values(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(settings, "data_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "config_path", str(tmp_path / "config" / "edugate.env"))
 
     with pytest.raises(HTTPException, match="Unsupported settings"):
         update_advanced_settings({"UNRECOGNIZED": "value"})

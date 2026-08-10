@@ -48,7 +48,10 @@ def _as_bool(name: str, default: bool = False) -> bool:
 class Settings:
     app_name: str = "EduGate"
     deployment_mode: str = os.getenv("EDUGATE_MODE", "standalone")
+    portable_mode: bool = _as_bool("EDUGATE_PORTABLE_MODE", False)
+    app_dir: str = os.getenv("EDUGATE_APP_DIR", str(PROJECT_ROOT))
     data_dir: str = str(DATA_DIR)
+    config_path: str = os.getenv("EDUGATE_CONFIG_PATH", str(DATA_DIR / ".env"))
     frontend_dir: str = os.getenv("EDUGATE_FRONTEND_DIR", str(PROJECT_ROOT / "frontend"))
     litellm_base_url: str = _normalize_base_url(os.getenv("LITELLM_BASE_URL", "http://127.0.0.1:4000"))
     litellm_api_prefix: str = _normalize_prefix(os.getenv("LITELLM_API_PREFIX", "/v1"))
@@ -65,6 +68,16 @@ class Settings:
     sqlite_db_path: str = _data_path("EDUGATE_SQLITE_DB_PATH", "edugate.sqlite3")
     platform_api_key: str | None = os.getenv("PLATFORM_API_KEY") or None
     admin_username: str = os.getenv("ADMIN_USERNAME", "admin")
+    admin_password: str | None = os.getenv("ADMIN_PASSWORD") or (
+        "edugate" if _as_bool("EDUGATE_PORTABLE_MODE", False) else None
+    )
+    portable_auto_login: bool = _as_bool(
+        "PORTABLE_AUTO_LOGIN",
+        _as_bool("EDUGATE_PORTABLE_MODE", False),
+    )
+    secret_store_mode: str = os.getenv("SECRET_STORE_MODE") or (
+        "portable" if _as_bool("EDUGATE_PORTABLE_MODE", False) else "dpapi"
+    )
     session_ttl_seconds: int = int(os.getenv("SESSION_TTL_SECONDS", "28800"))
     student_session_ttl_seconds: int = int(os.getenv("STUDENT_SESSION_TTL_SECONDS", "28800"))
     student_join_rate_limit: int = int(os.getenv("STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES", "256"))
@@ -77,7 +90,10 @@ class Settings:
     request_timeout_seconds: float = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "60"))
     stream_read_timeout_seconds: float = float(os.getenv("STREAM_READ_TIMEOUT_SECONDS", "120"))
     stream_heartbeat_seconds: float = float(os.getenv("STREAM_HEARTBEAT_SECONDS", "15"))
-    python_runner_enabled: bool = _as_bool("PYTHON_RUNNER_ENABLED", False)
+    python_runner_enabled: bool = _as_bool(
+        "PYTHON_RUNNER_ENABLED",
+        _as_bool("EDUGATE_PORTABLE_MODE", False),
+    )
     python_runner_timeout_seconds: float = float(os.getenv("PYTHON_RUNNER_TIMEOUT_SECONDS", "3"))
     python_runner_max_code_chars: int = int(os.getenv("PYTHON_RUNNER_MAX_CODE_CHARS", "6000"))
     python_runner_memory_mb: int = int(os.getenv("PYTHON_RUNNER_MEMORY_MB", "128"))

@@ -1,76 +1,68 @@
 EduGate 单机课堂版：安装与故障排查
-====================================
 
-一、首次安装
+一、推荐方式：使用打包版
 
-1. 安装 64 位 Python 3.9 或更高版本。
-2. 安装 Python 时勾选“Add python.exe to PATH”。
-3. 双击 desktop\install_backend_deps.bat。
-4. 安装脚本只使用清华 PyPI 镜像：
-   https://pypi.tuna.tsinghua.edu.cn/simple
-5. 脚本会创建独立环境：
-   %LOCALAPPDATA%\EduGate\venv
-6. 安装成功后双击 desktop\run_standalone.bat。
+1. 将完整的 EduGate-Standalone 文件夹复制到教师电脑本地磁盘。
+2. 文件夹路径尽量简短，例如 D:\EduGate-Standalone；不要只复制 EduGate-Standalone.exe。
+3. 双击 EduGate-Standalone.exe。打包版已包含后端依赖和学生代码所需的独立 Python，不需要安装 Python，也不需要联网安装。
+4. Windows 防火墙首次询问时允许“专用网络”，否则本机能打开但学生电脑可能无法连接。
+5. 浏览器自动打开教师控制台并在本机自动进入。首次使用只需添加并测试模型公司 API。
 
-不要使用管理员身份安装，也不需要执行 pip install --user。EduGate 不修改系统 Python 的包。
+初始账号是 admin，初始密码是 edugate，保存在 config\edugate.env。正常上课由本机自动进入，无需输入密码；来自局域网的学生设备不能调用自动登录接口。
 
-二、首次打开
+二、从源码运行（仅开发或未拿到打包版时）
 
-1. 后台启动程序会打开 http://127.0.0.1:8000/admin.html，不会显示单独的 Windows 控制窗口。
-2. 页面显示“首次运行”时，创建至少 10 个字符的管理员密码。
-3. 系统没有默认密码，也不会从 .env 自动创建固定管理员。
-4. 进入“资源 -> 模型与供应商管理”。
-5. 填写模型 ID、显示名称、OpenAI-compatible Base URL 和 API Key。
-6. 保存后点击“测试连接”。连接成功后再用于课堂。
+1. 安装 64 位 Python 3.9 或更高版本，并勾选 Add python.exe to PATH。
+2. 双击 desktop\install_backend_deps.bat。
+3. 脚本固定从 https://pypi.tuna.tsinghua.edu.cn/simple 安装依赖。
+4. 虚拟环境创建在项目目录 runtime\venv，不修改系统 Python 包。
+5. 安装完成后双击 desktop\run_standalone.bat。
 
-三、Windows 防火墙
+若运行启动脚本时尚未安装依赖，脚本会自动打开上述安装流程。已下载依赖、config 和 data 不会因重复安装而删除。
 
-学生电脑访问教师电脑时，Windows 可能第一次弹出网络访问提示。只允许“专用网络”即可，不建议在公共网络放行。
+三、便携目录与旧版迁移
 
-EduGate 只需要 TCP 8000 端口。教师端和学生端不再使用 8080，也不需要 CORS 配置。
+首次启动会在 EXE 或项目根目录创建：
 
-四、安装失败
+  config\edugate.env
+  data\edugate.sqlite3
+  data\knowledge.sqlite3
+  data\knowledge_files\
+  data\runtime_config.json
+  data\secrets.json
+  data\launcher.log
 
-“找不到 Python”
-  重新安装 Python，并勾选 Add python.exe to PATH。关闭旧命令窗口后重试。
+复制整个文件夹即可保留配置、API Key、知识库、账号和课堂记录。便携版 secrets.json 不绑定 Windows 用户，因此可以在另一台电脑继续读取；同时也意味着拥有文件夹的人可以读取本地密钥。
 
-“无法访问清华源”
-  在浏览器打开 https://pypi.tuna.tsinghua.edu.cn/simple 检查网络。校园网有认证页面时，先完成网页认证。脚本失败后可直接重跑，不会删除已有数据。
+从旧版首次升级且新 data 为空时，启动器会尝试把 %LOCALAPPDATA%\EduGate 中的数据库、知识库、配置和密钥复制到新目录，并写入 data\.imported-from-localappdata 标记。旧 DPAPI 密钥应先在原 Windows 用户下启动一次完成转换。
 
-“创建虚拟环境失败”
-  安装脚本会自动识别 Python 3.9 在含空格用户目录中的 venv 启动器问题，并从清华源安装隔离的 virtualenv 兼容引导。若两种方式都失败，请在命令行执行：py -3 -m ensurepip --upgrade，然后重跑安装脚本。
+四、常见问题
 
-五、启动失败
+双击后没有页面
+  等待 10 秒后再试；检查 data\launcher.log。也可在浏览器打开 http://127.0.0.1:8000/admin.html。若 8000 被占用，启动器会自动尝试后续 19 个端口，日志会记录实际地址。
 
-“端口 8000 已被占用”
-  关闭其他 EduGate、Uvicorn 或占用 8000 端口的程序，再重新启动。可用以下命令查看：
-  netstat -ano | findstr :8000
+自动进入失败
+  展开的登录区可使用 config\edugate.env 中 ADMIN_USERNAME 和 ADMIN_PASSWORD 登录。确认页面地址是 127.0.0.1 或 localhost；通过局域网 IP 打开教师页不会自动登录。
 
-“缺少后端依赖”
-  确认是通过 desktop\run_standalone.bat 启动，不要直接双击 Python 文件。重新运行安装脚本修复独立环境。
+学生打不开课堂链接
+  先确认学生与教师电脑在可互访的局域网；使用控制台复制的完整链接，不要手写端口或只复制 student.html。检查 Windows 防火墙是否允许 EduGate 在专用网络通信，学校网络是否启用了客户端隔离。
 
-仍无法启动
-  查看 %LOCALAPPDATA%\EduGate\launcher.log。该文件记录启动和服务线程异常，不记录师生对话正文。
+模型连接失败
+  检查 Base URL 是否包含供应商要求的 /v1，模型 ID 是否正确，API Key 是否有效，教师电脑是否能访问供应商。点击“测试连接”会实际请求供应商模型列表。
 
-六、学生无法打开
+Python 代码无法运行
+  打包目录必须保留 runtime\python。源码模式需保留 runtime\venv。高级设置中的 PYTHON_RUNNER_ENABLED 应为 true；并发数范围 1 到 8。
 
-1. 教师电脑和学生电脑应处于同一个可信局域网。
-2. 使用教师控制台复制的完整课堂链接，不能只复制 student.html。
-3. 确认 Windows 防火墙允许 EduGate/Python 访问专用网络。
-4. 点击“换一个链接”后，旧课堂链接会立即失效，需要重新发送。
-5. 不要把 127.0.0.1 地址发给学生；“系统”页显示局域网地址，课堂链接也会使用教师电脑的局域网地址。
+复制后缺少配置
+  必须在停止服务后复制整个文件夹，并确认 config、data、runtime、_internal 都在。只复制 EXE 不构成完整程序。
 
-七、模型连接失败
+杀毒软件拦截
+  one-directory 包含 Python DLL 和大量小文件。请从可信发布页重新下载完整包，必要时将整个 EduGate-Standalone 文件夹加入单位允许列表，不要单独恢复未知来源文件。
 
-1. Base URL 通常类似 https://api.deepseek.com/v1，也可填写完整的 /chat/completions 地址。
-2. API Key 更新后应重新保存并点击“测试连接”。
-3. 供应商必须兼容 OpenAI Chat Completions；测试会实际请求其 /models 接口。
-4. secrets.json 只能由创建它的 Windows 用户解密。换电脑或换 Windows 用户后需重新填写 API Key。
+五、停止、备份与重置
 
-八、数据与重装
+“结束课堂”只关闭学生入口，教师服务仍继续运行。需要复制、移动或拔出磁盘时，请到“系统”页点击“停止服务”；服务退出时会完成数据库 checkpoint。强制结束进程通常可由 SQLite WAL 恢复，但不适合作为日常关闭方式。
 
-所有运行数据位于 %LOCALAPPDATA%\EduGate。重装程序不会删除这里的数据。需要完全重置时，先停止 EduGate，再自行备份并删除该目录；此操作会永久删除账号、知识库和加密密钥。
+“系统”页可下载完整备份并恢复。恢复会验证 ZIP，在服务停止后替换数据并重启。
 
-九、后台服务与日志
-
-运行中不会出现 Windows 控制窗口。管理操作位于 Web 控制台“系统”页。无法打开网页时查看 %LOCALAPPDATA%\EduGate\launcher.log；服务已停止时重新双击 desktop\run_standalone.bat。
+完全重置：先停止 EduGate，备份整个文件夹，然后删除 config 和 data。下次启动会回到默认配置；此操作会删除账号、知识库、课堂记录和密钥。

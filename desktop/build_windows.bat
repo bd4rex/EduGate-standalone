@@ -45,5 +45,12 @@ if %errorlevel% neq 0 exit /b 1
 if %errorlevel% neq 0 exit /b 1
 
 echo.
+echo Adding the portable classroom Python runtime...
+"%BUILD_PYTHON%" desktop\build_portable_runtime.py dist\EduGate-Standalone\runtime\python
+if %errorlevel% neq 0 exit /b 1
+
+copy /y desktop\PORTABLE-README.txt dist\EduGate-Standalone\README.txt >nul
+
+echo.
 echo [OK] Windows bundle created at:
 echo   %CD%\dist\EduGate-Standalone

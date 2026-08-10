@@ -113,6 +113,8 @@ class BusinessDB:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     classroom_run_id TEXT NOT NULL REFERENCES classroom_runs(id) ON DELETE CASCADE,
                     student_session_id TEXT NOT NULL,
+                    computer_name TEXT NOT NULL DEFAULT '',
+                    client_ip TEXT NOT NULL DEFAULT '',
                     kind TEXT NOT NULL CHECK(kind IN ('chat', 'python')),
                     input_content TEXT NOT NULL,
                     output_content TEXT NOT NULL DEFAULT '',
@@ -131,6 +133,8 @@ class BusinessDB:
                     ON classroom_turns(student_session_id, id);
                 """
             )
+            self._ensure_column(conn, "classroom_turns", "computer_name", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "classroom_turns", "client_ip", "TEXT NOT NULL DEFAULT ''")
             conn.execute(
                 "UPDATE classroom_runs SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP) WHERE ended_at IS NULL"
             )
@@ -206,6 +210,8 @@ class BusinessDB:
                 (username,),
             ).fetchone()
             if exists:
+                if role == "admin":
+                    self._set_setting(conn, "admin_initialized", "1")
                 return
             conn.execute(
                 """
@@ -214,6 +220,25 @@ class BusinessDB:
                 """,
                 (username, hash_password(password), display_name, role),
             )
+            if role == "admin":
+                self._set_setting(conn, "admin_initialized", "1")
+
+    @staticmethod
+    def _ensure_column(
+        conn: sqlite3.Connection,
+        table: str,
+        column: str,
+        definition: str,
+    ) -> None:
+        columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    def checkpoint(self) -> None:
+        if not Path(self.sqlite_path).exists():
+            return
+        with self._connect() as conn:
+            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
     def authenticate_teacher(self, username: str, password: str) -> dict[str, Any] | None:
         with self._connect() as conn:
@@ -469,6 +494,8 @@ class BusinessDB:
         classroom_instance_id: str,
         teacher_username: str,
         student_session_id: str,
+        computer_name: str = "",
+        client_ip: str = "",
         kind: str,
         input_content: str,
         output_content: str,
@@ -507,14 +534,16 @@ class BusinessDB:
             conn.execute(
                 """
                 INSERT INTO classroom_turns (
-                    classroom_run_id, student_session_id, kind, input_content,
+                    classroom_run_id, student_session_id, computer_name, client_ip, kind, input_content,
                     output_content, status_code, latency_ms, queue_wait_ms, timed_out
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run_id,
                     student_session_id,
+                    computer_name[:120],
+                    client_ip[:80],
                     kind,
                     input_content,
                     output_content,
@@ -609,7 +638,7 @@ class BusinessDB:
                 return None
             turns = conn.execute(
                 """
-                SELECT id, student_session_id, kind, input_content, output_content,
+                SELECT id, student_session_id, computer_name, client_ip, kind, input_content, output_content,
                        status_code, latency_ms, queue_wait_ms, timed_out, created_at
                 FROM classroom_turns
                 WHERE classroom_run_id = ?

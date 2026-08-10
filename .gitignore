@@ -21,5 +21,9 @@ knowledge_files/
 runtime_config.json
 dist/
 build/
+artifacts/
+config/edugate.env
+data/
+runtime/
 *.spec
 !desktop/edugate_standalone.spec

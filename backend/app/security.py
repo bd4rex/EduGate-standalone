@@ -18,7 +18,16 @@ class SessionRecord:
 class StudentSessionRecord:
     student_id: str
     classroom_token: str
+    computer_name: str
+    client_ip: str
     expires_at: float
+
+
+@dataclass(frozen=True)
+class StudentIdentity:
+    student_id: str
+    computer_name: str
+    client_ip: str
 
 
 class SessionStore:
@@ -90,6 +99,8 @@ class StudentSessionStore:
         classroom_token: str,
         *,
         existing_token: str | None = None,
+        computer_name: str = "",
+        client_ip: str = "",
     ) -> tuple[str, StudentSessionRecord]:
         now = time.time()
         with self._lock:
@@ -97,11 +108,21 @@ class StudentSessionStore:
             if existing_token:
                 existing = self._sessions.get(existing_token)
                 if existing and secrets.compare_digest(existing.classroom_token, classroom_token):
-                    return existing_token, existing
+                    updated = StudentSessionRecord(
+                        student_id=existing.student_id,
+                        classroom_token=existing.classroom_token,
+                        computer_name=computer_name or existing.computer_name,
+                        client_ip=client_ip or existing.client_ip,
+                        expires_at=existing.expires_at,
+                    )
+                    self._sessions[existing_token] = updated
+                    return existing_token, updated
             token = secrets.token_urlsafe(32)
             record = StudentSessionRecord(
                 student_id=secrets.token_urlsafe(12),
                 classroom_token=classroom_token,
+                computer_name=computer_name,
+                client_ip=client_ip,
                 expires_at=now + self.ttl_seconds,
             )
             self._sessions[token] = record
@@ -122,6 +143,13 @@ class StudentSessionStore:
                 return None
             return record
 
+    def identity(self, record: StudentSessionRecord) -> StudentIdentity:
+        return StudentIdentity(
+            student_id=record.student_id,
+            computer_name=record.computer_name,
+            client_ip=record.client_ip,
+        )
+
     def revoke_all(self) -> None:
         with self._lock:
             self._sessions.clear()
@@ -138,6 +166,11 @@ class ClassroomAccess:
         self._token = secrets.token_urlsafe(24)
         self._classroom_id = secrets.token_urlsafe(12)
         self._identity_secret = secrets.token_bytes(32)
+        self._active = True
+
+    def active(self) -> bool:
+        with self._lock:
+            return self._active
 
     def token(self) -> str:
         with self._lock:
@@ -161,7 +194,15 @@ class ClassroomAccess:
             self._token = secrets.token_urlsafe(24)
             self._classroom_id = secrets.token_urlsafe(12)
             self._identity_secret = secrets.token_bytes(32)
+            self._active = True
             return self._token
+
+    def start(self) -> str:
+        return self.rotate()
+
+    def end(self) -> None:
+        with self._lock:
+            self._active = False
 
     def matches(self, candidate: str | None) -> bool:
         return self.validated_token(candidate) is not None
@@ -170,4 +211,6 @@ class ClassroomAccess:
         if not candidate:
             return None
         with self._lock:
+            if not self._active:
+                return None
             return self._token if secrets.compare_digest(candidate, self._token) else None

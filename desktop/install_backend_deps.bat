@@ -4,10 +4,11 @@ setlocal EnableExtensions
 title EduGate Standalone - First-time Installation
 set "PROJECT_ROOT=%~dp0.."
 set "BACKEND_DIR=%PROJECT_ROOT%\backend"
-set "DATA_DIR=%LOCALAPPDATA%\EduGate"
-set "VENV_DIR=%DATA_DIR%\venv"
+set "DATA_DIR=%PROJECT_ROOT%\data"
+set "CONFIG_DIR=%PROJECT_ROOT%\config"
+set "VENV_DIR=%PROJECT_ROOT%\runtime\venv"
 set "VENV_PYTHON=%VENV_DIR%\Scripts\python.exe"
-set "BOOTSTRAP_DIR=%DATA_DIR%\venv-bootstrap"
+set "BOOTSTRAP_DIR=%PROJECT_ROOT%\runtime\venv-bootstrap"
 set "PYPI_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple"
 
 echo ============================================================
@@ -16,7 +17,7 @@ echo ============================================================
 echo.
 echo Packages will be installed from the Tsinghua PyPI mirror.
 echo EduGate data and its private Python environment will be stored in:
-echo   %DATA_DIR%
+echo   %PROJECT_ROOT%
 echo.
 
 where py >nul 2>nul
@@ -83,7 +84,9 @@ if %errorlevel% neq 0 goto :install_failed
 
 echo.
 echo [5/6] Creating the local configuration directory...
-if not exist "%DATA_DIR%\.env" copy "%BACKEND_DIR%\.env.example" "%DATA_DIR%\.env" >nul
+if not exist "%DATA_DIR%" mkdir "%DATA_DIR%"
+if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%"
+if not exist "%CONFIG_DIR%\edugate.env" copy "%BACKEND_DIR%\.env.example" "%CONFIG_DIR%\edugate.env" >nul
 
 echo.
 echo [6/6] Verifying the installation...
@@ -97,10 +100,9 @@ echo ============================================================
 echo Next:
 echo   1. Close this window.
 echo   2. Double-click desktop\run_standalone.bat.
-echo   3. Create the administrator password in the teacher console.
-echo   4. Add and test the model-company API in Settings.
+echo   3. Add and test the model-company API in Settings.
 echo.
-echo No default administrator password is created.
+echo The local teacher console signs in automatically.
 pause
 exit /b 0
 

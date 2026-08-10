@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Iterable, Literal
 
 import httpx
+from dotenv import set_key
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,7 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.config import settings
 from app.db import BusinessDB, latest_user_preview, now_ms
-from app.knowledge import KnowledgeFile, KnowledgeSource, KnowledgeStore
+from app.knowledge import KnowledgeFile, KnowledgeScanResult, KnowledgeSource, KnowledgeStore
 from app.litellm_client import LiteLLMClient
 from app.observability import LangfuseClient
 from app.python_runner import (
@@ -37,11 +38,13 @@ from app.python_runner import (
     run_python_code,
 )
 from app.secret_store import SecretStore
-from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter, StudentSessionStore
+from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter, StudentIdentity, StudentSessionStore
 from app.system_control import system_control
 from app.system_ops import (
     create_backup,
     launcher_log_tail,
+    open_app_directory,
+    open_local_directory,
     read_advanced_settings,
     remove_backup_file,
     save_restore_archive,
@@ -66,7 +69,7 @@ business_db = BusinessDB(
     classroom_record_max_records=settings.classroom_record_max_records,
     classroom_record_max_content_chars=settings.classroom_record_max_content_chars,
 )
-secret_store = SecretStore(settings.secret_store_path)
+secret_store = SecretStore(settings.secret_store_path, mode=settings.secret_store_mode)
 langfuse = LangfuseClient()
 sessions = SessionStore(settings.session_ttl_seconds)
 classroom_access = ClassroomAccess()
@@ -170,6 +173,7 @@ OPENAPI_TAGS = [
 API_DOCS = {
     ("GET", "/health"): ("Health", "Check whether EduGate is online."),
     ("POST", "/auth/login"): ("Login", "Login with teacher username and password."),
+    ("POST", "/auth/local-session"): ("Local teacher session", "Open the portable teacher console from this computer."),
     ("GET", "/models"): ("List upstream models", "Read models from the configured upstream provider when available."),
     ("POST", "/chat"): ("Student chat", "Without teacher_id this uses open default; with teacher_id it uses that teacher policy."),
     ("POST", "/chat/stream"): ("Student stream chat", "POST + text/event-stream chat API."),
@@ -201,6 +205,14 @@ API_DOCS = {
     ("GET", "/knowledge/sources"): ("Knowledge sources", "List knowledge sources."),
     ("POST", "/knowledge/sources"): ("Upsert knowledge source", "Create or update knowledge source."),
     ("DELETE", "/knowledge/sources/{source_id}"): ("Delete knowledge source", "Delete source and indexes."),
+    ("POST", "/knowledge/sources/{source_id}/open-folder"): (
+        "Open knowledge folder",
+        "Open a source's fixed local folder on the teacher computer.",
+    ),
+    ("POST", "/knowledge/sources/{source_id}/scan"): (
+        "Scan knowledge folder",
+        "Incrementally synchronize supported files in a source folder.",
+    ),
     ("GET", "/knowledge/files"): ("Knowledge files", "List uploaded files."),
     ("POST", "/knowledge/files"): ("Upload knowledge file", "Upload txt, md, pdf and other files."),
     ("DELETE", "/knowledge/files/{file_id}"): ("Delete knowledge file", "Delete file and chunks."),
@@ -239,6 +251,14 @@ def _tag_for_path(path: str) -> str:
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     business_db.init()
+    business_db.seed_teacher(
+        username=settings.admin_username,
+        password=settings.admin_password,
+        display_name="教师管理员",
+        role="admin",
+    )
+    if settings.portable_mode:
+        classroom_access.end()
     await python_pool.start()
     try:
         yield
@@ -246,6 +266,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await python_pool.stop()
         if python_record_tasks:
             await asyncio.gather(*list(python_record_tasks), return_exceptions=True)
+        await asyncio.to_thread(business_db.checkpoint)
+        await asyncio.to_thread(knowledge_store.checkpoint)
         await client.close()
 
 
@@ -256,7 +278,7 @@ app = FastAPI(
         "EduGate sits between student pages or third-party clients and the teacher-selected upstream model provider. "
         "Requests without teacher_id use open default. Requests with teacher_id use that teacher policy."
     ),
-    version="1.4.0",
+    version="1.5.0",
     lifespan=lifespan,
     openapi_tags=OPENAPI_TAGS,
 )
@@ -470,7 +492,15 @@ class PythonRunResponse(BaseModel):
 class StudentJoinResponse(BaseModel):
     student_token: str
     student_session_id: str
+    computer_name: str
+    client_ip: str
     expires_in: int
+
+
+class StudentJoinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    computer_name: str = Field(default="", max_length=80)
 
 
 class SystemActionRequest(BaseModel):
@@ -538,7 +568,13 @@ class RuntimeConfig:
             return
         if not settings.upstream_base_url and not settings.upstream_api_key:
             return
-        if settings.default_model in self.data.model_catalog:
+        current = self.data.model_catalog.get(settings.default_model)
+        if current is not None:
+            if current.description == "Local classroom default upstream model. Edit base_url and api_key before live use.":
+                self.data.model_catalog[settings.default_model] = current.model_copy(
+                    update={"description": "本地课堂默认上游模型，上课前请填写接口地址和 API 密钥。"}
+                )
+                self.save()
             return
         credential_id = f"model:{settings.default_model}"
         if settings.upstream_api_key:
@@ -547,7 +583,7 @@ class RuntimeConfig:
             id=settings.default_model,
             name=settings.default_model,
             provider=settings.upstream_provider,
-            description="Local classroom default upstream model. Edit base_url and api_key before live use.",
+            description="本地课堂默认上游模型，上课前请填写接口地址和 API 密钥。",
             source="openai_compatible",
             base_url=settings.upstream_base_url or None,
             credential_id=credential_id,
@@ -658,11 +694,26 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _computer_name(value: str | None, client_ip: str) -> str:
+    cleaned = " ".join((value or "").split())[:80]
+    return cleaned or f"电脑-{client_ip}"
+
+
 def _is_loopback(request: Request) -> bool:
     try:
         return ipaddress.ip_address(_client_ip(request)).is_loopback
     except ValueError:
         return False
+
+
+def _sync_portable_admin_password(username: str, password: str) -> None:
+    if not settings.portable_mode or username != settings.admin_username:
+        return
+    config_path = Path(settings.config_path)
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.touch(exist_ok=True)
+    set_key(str(config_path), "ADMIN_PASSWORD", password, quote_mode="always")
+    settings.admin_password = password
 
 
 def require_admin(
@@ -726,8 +777,11 @@ def require_classroom_access(
     request: Request,
     x_class_token: str | None = Header(default=None, alias="X-Class-Token"),
     x_student_token: str | None = Header(default=None, alias="X-Student-Token"),
+    x_computer_name: str | None = Header(default=None, alias="X-Computer-Name"),
     class_token: str | None = None,
-) -> str:
+) -> StudentIdentity:
+    if not classroom_access.active():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Classroom is not active")
     if x_student_token:
         record = student_sessions.resolve(
             x_student_token,
@@ -738,14 +792,19 @@ def require_classroom_access(
         key = f"chat:student:{record.student_id}"
         if not rate_limiter.allow(key, limit=settings.classroom_rate_limit, window_seconds=60):
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom request limit exceeded")
-        return record.student_id
+        return student_sessions.identity(record)
     token = x_class_token or class_token
     if not classroom_access.matches(token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid classroom token")
-    key = f"chat:ip:{_client_ip(request)}"
+    client_ip = _client_ip(request)
+    key = f"chat:ip:{client_ip}"
     if not rate_limiter.allow(key, limit=settings.classroom_rate_limit, window_seconds=60):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom request limit exceeded")
-    return classroom_access.legacy_student_id(_client_ip(request))
+    return StudentIdentity(
+        student_id=classroom_access.legacy_student_id(client_ip),
+        computer_name=_computer_name(x_computer_name, client_ip),
+        client_ip=client_ip,
+    )
 
 
 def _resolve_chat_context(request: ChatRequest) -> tuple[str, TeachingScenario, dict[str, Any] | None]:
@@ -1122,7 +1181,7 @@ def _chat_response_content(response: dict[str, Any] | None) -> str:
 def _record_classroom_turn(
     *,
     teacher_id: str | None,
-    student_id: str,
+    student: StudentIdentity,
     kind: str,
     input_content: str,
     output_content: str,
@@ -1131,13 +1190,15 @@ def _record_classroom_turn(
     queue_wait_ms: int | None = None,
     timed_out: bool | None = None,
 ) -> None:
-    if not settings.classroom_recording_enabled or not teacher_id or not student_id:
+    if not settings.classroom_recording_enabled or not teacher_id or not student.student_id:
         return
     try:
         business_db.record_classroom_turn(
             classroom_instance_id=classroom_access.classroom_id(),
             teacher_username=teacher_id,
-            student_session_id=student_id,
+            student_session_id=student.student_id,
+            computer_name=student.computer_name,
+            client_ip=student.client_ip,
             kind=kind,
             input_content=input_content,
             output_content=output_content,
@@ -1308,7 +1369,7 @@ async def _stream_with_completion_log(
     scenario: TeachingScenario,
     effective_scenario_id: str,
     teacher_id: str | None,
-    student_id: str,
+    student: StudentIdentity,
 ):
     start = time.perf_counter()
     stream_chunks = 0
@@ -1378,7 +1439,7 @@ async def _stream_with_completion_log(
             output = error_text
         _record_classroom_turn(
             teacher_id=teacher_id,
-            student_id=student_id,
+            student=student,
             kind="chat",
             input_content=_latest_user_content(request.messages),
             output_content=output,
@@ -1427,6 +1488,26 @@ async def auth_status() -> dict[str, Any]:
     return {
         "initialized": business_db.is_admin_initialized(settings.admin_username),
         "admin_username": settings.admin_username,
+        "portable_mode": settings.portable_mode,
+        "local_auto_login": settings.portable_auto_login,
+    }
+
+
+@app.post("/auth/local-session")
+async def local_teacher_session(request: Request) -> dict[str, Any]:
+    if not settings.portable_mode or not settings.portable_auto_login:
+        raise HTTPException(status_code=404, detail="Local automatic login is disabled")
+    if not _is_loopback(request):
+        raise HTTPException(status_code=403, detail="Local automatic login is only available on this computer")
+    teacher = business_db.get_teacher(settings.admin_username)
+    if not teacher or not teacher.get("is_active") or teacher.get("role") != "admin":
+        raise HTTPException(status_code=409, detail="Portable administrator is not available")
+    token = sessions.issue(teacher["username"])
+    return {
+        "access_token": token,
+        "token_type": "x-admin-token",
+        "expires_in": settings.session_ttl_seconds,
+        "teacher": teacher,
     }
 
 
@@ -1495,6 +1576,7 @@ async def change_own_password(
     if verified is None:
         raise HTTPException(status_code=401, detail="Current password is incorrect")
     teacher = business_db.change_teacher_password(current_teacher["username"], request.new_password)
+    _sync_portable_admin_password(current_teacher["username"], request.new_password)
     sessions.revoke_user(current_teacher["username"])
     token = sessions.issue(current_teacher["username"])
     return {
@@ -1537,7 +1619,7 @@ async def models() -> dict[str, Any]:
 @app.post("/chat")
 async def chat(
     request: ChatRequest,
-    student_id: str = Depends(require_classroom_access),
+    student: StudentIdentity = Depends(require_classroom_access),
 ) -> dict[str, Any]:
     effective_scenario_id, scenario, teacher = _resolve_chat_context(request)
     teacher_id = teacher["username"] if teacher else request.teacher_id
@@ -1566,7 +1648,7 @@ async def chat(
         )
         _record_classroom_turn(
             teacher_id=teacher_id,
-            student_id=student_id,
+            student=student,
             kind="chat",
             input_content=_latest_user_content(request.messages),
             output_content=_chat_response_content(response),
@@ -1589,7 +1671,7 @@ async def chat(
         )
         _record_classroom_turn(
             teacher_id=teacher_id,
-            student_id=student_id,
+            student=student,
             kind="chat",
             input_content=_latest_user_content(request.messages),
             output_content=str(error),
@@ -1612,7 +1694,7 @@ async def chat(
         )
         _record_classroom_turn(
             teacher_id=teacher_id,
-            student_id=student_id,
+            student=student,
             kind="chat",
             input_content=_latest_user_content(request.messages),
             output_content=str(error),
@@ -1628,7 +1710,7 @@ async def chat(
 @app.post("/chat/stream")
 async def chat_stream(
     request: ChatRequest,
-    student_id: str = Depends(require_classroom_access),
+    student: StudentIdentity = Depends(require_classroom_access),
 ) -> StreamingResponse:
     effective_scenario_id, scenario, teacher = _resolve_chat_context(request)
     teacher_id = teacher["username"] if teacher else request.teacher_id
@@ -1642,7 +1724,7 @@ async def chat_stream(
                 scenario=scenario,
                 effective_scenario_id=effective_scenario_id,
                 teacher_id=teacher_id,
-                student_id=student_id,
+                student=student,
             ),
             media_type="text/event-stream",
         )
@@ -1660,7 +1742,7 @@ async def chat_stream(
             scenario=scenario,
             effective_scenario_id=effective_scenario_id,
             teacher_id=teacher_id,
-            student_id=student_id,
+            student=student,
         ),
         media_type="text/event-stream",
     )
@@ -1689,7 +1771,7 @@ async def v1_chat_completions(request: V1ChatCompletionRequest):
             strict_topic_related=strict_topic_related,
         )
         return StreamingResponse(_stream_with_errors(payload), media_type="text/event-stream")
-    return await chat(chat_request, student_id="")
+    return await chat(chat_request, student=StudentIdentity(student_id="", computer_name="", client_ip=""))
 
 
 def _config_response(current_teacher: dict[str, Any]) -> ConfigResponse:
@@ -1787,6 +1869,11 @@ async def admin_system_settings() -> dict[str, Any]:
     return read_advanced_settings()
 
 
+@app.post("/admin/system/open-app-dir", dependencies=[Depends(require_super_admin)])
+async def admin_open_app_directory() -> dict[str, str]:
+    return await run_in_threadpool(open_app_directory)
+
+
 @app.put("/admin/system/settings", dependencies=[Depends(require_super_admin)])
 async def admin_update_system_settings(request: AdvancedSettingsRequest) -> dict[str, Any]:
     return update_advanced_settings(request.values)
@@ -1833,10 +1920,13 @@ async def admin_system_action(request: SystemActionRequest) -> dict[str, Any]:
 @app.post("/classroom/join", response_model=StudentJoinResponse)
 async def classroom_join(
     request: Request,
+    join_request: StudentJoinRequest | None = None,
     x_class_token: str | None = Header(default=None, alias="X-Class-Token"),
     x_student_token: str | None = Header(default=None, alias="X-Student-Token"),
     class_token: str | None = None,
 ) -> StudentJoinResponse:
+    if not classroom_access.active():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Classroom is not active")
     supplied_class_token = x_class_token or class_token
     current_classroom_token = classroom_access.validated_token(supplied_class_token)
     if current_classroom_token is None:
@@ -1851,18 +1941,24 @@ async def classroom_join(
     token, record = student_sessions.issue(
         current_classroom_token,
         existing_token=x_student_token,
+        computer_name=_computer_name(join_request.computer_name if join_request else "", _client_ip(request)),
+        client_ip=_client_ip(request),
     )
     return StudentJoinResponse(
         student_token=token,
         student_session_id=record.student_id,
+        computer_name=record.computer_name,
+        client_ip=record.client_ip,
         expires_in=max(0, int(record.expires_at - time.time())),
     )
 
 
 @app.get("/admin/classroom", dependencies=[Depends(require_admin)])
 async def admin_classroom_access() -> dict[str, Any]:
+    active = classroom_access.active()
     return {
-        "class_token": classroom_access.token(),
+        "active": active,
+        "class_token": classroom_access.token() if active else "",
         "classroom_id": classroom_access.classroom_id(),
         "recording_enabled": settings.classroom_recording_enabled,
         "record_retention_days": settings.classroom_record_retention_days,
@@ -1874,7 +1970,23 @@ async def rotate_classroom_access() -> dict[str, Any]:
     business_db.end_classroom_instance(classroom_access.classroom_id())
     token = classroom_access.rotate()
     student_sessions.revoke_all()
-    return {"class_token": token, "classroom_id": classroom_access.classroom_id()}
+    return {"active": True, "class_token": token, "classroom_id": classroom_access.classroom_id()}
+
+
+@app.post("/admin/classroom/start", dependencies=[Depends(require_admin)])
+async def start_classroom_access() -> dict[str, Any]:
+    business_db.end_classroom_instance(classroom_access.classroom_id())
+    token = classroom_access.start()
+    student_sessions.revoke_all()
+    return {"active": True, "class_token": token, "classroom_id": classroom_access.classroom_id()}
+
+
+@app.post("/admin/classroom/end", dependencies=[Depends(require_admin)])
+async def end_classroom_access() -> dict[str, Any]:
+    business_db.end_classroom_instance(classroom_access.classroom_id())
+    classroom_access.end()
+    student_sessions.revoke_all()
+    return {"active": False, "class_token": "", "classroom_id": classroom_access.classroom_id()}
 
 
 def _record_teacher_scope(current_teacher: dict[str, Any]) -> str | None:
@@ -1959,6 +2071,7 @@ async def admin_update_teacher_password(username: str, request: TeacherPasswordR
         raise HTTPException(status_code=503, detail=str(error)) from error
     if not teacher:
         raise HTTPException(status_code=404, detail=f"Unknown teacher: {username}")
+    _sync_portable_admin_password(username, request.password)
     sessions.revoke_user(username)
     return teacher
 
@@ -2206,6 +2319,29 @@ async def delete_knowledge_source(
     return {"status": "deleted"}
 
 
+@app.post("/knowledge/sources/{source_id}/open-folder")
+async def open_knowledge_source_folder(
+    source_id: str,
+    current_teacher: dict[str, Any] = Depends(require_admin),
+) -> dict[str, str]:
+    _ensure_source_access(source_id, current_teacher, write=True)
+    directory = knowledge_store.source_directory(source_id)
+    return await run_in_threadpool(
+        open_local_directory,
+        directory,
+        missing_detail="Knowledge source directory does not exist",
+    )
+
+
+@app.post("/knowledge/sources/{source_id}/scan", response_model=KnowledgeScanResult)
+async def scan_knowledge_source_folder(
+    source_id: str,
+    current_teacher: dict[str, Any] = Depends(require_admin),
+) -> KnowledgeScanResult:
+    _ensure_source_access(source_id, current_teacher, write=True)
+    return await run_in_threadpool(knowledge_store.scan_source, source_id)
+
+
 @app.get("/knowledge/files", response_model=list[KnowledgeFile])
 async def list_knowledge_files(
     source_id: str | None = None,
@@ -2277,25 +2413,25 @@ async def _python_sse_events(job: PythonJob):
                 await pending
 
 
-async def _submit_python_job(request: PythonRunRequest, student_id: str) -> PythonJob:
+async def _submit_python_job(request: PythonRunRequest, student: StudentIdentity) -> PythonJob:
     if not settings.python_runner_enabled:
         raise HTTPException(status_code=503, detail="Python runner is disabled")
     try:
         job = await python_pool.submit(
             request.code,
-            student_id=student_id,
+            student_id=student.student_id,
             runner=run_python_code,
             timeout_seconds=settings.python_runner_timeout_seconds,
             memory_limit_mb=settings.python_runner_memory_mb,
             executable=settings.python_runner_executable,
         )
-        _track_python_record(job, request=request, student_id=student_id)
+        _track_python_record(job, request=request, student=student)
         return job
     except (PythonRunnerUnavailable, PythonStudentBusy, PythonQueueFull, PythonQueueTimeout) as error:
         raise _python_http_error(error) from error
 
 
-def _track_python_record(job: PythonJob, *, request: PythonRunRequest, student_id: str) -> None:
+def _track_python_record(job: PythonJob, *, request: PythonRunRequest, student: StudentIdentity) -> None:
     if not settings.classroom_recording_enabled or not request.teacher_id:
         return
     teacher = business_db.get_teacher(request.teacher_id)
@@ -2314,7 +2450,7 @@ def _track_python_record(job: PythonJob, *, request: PythonRunRequest, student_i
                 status_code = 500
             _record_classroom_turn(
                 teacher_id=request.teacher_id,
-                student_id=student_id,
+                student=student,
                 kind="python",
                 input_content=request.code,
                 output_content=str(error),
@@ -2330,7 +2466,7 @@ def _track_python_record(job: PythonJob, *, request: PythonRunRequest, student_i
             output_parts.append(result.stderr)
         _record_classroom_turn(
             teacher_id=request.teacher_id,
-            student_id=student_id,
+            student=student,
             kind="python",
             input_content=request.code,
             output_content="\n".join(output_parts),
@@ -2348,9 +2484,9 @@ def _track_python_record(job: PythonJob, *, request: PythonRunRequest, student_i
 @app.post("/run_python", response_model=PythonRunResponse)
 async def run_python(
     request: PythonRunRequest,
-    student_id: str = Depends(require_classroom_access),
+    student: StudentIdentity = Depends(require_classroom_access),
 ) -> PythonRunResponse:
-    job = await _submit_python_job(request, student_id)
+    job = await _submit_python_job(request, student)
     try:
         pooled = await job.future
     except (PythonRunnerUnavailable, PythonStudentBusy, PythonQueueFull, PythonQueueTimeout) as error:
@@ -2371,9 +2507,9 @@ async def run_python(
 @app.post("/run_python/stream")
 async def run_python_stream(
     request: PythonRunRequest,
-    student_id: str = Depends(require_classroom_access),
+    student: StudentIdentity = Depends(require_classroom_access),
 ) -> StreamingResponse:
-    job = await _submit_python_job(request, student_id)
+    job = await _submit_python_job(request, student)
     return StreamingResponse(
         _python_sse_events(job),
         media_type="text/event-stream",

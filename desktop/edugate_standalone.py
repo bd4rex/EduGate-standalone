@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -15,17 +16,24 @@ from importlib.util import find_spec
 from pathlib import Path
 
 
-RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
+RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1])).resolve()
+APP_DIR = (
+    Path(sys.executable).resolve().parent
+    if getattr(sys, "frozen", False)
+    else RESOURCE_DIR
+)
 BACKEND_DIR = RESOURCE_DIR / "backend"
 FRONTEND_DIR = RESOURCE_DIR / "frontend"
-DATA_DIR = Path(
-    os.getenv("EDUGATE_DATA_DIR")
-    or Path(os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or Path.home()) / "EduGate"
-)
+DATA_DIR = Path(os.getenv("EDUGATE_DATA_DIR") or APP_DIR / "data").resolve()
+CONFIG_PATH = Path(os.getenv("EDUGATE_CONFIG_PATH") or APP_DIR / "config" / "edugate.env").resolve()
+LEGACY_DATA_DIR = (
+    Path(os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or Path.home()) / "EduGate"
+).resolve()
 REQUIRED_BACKEND_MODULES = ("fastapi", "httpx", "uvicorn", "pydantic", "multipart", "pypdf")
 RESTORE_ARCHIVE = DATA_DIR / "pending-restore.zip"
 RESTORABLE_FILES = {
     ".env",
+    "config/edugate.env",
     "edugate.sqlite3",
     "knowledge.sqlite3",
     "runtime_config.json",
@@ -48,15 +56,21 @@ def main() -> int:
 
     from dotenv import load_dotenv
 
-    load_dotenv(DATA_DIR / ".env", override=True)
+    load_dotenv(CONFIG_PATH, override=True)
+    os.environ["EDUGATE_PORTABLE_MODE"] = "true"
+    os.environ["EDUGATE_APP_DIR"] = str(APP_DIR)
     os.environ["EDUGATE_DATA_DIR"] = str(DATA_DIR)
+    os.environ["EDUGATE_CONFIG_PATH"] = str(CONFIG_PATH)
     os.environ["EDUGATE_FRONTEND_DIR"] = str(FRONTEND_DIR)
 
-    port = int(os.getenv("EDUGATE_BACKEND_PORT", "8000"))
-    admin_url = f"http://127.0.0.1:{port}/admin.html"
-    if healthcheck(f"http://127.0.0.1:{port}/health"):
-        webbrowser.open(admin_url)
+    configured_port = int(os.getenv("EDUGATE_BACKEND_PORT", "8000"))
+    configured_health_url = f"http://127.0.0.1:{configured_port}/health"
+    if healthcheck(configured_health_url):
+        webbrowser.open(f"http://127.0.0.1:{configured_port}/admin.html")
         return 0
+    port = first_available_port(configured_port)
+    os.environ["EDUGATE_BACKEND_PORT"] = str(port)
+    admin_url = f"http://127.0.0.1:{port}/admin.html"
 
     sys.path.insert(0, str(BACKEND_DIR))
     import uvicorn
@@ -103,10 +117,46 @@ def main() -> int:
 
 def ensure_runtime_environment() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    env_path = DATA_DIR / ".env"
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    migrate_legacy_data()
     example_path = BACKEND_DIR / ".env.example"
-    if not env_path.exists() and example_path.exists():
-        shutil.copyfile(example_path, env_path)
+    if not CONFIG_PATH.exists() and example_path.exists():
+        shutil.copyfile(example_path, CONFIG_PATH)
+
+
+def migrate_legacy_data() -> bool:
+    if os.getenv("EDUGATE_SKIP_LEGACY_IMPORT", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return False
+    if DATA_DIR == LEGACY_DATA_DIR or not LEGACY_DATA_DIR.exists():
+        return False
+    state_names = ("edugate.sqlite3", "knowledge.sqlite3", "runtime_config.json", "secrets.json")
+    if any((DATA_DIR / name).exists() for name in state_names):
+        return False
+    copied = False
+    for name in state_names:
+        source = LEGACY_DATA_DIR / name
+        if source.exists():
+            shutil.copy2(source, DATA_DIR / name)
+            copied = True
+        for suffix in ("-wal", "-shm"):
+            sidecar = LEGACY_DATA_DIR / f"{name}{suffix}"
+            if sidecar.exists():
+                shutil.copy2(sidecar, DATA_DIR / sidecar.name)
+    legacy_knowledge = LEGACY_DATA_DIR / "knowledge_files"
+    portable_knowledge = DATA_DIR / "knowledge_files"
+    if legacy_knowledge.exists() and not portable_knowledge.exists():
+        shutil.copytree(legacy_knowledge, portable_knowledge)
+        copied = True
+    legacy_env = LEGACY_DATA_DIR / ".env"
+    if legacy_env.exists() and not CONFIG_PATH.exists():
+        shutil.copy2(legacy_env, CONFIG_PATH)
+        copied = True
+    if copied:
+        (DATA_DIR / ".imported-from-localappdata").write_text(
+            str(LEGACY_DATA_DIR),
+            encoding="utf-8",
+        )
+    return copied
 
 
 def configure_logging() -> None:
@@ -139,6 +189,17 @@ def healthcheck(url: str) -> bool:
         return False
 
 
+def first_available_port(preferred: int, *, attempts: int = 20) -> int:
+    for port in range(preferred, min(preferred + attempts, 65536)):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind(("127.0.0.1", port))
+            except OSError:
+                continue
+        return port
+    raise RuntimeError(f"No available EduGate port found from {preferred}")
+
+
 def apply_pending_restore(logger: logging.Logger) -> None:
     if not RESTORE_ARCHIVE.exists():
         return
@@ -164,7 +225,9 @@ def apply_pending_restore(logger: logging.Logger) -> None:
         for name in RESTORABLE_FILES:
             source = staging / name
             if source.exists():
-                os.replace(source, DATA_DIR / name)
+                target = CONFIG_PATH if name in {".env", "config/edugate.env"} else DATA_DIR / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                os.replace(source, target)
         restored_knowledge = staging / "knowledge_files"
         if restored_knowledge.exists():
             current_knowledge = DATA_DIR / "knowledge_files"
@@ -191,7 +254,7 @@ def restart_process() -> None:
         creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
     subprocess.Popen(
         command,
-        cwd=RESOURCE_DIR,
+        cwd=APP_DIR,
         env=os.environ.copy(),
         close_fds=True,
         creationflags=creationflags,
