@@ -343,12 +343,13 @@
       white-space: nowrap;
     }
 
-    .system-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-    .system-metric { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
-    .system-metric span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
-    .system-metric strong { display: block; margin-top: 8px; overflow-wrap: anywhere; font-size: 17px; }
-    .system-metric-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
-    .system-metric-value strong { min-width: 0; margin-top: 0; }
+    .system-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: stretch; gap: 12px; }
+    .system-metric { display: flex; min-width: 0; flex-direction: column; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+    .system-metric span { display: block; min-height: 18px; color: var(--muted); font-size: 12px; font-weight: 800; line-height: 18px; }
+    .system-metric strong { display: block; min-width: 0; overflow-wrap: anywhere; font-size: 17px; line-height: 24px; }
+    .system-metric > strong { margin-top: 6px; }
+    .system-metric-value { display: flex; min-height: 36px; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 6px; }
+    .system-metric-value strong { padding-top: 0; }
     #record-summary .system-metric { padding: 12px 14px; }
     #record-summary .system-metric strong { margin-top: 5px; }
     .system-actions { gap: 12px; }
@@ -1529,12 +1530,10 @@
       el.systemMetrics.innerHTML = metrics.map(([label, value, kind]) => `
         <div class="system-metric">
           <span>${escapeHtml(label)}</span>
-          ${kind === "lan-url" ? `
-            <div class="system-metric-value">
-              <strong>${escapeHtml(value)}</strong>
-              <button class="button mini ghost" id="copy-lan-url" type="button" ${system.lan_base_url ? "" : "disabled"}>复制</button>
-            </div>
-          ` : `<strong>${escapeHtml(value)}</strong>`}
+          <div class="system-metric-value">
+            <strong>${escapeHtml(value)}</strong>
+            ${kind === "lan-url" ? `<button class="button mini ghost" id="copy-lan-url" type="button" ${system.lan_base_url ? "" : "disabled"}>复制</button>` : ""}
+          </div>
         </div>
       `).join("");
       document.querySelector("#copy-lan-url")?.addEventListener("click", () => {

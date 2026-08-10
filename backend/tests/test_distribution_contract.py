@@ -200,6 +200,8 @@ def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> 
     assert "@media (max-width: 900px)" in page
     assert ".system-grid, .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in page
     assert 'class="system-action-group critical"' in page
+    assert '.system-metric-value { display: flex; min-height: 36px; align-items: flex-start;' in page
+    assert page.count('<div class="system-metric-value">') == 1
 
 
 def test_teacher_console_replaces_native_visible_file_inputs_and_compacts_source_actions() -> None:
