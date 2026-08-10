@@ -1,66 +1,79 @@
-# EduGate Standalone
+<p align="center">
+  <img src="frontend/assets/brand/edugate-logo-horizontal.svg" width="680" alt="EduGate - Local AI Teaching Gateway" />
+</p>
 
-EduGate 单机课堂版运行在教师电脑上，为单节课/单教师场景提供本地 AI 教学网关。
+# EduGate 单机课堂版
 
-它向上接入 OpenAI-compatible 模型公司 API，向下保留 EduGate 现有学生端接口：
+<p align="center">
+  <strong>中文</strong> · <a href="README.en.md">English</a>
+</p>
 
-- `POST /chat`
-- `POST /chat/stream`
-- `POST /v1/chat/completions`
+EduGate 单机课堂版运行在教师电脑上，面向单教师、单节课或小型课堂。它向上连接 OpenAI-compatible 模型公司 API，向下提供受课堂令牌保护的学生页面和 EduGate API。
 
-## 快速启动
+## Windows 首次安装
 
-Windows 首次运行先安装依赖：
+1. 安装 Python 3.9 或更高版本，并勾选 `Add python.exe to PATH`。
+2. 双击 `desktop\install_backend_deps.bat`。脚本固定使用清华 PyPI 镜像，并创建 `%LOCALAPPDATA%\EduGate\venv`，不会向系统 Python 安装包。
+3. 双击 `desktop\run_standalone.bat`。
+4. 在自动打开的教师控制台创建管理员密码。系统没有默认密码。
+5. 在“资源 -> 模型与供应商管理”中填写模型 ID、Base URL 和 API Key，保存后点击“测试连接”。
 
-```text
-desktop/install_backend_deps.bat
-```
+以后上课只需双击 `desktop\run_standalone.bat`。教师控制台、学生页面和 API 都由同一个 `8000` 端口提供，不需要配置跨域或单独启动网页服务器。
 
-安装脚本会显示完整步骤，并默认使用清华 PyPI 镜像。详细说明见：
+EduGate 不再显示 Windows 控制窗口。启动脚本在后台运行监督进程并打开浏览器，教师在 Web 控制台完成课堂控制、资源管理、运行日志、统计、备份恢复、高级设置、重启和停止。
 
-```text
-docs/安装与故障排查.txt
-```
+安装脚本会自动处理部分 Python 3.9 在含空格 Windows 用户目录中无法创建 `venv` 的问题；启动异常记录在 `%LOCALAPPDATA%\EduGate\launcher.log`。
 
-启动单机课堂版：
+## 上课流程
 
-```text
-desktop/run_standalone.bat
-```
+1. 登录教师控制台，选择模型、知识库和课堂策略。
+2. 复制“学生课堂入口”中的完整链接发给学生。
+3. 学生链接包含本次运行生成的临时课堂令牌；学生页面会将它交换为匿名学生会话，以便在共享代理环境下独立限流。
+4. 需要让旧链接失效时，点击“换一个链接”。
 
-启动器会显示：
+学生页面会按当前课堂在浏览器本地保存最近 50 条消息，刷新后可继续对话；发送给模型时仍只携带最近 10 条，避免上下文无限增长。更换课堂链接后会使用新的独立历史空间。
 
-- 教师控制台：`http://教师电脑IP:8080/admin.html`
-- 学生 API：`http://教师电脑IP:8000`
+“系统”页可以查看运行状态和日志、下载完整备份、恢复数据、修改高级参数以及重启或停止服务。停止后 Web 页面也会关闭，再次使用需要重新双击启动脚本。
 
-默认登录：
+“记录”页按课堂展示匿名学生的 AI 对话和 Python 运行结果，可按学生或类型筛选，并可删除整节课堂记录。课堂内容只保存在教师电脑本地，不记录学生 IP；默认保留 30 天。管理员可以在高级设置中关闭课堂内容记录或调整保留期限。
 
-```text
-admin / edugate
-```
-
-正式课堂使用前，请修改 `backend/.env` 中的 `ADMIN_PASSWORD`、`ADMIN_API_KEY` 和模型公司 API Key。
-
-## 目录
+模型 API Key 使用当前 Windows 用户的 DPAPI 加密。运行数据默认保存在：
 
 ```text
-backend/    FastAPI 本地网关、SQLite 业务库、知识库索引
-frontend/   教师控制台、学生测试页、嵌入示例页
-desktop/    Windows 桌面启动器和依赖安装脚本
-docs/       单机版说明、使用手册、验收清单
-samples/    示例知识库资料
+%LOCALAPPDATA%\EduGate
+  .env
+  edugate.sqlite3
+  knowledge.sqlite3
+  knowledge_files\
+  runtime_config.json
+  secrets.json
+  venv\
 ```
 
-## 验证
+卸载程序时可保留此目录来保留课堂数据。复制到另一台电脑时，`secrets.json` 无法解密，需要重新填写模型 API Key。
+
+## 安全默认值
+
+- 管理员只能从教师电脑首次创建，密码至少 10 个字符。
+- 教师登录会话默认 8 小时过期；退出、改密码或停用账号会立即使会话失效。
+- `/chat`、`/chat/stream` 和 `/run_python` 要求匿名学生会话或兼容的临时课堂令牌，并按学生限流。
+- `/v1/chat/completions` 仅在配置 `PLATFORM_API_KEY` 后启用。
+- Python 运行器默认关闭；启用后默认使用 4 个独立执行槽位和最多 64 个排队任务，`/run_python/stream` 会实时返回排队、运行、输出和完成事件。每个任务仍有语法、超时和内存限制，并使用不包含模型密钥的最小子进程环境。
+- 上传默认限制 25 MB，PDF 默认限制 200 页。
+- 技术请求日志默认不保存师生消息正文，最多保留 5000 条；独立的课堂内容记录默认在本机保存 30 天，可关闭或按课堂删除。
+
+## 开发验证
 
 ```powershell
-cd backend
-python -m pytest -q
+python -m pytest -q --basetemp=.pytest-tmp
 ```
 
-当前已验证：
+Windows 打包：
 
 ```text
-31 passed
-health smoke passed
+desktop\build_windows.bat
 ```
+
+输出位于 `dist\EduGate-Standalone`。打包脚本同样使用清华 PyPI 镜像。
+
+详细说明见 [安装与故障排查](docs/安装与故障排查.txt)、[使用手册](docs/使用手册.txt)、[并发执行与课堂记录设计](docs/并发执行与课堂记录设计.md)、[验收清单](docs/单机版验收清单.txt) 和 [回归测试矩阵](docs/回归测试矩阵.md)。英文读者可从 [English README](README.en.md) 开始。

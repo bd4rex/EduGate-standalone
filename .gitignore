@@ -1,5 +1,12 @@
 .env
 .venv/
+.venv-build/
+.venv-bootstrap/
+.venv-test/
+.venv-test312/
+.pytest-tmp/
+.pytest-tmp-312/
+.pytest-runtime-*/
 __pycache__/
 .pytest_cache/
 *.pyc
@@ -15,3 +22,4 @@ runtime_config.json
 dist/
 build/
 *.spec
+!desktop/edugate_standalone.spec

@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EduGate 教师端控制台</title>
+  <link rel="icon" href="assets/brand/edugate-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/brand/edugate-icon-1024.png" />
   <style>
     :root {
       --bg: #eef0f6;
@@ -25,6 +27,7 @@
     }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
 
     body {
       margin: 0;
@@ -61,9 +64,22 @@
     }
 
     h1, h2, h3, p { margin-top: 0; }
-    h1 { margin-bottom: 6px; font-size: clamp(25px, 3vw, 36px); letter-spacing: -0.04em; }
+    h1 { margin-bottom: 6px; font-size: clamp(25px, 3vw, 36px); letter-spacing: 0; }
     .subtle { color: var(--muted); }
     .topbar p { margin-bottom: 0; }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 58px;
+      height: 58px;
+      flex: 0 0 58px;
+    }
 
     .status-pill {
       display: inline-flex;
@@ -83,10 +99,11 @@
 
     .tabs {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       border-bottom: 1px solid var(--line);
       background: var(--soft);
     }
+    .tabs.teacher-tabs { grid-template-columns: repeat(3, 1fr); }
 
     .tab {
       min-height: 76px;
@@ -102,6 +119,16 @@
     .tab.active { color: var(--violet); border-color: var(--violet); background: #fff; }
 
     .content { padding: 28px; }
+
+    .setup-callout {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid #e6c86b;
+      border-radius: 8px;
+      background: var(--amber-soft);
+      color: #76510d;
+    }
+    .setup-callout strong { display: block; margin-bottom: 6px; color: var(--ink); }
 
     .connection {
       display: grid;
@@ -242,6 +269,13 @@
       vertical-align: bottom;
     }
 
+    .classroom-link {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
     .login-state {
       display: inline-flex;
       align-items: center;
@@ -253,6 +287,44 @@
       font-weight: 800;
       white-space: nowrap;
     }
+
+    .system-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .system-metric { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+    .system-metric span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .system-metric strong { display: block; margin-top: 8px; overflow-wrap: anywhere; font-size: 17px; }
+    .log-view { max-height: 360px; overflow: auto; margin: 0; padding: 14px; border-radius: 8px; background: #111827; color: #d7e0ef; white-space: pre-wrap; word-break: break-word; font: 12px/1.6 Consolas, monospace; }
+    .setting-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+    .record-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.6fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .record-session-list { max-height: 680px; overflow: auto; border: 1px solid var(--line); }
+    .record-session-button {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 16px;
+      text-align: left;
+      color: var(--ink);
+      background: #fff;
+      cursor: pointer;
+    }
+    .record-session-button:last-child { border-bottom: 0; }
+    .record-session-button.active { background: var(--violet-soft); }
+    .record-session-button strong { display: block; margin-bottom: 7px; font-size: 16px; }
+    .record-session-button span { display: block; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .record-detail { min-width: 0; }
+    .record-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 14px; }
+    .record-toolbar label { min-width: 170px; flex: 1 1 170px; }
+    .record-turn { padding: 16px 0; border-top: 1px solid var(--line); }
+    .record-turn:first-child { border-top: 0; }
+    .record-turn-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .record-content { margin: 6px 0 0; padding: 12px; overflow: auto; border-left: 3px solid var(--line-dark); background: var(--soft); white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.65 "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .record-output { border-left-color: var(--green); }
+    .recording-note { padding: 14px 16px; border: 1px solid var(--line); background: var(--soft); color: var(--muted); line-height: 1.6; }
 
     .toast {
       position: fixed;
@@ -303,6 +375,10 @@
       .tab { min-height: 58px; font-size: 14px; }
       .content { padding: 16px; }
       .connection { padding: 14px; border-radius: 18px; }
+      .classroom-link { grid-template-columns: 1fr; }
+      .system-grid, .setting-list { grid-template-columns: 1fr; }
+      .record-layout { grid-template-columns: 1fr; }
+      .record-session-list { max-height: 320px; }
       .session-card { padding: 20px; border-radius: 22px; }
       .row {
         align-items: stretch;
@@ -322,29 +398,50 @@
 <body>
   <div class="shell">
     <header class="topbar">
-      <div>
-        <h1>EduGate 教师端控制台</h1>
-        <p class="subtle">Central Control · AI 教学网关</p>
+      <div class="brand-lockup">
+        <img class="brand-mark" src="assets/brand/edugate-icon.svg" alt="" />
+        <div>
+          <h1>EduGate 教师端控制台</h1>
+          <p class="subtle">Central Control · 本地 AI 教学网关</p>
+        </div>
       </div>
       <div class="status-pill" id="system-status"><span class="dot"></span><span>未连接</span></div>
     </header>
 
-    <nav class="tabs">
+    <nav class="tabs" id="main-tabs">
       <button class="tab active" data-tab="control">控制 (Control)</button>
-      <button class="tab" data-tab="settings">配置 (Settings)</button>
+      <button class="tab" data-tab="records">记录 (Records)</button>
+      <button class="tab" data-tab="settings">资源 (Resources)</button>
+      <button class="tab" data-tab="system" data-admin-only>系统 (System)</button>
     </nav>
 
     <main class="content">
+      <div class="setup-callout" id="setup-callout" hidden>
+        <strong>首次运行：请先创建教师管理员密码</strong>
+        密码至少 10 个字符。密码只保存在这台电脑中，EduGate 不提供默认密码，也无法替你找回。
+      </div>
       <section class="connection">
         <label>后端地址<input id="base-url" placeholder="自动使用当前主机的 8000 端口" /></label>
         <label>用户名<input id="admin-username" autocomplete="username" value="admin" /></label>
         <label>密码<input id="admin-password" type="password" autocomplete="current-password" placeholder="教师端登录密码" /></label>
+        <label id="confirm-password-label" hidden>确认密码<input id="confirm-password" type="password" autocomplete="new-password" placeholder="再次输入新密码" /></label>
         <button class="button primary" id="login-button">登录并连接</button>
         <button class="button ghost" id="logout-button" type="button">退出</button>
         <div class="login-state" id="login-state">未登录</div>
       </section>
 
-      <section id="control-view">
+      <section id="control-view" hidden>
+        <section class="section">
+          <div class="section-title"><h2>学生课堂入口</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="classroom-link">
+              <label>课堂链接<input id="classroom-url" readonly placeholder="登录后生成" /></label>
+              <button class="button soft" id="copy-classroom-url" type="button">复制链接</button>
+              <button class="button ghost" id="rotate-classroom-token" type="button">换一个链接</button>
+            </div>
+            <p class="hint" style="margin:10px 0 0">每次启动会生成新的课堂令牌。点击“换一个链接”后，之前发给学生的链接立即失效。</p>
+          </div>
+        </section>
         <div class="control-grid">
           <div>
             <section class="session-card">
@@ -417,6 +514,48 @@
         </div>
       </section>
 
+      <section id="records-view" hidden>
+        <section class="section">
+          <div class="section-title">
+            <div>
+              <h2>课堂记录</h2>
+              <p class="hint" style="margin:6px 0 0">按课堂查看匿名学生的 AI 对话和 Python 运行记录。</p>
+            </div>
+            <button class="button soft" id="refresh-records" type="button">刷新记录</button>
+          </div>
+          <div class="recording-note" id="recording-note">正在读取本机记录设置。</div>
+          <div class="system-grid" id="record-summary" style="margin-top:14px"></div>
+        </section>
+
+        <div class="record-layout">
+          <section class="section">
+            <div class="section-title"><h2>课堂列表</h2></div>
+            <div class="record-session-list" id="record-session-list"></div>
+          </section>
+
+          <section class="section record-detail">
+            <div class="section-title">
+              <div>
+                <h2 id="record-detail-title">选择一节课堂</h2>
+                <p class="hint" id="record-detail-meta" style="margin:6px 0 0">选择左侧课堂后查看记录。</p>
+              </div>
+              <button class="button danger" id="delete-record" type="button" hidden>删除本节记录</button>
+            </div>
+            <div class="record-toolbar">
+              <label>记录类型
+                <select id="record-kind-filter">
+                  <option value="all">全部</option>
+                  <option value="chat">AI 对话</option>
+                  <option value="python">Python 运行</option>
+                </select>
+              </label>
+              <label>匿名学生<select id="record-student-filter"><option value="all">全部学生</option></select></label>
+            </div>
+            <div id="record-turn-list"></div>
+          </section>
+        </div>
+      </section>
+
       <section id="settings-view" hidden>
         <div class="settings-grid single">
           <section class="section">
@@ -429,6 +568,7 @@
                 <button class="button primary" id="save-source">新增/更新知识库</button>
               </div>
             </div>
+            <div class="list-card" id="source-admin-list" style="margin-top:14px"></div>
 
             <div class="section-title" style="margin-top:20px"><h2>上传资料</h2></div>
             <div class="list-card" style="padding:18px">
@@ -477,7 +617,7 @@
           </div>
           <div class="list-card" style="padding:18px">
             <div class="stack">
-              <label>模型 ID<input id="model-id" placeholder="例如 gpt-4o-mini 或 deepseek-chat" /></label>
+              <label>模型 ID<input id="model-id" placeholder="例如 gpt-4o-mini 或 deepseek-v4-flash" /></label>
               <label>显示名称<input id="model-name" placeholder="例如 GPT-4o Mini" /></label>
               <label>供应商名称<input id="model-provider" placeholder="例如 OpenAI / DeepSeek / 校内模型服务" /></label>
               <label>模型来源
@@ -489,17 +629,85 @@
               <label>OpenAI-compatible Base URL<input id="model-base-url" placeholder="例如 https://api.deepseek.com/v1 或 https://api.openai.com/v1" /></label>
               <label>API Key<input id="model-api-key" type="password" placeholder="直连模型必填；更新资料不改 key 可留空" /></label>
               <label>说明<input id="model-description" placeholder="例如 低成本课堂问答模型" /></label>
-              <button class="button primary" id="save-model">新增/更新模型</button>
-              <p class="hint">直连模式只兼容 OpenAI Chat Completions 格式。API Key 只保存在后端配置，不会回显到页面。</p>
+              <div class="actions">
+                <button class="button soft" id="test-model" type="button">测试连接</button>
+                <button class="button primary" id="save-model">新增/更新模型</button>
+              </div>
+              <p class="hint">连接测试会实际请求供应商的模型列表接口。API Key 使用 Windows 凭据加密，只会在这台电脑上解密，不会回显到页面。</p>
             </div>
           </div>
           <div class="list-card" id="catalog-list" style="margin-top:16px"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>修改我的密码</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="stack">
+              <label>当前密码<input id="current-password" type="password" autocomplete="current-password" /></label>
+              <label>新密码<input id="new-password" type="password" autocomplete="new-password" placeholder="至少 10 个字符" /></label>
+              <button class="button primary" id="change-password" type="button">修改密码</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section id="system-view" hidden data-admin-only>
+        <section class="section">
+          <div class="section-title">
+            <h2>运行状态</h2>
+            <div class="actions">
+              <button class="button soft" id="refresh-system" type="button">刷新</button>
+              <button class="button ghost" id="restart-system" type="button">重启服务</button>
+              <button class="button danger" id="shutdown-system" type="button">停止服务</button>
+            </div>
+          </div>
+          <div class="system-grid" id="system-metrics"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>请求统计</h2></div>
+          <div class="system-grid" id="dashboard-metrics"></div>
+          <div class="list-card" id="request-log-list" style="margin-top:14px"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>启动日志</h2></div>
+          <pre class="log-view" id="launcher-log-view">暂无启动日志</pre>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>备份与恢复</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="stack">
+              <div class="actions" style="justify-content:flex-start">
+                <button class="button soft" id="download-backup" type="button">下载完整备份</button>
+              </div>
+              <label>恢复备份 ZIP<input id="restore-backup-file" type="file" accept=".zip,application/zip" /></label>
+              <button class="button danger" id="restore-backup" type="button">恢复并重启</button>
+              <p class="hint">备份包含账号、策略、加密密钥和知识库。加密密钥只能由当前 Windows 用户解密。恢复会重启服务并替换当前数据。</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>高级设置</h2></div>
+          <div class="list-card" style="padding:18px">
+            <div class="setting-list" id="advanced-setting-list"></div>
+            <div class="stack" style="margin-top:16px">
+              <label>平台 API Key<input id="platform-api-key" type="password" placeholder="留空并保存可关闭 /v1/chat/completions" /></label>
+              <div class="actions">
+                <button class="button soft" id="save-platform-key" type="button">保存平台密钥</button>
+                <button class="button primary" id="save-advanced-settings" type="button">保存高级设置</button>
+              </div>
+              <p class="hint">高级设置保存后需要重启服务才会生效。修改端口后，EduGate 会在新地址重新打开教师控制台。</p>
+            </div>
+          </div>
         </section>
       </section>
 
       <div class="footer-note">
         <span>● 控制端只给教师/管理员使用。页面通过用户名/密码登录，不再要求手动粘贴管理 token。</span>
-        <span>v1.1 · Knowledge Enabled</span>
+        <span>v1.4 · Classroom Records</span>
       </div>
     </main>
   </div>
@@ -508,9 +716,10 @@
 
   <script>
     function defaultBackendBaseUrl() {
-      const host = window.location.hostname || "127.0.0.1";
-      const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-      return `${protocol}//${host}:8000`;
+      if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+        return window.location.origin;
+      }
+      return "http://127.0.0.1:8000";
     }
 
     const state = {
@@ -518,18 +727,33 @@
       adminToken: "",
       username: "admin",
       currentTeacher: null,
+      needsSetup: false,
+      sessionExpiresAt: 0,
+      classroomToken: "",
+      activeTab: "control",
       config: null,
       models: [],
       catalog: [],
       sources: [],
       files: [],
       teachers: [],
+      systemStatus: null,
+      dashboard: null,
+      requestLogs: [],
+      launcherLogs: [],
+      advancedSettings: [],
+      classroomRecords: [],
+      classroomRecordConfig: { recording_enabled: false, retention_days: 30 },
+      selectedClassroomRecord: null,
     };
 
     const el = {
       baseUrl: document.querySelector("#base-url"),
       adminUsername: document.querySelector("#admin-username"),
       adminPassword: document.querySelector("#admin-password"),
+      confirmPassword: document.querySelector("#confirm-password"),
+      confirmPasswordLabel: document.querySelector("#confirm-password-label"),
+      setupCallout: document.querySelector("#setup-callout"),
       loginButton: document.querySelector("#login-button"),
       logoutButton: document.querySelector("#logout-button"),
       loginState: document.querySelector("#login-state"),
@@ -565,10 +789,33 @@
       teacherRole: document.querySelector("#teacher-role"),
       teacherList: document.querySelector("#teacher-list"),
       teacherForm: document.querySelector("#teacher-form"),
+      sourceAdminList: document.querySelector("#source-admin-list"),
+      classroomUrl: document.querySelector("#classroom-url"),
+      currentPassword: document.querySelector("#current-password"),
+      newPassword: document.querySelector("#new-password"),
       toast: document.querySelector("#toast"),
       tabs: document.querySelectorAll(".tab"),
+      tabNav: document.querySelector("#main-tabs"),
       controlView: document.querySelector("#control-view"),
+      recordsView: document.querySelector("#records-view"),
       settingsView: document.querySelector("#settings-view"),
+      systemView: document.querySelector("#system-view"),
+      systemMetrics: document.querySelector("#system-metrics"),
+      dashboardMetrics: document.querySelector("#dashboard-metrics"),
+      requestLogList: document.querySelector("#request-log-list"),
+      launcherLogView: document.querySelector("#launcher-log-view"),
+      advancedSettingList: document.querySelector("#advanced-setting-list"),
+      platformApiKey: document.querySelector("#platform-api-key"),
+      restoreBackupFile: document.querySelector("#restore-backup-file"),
+      recordingNote: document.querySelector("#recording-note"),
+      recordSummary: document.querySelector("#record-summary"),
+      recordSessionList: document.querySelector("#record-session-list"),
+      recordDetailTitle: document.querySelector("#record-detail-title"),
+      recordDetailMeta: document.querySelector("#record-detail-meta"),
+      recordTurnList: document.querySelector("#record-turn-list"),
+      recordKindFilter: document.querySelector("#record-kind-filter"),
+      recordStudentFilter: document.querySelector("#record-student-filter"),
+      deleteRecord: document.querySelector("#delete-record"),
     };
 
     function api(path) {
@@ -587,6 +834,7 @@
 
     function applyRoleUI() {
       const admin = isAdmin();
+      el.tabNav.classList.toggle("teacher-tabs", !admin);
       document.querySelectorAll("[data-admin-only]").forEach((node) => {
         node.hidden = !admin;
       });
@@ -595,10 +843,14 @@
       if (teacherTitle) teacherTitle.textContent = admin ? "教师账号" : "我的 API";
       const hint = document.querySelector(".footer-note span");
       if (hint) {
-        hint.textContent = admin
+        hint.textContent = !state.adminToken
+          ? "● 请先完成首次初始化或登录教师账号。"
+          : admin
           ? "● 管理员可管理教师账号、模型供应商、全局策略和知识库。"
           : "● 普通老师只能复制自己的 API，并管理以自己用户名开头的知识库。";
       }
+      if (el.systemView) el.systemView.hidden = !admin || state.activeTab !== "system";
+      if (el.recordsView) el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
     }
 
     async function request(path, options = {}) {
@@ -614,7 +866,7 @@
         const message = Array.isArray(detail)
           ? detail.map((item) => item.msg || JSON.stringify(item)).join("；")
           : String(detail || data || response.statusText);
-        if (response.status === 401 && message.includes("Invalid admin token")) {
+        if (response.status === 401 && /admin token|expired/i.test(message)) {
           clearSession();
           throw new Error("登录已过期，请重新输入用户名和密码登录。");
         }
@@ -623,29 +875,16 @@
       return data;
     }
 
-    function saveLoginSession() {
-      localStorage.setItem("edugate-admin-session", JSON.stringify({
-        baseUrl: state.baseUrl,
-        username: state.username,
-        currentTeacher: state.currentTeacher,
-      }));
-    }
-
-    function loadSession() {
-      try {
-        const saved = JSON.parse(localStorage.getItem("edugate-admin-session") || "{}");
-        if (saved.baseUrl) state.baseUrl = saved.baseUrl;
-        if (saved.username) state.username = saved.username;
-      } catch {}
-      el.baseUrl.value = state.baseUrl;
-      el.adminUsername.value = state.username;
-      updateLoginState();
-    }
-
     function clearSession() {
       state.adminToken = "";
       state.currentTeacher = null;
+      state.sessionExpiresAt = 0;
+      state.classroomToken = "";
+      state.classroomRecords = [];
+      state.selectedClassroomRecord = null;
+      sessionStorage.removeItem("edugate-admin-session");
       localStorage.removeItem("edugate-admin-session");
+      el.classroomUrl.value = "";
       updateLoginState();
       applyRoleUI();
       setStatus("未连接");
@@ -655,7 +894,67 @@
       const role = state.currentTeacher?.role === "admin" ? "管理员" : "普通老师";
       el.loginState.textContent = state.adminToken ? `已登录：${state.username}（${role}）` : "未登录";
       el.logoutButton.disabled = !state.adminToken;
+      el.tabs.forEach((tab) => {
+        tab.disabled = !state.adminToken;
+        tab.classList.toggle("active", tab.dataset.tab === state.activeTab);
+      });
+      el.controlView.hidden = !state.adminToken || state.activeTab !== "control";
+      el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
+      el.settingsView.hidden = !state.adminToken || state.activeTab !== "settings";
+      el.systemView.hidden = !state.adminToken || !isAdmin() || state.activeTab !== "system";
       applyRoleUI();
+    }
+
+    function applySetupMode() {
+      el.setupCallout.hidden = !state.needsSetup;
+      el.confirmPasswordLabel.hidden = !state.needsSetup;
+      el.loginButton.textContent = state.needsSetup ? "创建管理员并进入" : "登录并连接";
+      el.adminPassword.autocomplete = state.needsSetup ? "new-password" : "current-password";
+      el.adminUsername.readOnly = state.needsSetup;
+    }
+
+    async function checkAuthStatus() {
+      state.baseUrl = el.baseUrl.value.trim() || state.baseUrl;
+      try {
+        const response = await fetch(api("/auth/status"));
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || response.statusText);
+        state.needsSetup = !data.initialized;
+        state.username = data.admin_username || state.username;
+        el.adminUsername.value = state.username;
+        applySetupMode();
+        return data;
+      } catch (error) {
+        setStatus("服务未连接");
+        showToast(`无法读取初始化状态：${error.message}`, true);
+        return null;
+      }
+    }
+
+    function saveLoginSession() {
+      sessionStorage.setItem("edugate-admin-session", JSON.stringify({
+        baseUrl: state.baseUrl,
+        username: state.username,
+        currentTeacher: state.currentTeacher,
+        adminToken: state.adminToken,
+        sessionExpiresAt: state.sessionExpiresAt,
+      }));
+    }
+
+    function loadSession() {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem("edugate-admin-session") || "{}");
+        if (saved.baseUrl) state.baseUrl = saved.baseUrl;
+        if (saved.username) state.username = saved.username;
+        if (saved.adminToken && Number(saved.sessionExpiresAt) > Date.now()) {
+          state.adminToken = saved.adminToken;
+          state.sessionExpiresAt = Number(saved.sessionExpiresAt);
+          state.currentTeacher = saved.currentTeacher || null;
+        }
+      } catch {}
+      el.baseUrl.value = state.baseUrl;
+      el.adminUsername.value = state.username;
+      updateLoginState();
     }
 
     function showToast(message, isError = false) {
@@ -693,7 +992,8 @@
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Accept": "text/event-stream"
+    "Accept": "text/event-stream",
+    "X-Class-Token": "${state.classroomToken}"
   },
   body: JSON.stringify(${JSON.stringify(payload, null, 2)})
 });`;
@@ -712,7 +1012,8 @@
       return `fetch("${api("/chat")}", {
   method: "POST",
   headers: {
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    "X-Class-Token": "${state.classroomToken}"
   },
   body: JSON.stringify(${JSON.stringify(payload, null, 2)})
 });`;
@@ -912,6 +1213,18 @@
       if (writableSources.some((source) => source.id === activeSource)) {
         el.uploadSource.value = activeSource;
       }
+      el.sourceAdminList.innerHTML = writableSources.map((source) => `
+        <div class="row">
+          <div class="row-main">
+            <p class="row-title">${escapeHtml(source.name)}</p>
+            <div class="row-meta"><span class="badge">${escapeHtml(source.id)}</span><span>${source.file_count} 文件</span><span>${source.chunk_count} chunks</span></div>
+          </div>
+          ${source.id === "general" ? "" : `<button class="button danger" type="button" data-source-delete="${escapeHtml(source.id)}">删除</button>`}
+        </div>
+      `).join("") || `<div class="row"><div class="row-main"><p class="row-title">暂无可管理知识库</p></div></div>`;
+      el.sourceAdminList.querySelectorAll("[data-source-delete]").forEach((button) => {
+        button.addEventListener("click", () => deleteSource(button.dataset.sourceDelete));
+      });
     }
 
     function renderModels(activeModel) {
@@ -932,7 +1245,7 @@
                 <span>${escapeHtml(model.description)}</span>
               </div>
             </div>
-            <button class="switch ${active ? "active" : ""}" type="button" data-model-id="${escapeHtml(model.id)}"></button>
+            <button class="switch ${active ? "active" : ""}" type="button" data-model-id="${escapeHtml(model.id)}" ${model.available ? "" : "disabled"}></button>
           </div>
         `;
       }).join("");
@@ -961,11 +1274,21 @@
             </div>
             <div class="row-meta">${escapeHtml(model.description || "")}</div>
           </div>
-          <button class="button ghost" type="button" data-catalog-edit="${escapeHtml(model.id)}">填入表单</button>
+          <div class="actions">
+            <button class="button soft" type="button" data-catalog-test="${escapeHtml(model.id)}">测试</button>
+            <button class="button ghost" type="button" data-catalog-edit="${escapeHtml(model.id)}">填入表单</button>
+            <button class="button danger" type="button" data-catalog-delete="${escapeHtml(model.id)}">删除</button>
+          </div>
         </div>
       `).join("");
       el.catalogList.querySelectorAll("[data-catalog-edit]").forEach((button) => {
         button.addEventListener("click", () => fillModelForm(button.dataset.catalogEdit));
+      });
+      el.catalogList.querySelectorAll("[data-catalog-test]").forEach((button) => {
+        button.addEventListener("click", () => testModel(button.dataset.catalogTest));
+      });
+      el.catalogList.querySelectorAll("[data-catalog-delete]").forEach((button) => {
+        button.addEventListener("click", () => deleteModel(button.dataset.catalogDelete));
       });
     }
 
@@ -994,7 +1317,7 @@
 
     function renderTeachers() {
       if (!state.teachers.length) {
-        el.teacherList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">${isAdmin() ? "暂无教师账号" : "未读取到当前教师账号"}</p><div class="row-meta">${isAdmin() ? "登录后会自动初始化 .env 中的管理员账号。" : "请重新登录后再试。"}</div></div></div>`;
+        el.teacherList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">${isAdmin() ? "暂无教师账号" : "未读取到当前教师账号"}</p><div class="row-meta">${isAdmin() ? "可以在上方创建课堂教师账号。" : "请重新登录后再试。"}</div></div></div>`;
         return;
       }
       el.teacherList.innerHTML = state.teachers.map((teacher) => `
@@ -1032,7 +1355,206 @@
       });
     }
 
+    const settingLabels = {
+      EDUGATE_BACKEND_PORT: "服务端口",
+      SESSION_TTL_SECONDS: "登录会话有效期（秒）",
+      STUDENT_SESSION_TTL_SECONDS: "学生会话有效期（秒）",
+      STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES: "同一来源 5 分钟加入课堂上限",
+      CLASSROOM_RATE_LIMIT_PER_MINUTE: "学生每分钟请求上限",
+      LOGIN_RATE_LIMIT_PER_5_MINUTES: "5 分钟登录尝试上限",
+      MODEL_MAX_CONCURRENCY: "模型最大并发",
+      REQUEST_TIMEOUT_SECONDS: "普通请求超时（秒）",
+      STREAM_READ_TIMEOUT_SECONDS: "流式读取超时（秒）",
+      STREAM_HEARTBEAT_SECONDS: "流式心跳间隔（秒）",
+      MAX_UPLOAD_BYTES: "单文件上传上限（字节）",
+      MAX_PDF_PAGES: "PDF 最大页数",
+      LOG_MAX_RECORDS: "请求日志保留条数",
+      LOG_MESSAGE_PREVIEW: "记录消息预览",
+      PYTHON_RUNNER_ENABLED: "启用 Python 运行器",
+      PYTHON_RUNNER_TIMEOUT_SECONDS: "Python 超时（秒）",
+      PYTHON_RUNNER_MAX_CODE_CHARS: "Python 代码字符上限",
+      PYTHON_RUNNER_MEMORY_MB: "Python 内存上限（MB）",
+      PYTHON_RUNNER_EXECUTABLE: "独立 Python 解释器路径",
+      PYTHON_RUNNER_MAX_CONCURRENCY: "Python 并发槽位（建议 4–8）",
+      PYTHON_RUNNER_MAX_QUEUE: "Python 最大排队任务数",
+      PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS: "Python 排队超时（秒）",
+      CLASSROOM_RECORDING_ENABLED: "保存课堂内容记录到本机",
+      CLASSROOM_RECORD_RETENTION_DAYS: "课堂记录保留天数",
+      CLASSROOM_RECORD_MAX_RECORDS: "课堂互动记录总上限",
+      CLASSROOM_RECORD_MAX_CONTENT_CHARS: "单条课堂内容字符上限",
+      CORS_ORIGINS: "额外允许的跨域来源",
+    };
+
+    function formatBytes(value) {
+      const bytes = Number(value || 0);
+      if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+      if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+      return `${Math.ceil(bytes / 1024)} KB`;
+    }
+
+    function formatDuration(seconds) {
+      const value = Number(seconds || 0);
+      const hours = Math.floor(value / 3600);
+      const minutes = Math.floor((value % 3600) / 60);
+      return hours ? `${hours} 小时 ${minutes} 分` : `${minutes} 分钟`;
+    }
+
+    function renderSystem() {
+      const system = state.systemStatus || {};
+      const pool = system.python_runner_pool || {};
+      const metrics = [
+        ["服务状态", system.status === "running" ? "运行中" : "未知"],
+        ["运行时间", formatDuration(system.uptime_seconds)],
+        ["局域网地址", system.lan_base_url || "-"],
+        ["数据目录", system.data_dir || "-"],
+        ["剩余磁盘", formatBytes(system.disk_free_bytes)],
+        ["进程 ID", system.pid || "-"],
+        ["监督模式", system.supervised ? "可重启/停止" : "仅查看"],
+        ["Python 运行器", system.python_runner_enabled ? "开启" : "关闭"],
+        ["Python 执行槽位", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
+        ["Python 排队任务", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
+      ];
+      el.systemMetrics.innerHTML = metrics.map(([label, value]) => `
+        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      `).join("");
+
+      const dashboard = state.dashboard || {};
+      const dashboardItems = [
+        ["总请求", dashboard.total_requests ?? 0],
+        ["总 Tokens", dashboard.total_tokens ?? 0],
+        ["平均延迟", `${dashboard.average_latency_ms ?? 0} ms`],
+        ["错误数", dashboard.error_count ?? 0],
+      ];
+      el.dashboardMetrics.innerHTML = dashboardItems.map(([label, value]) => `
+        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      `).join("");
+
+      el.requestLogList.innerHTML = state.requestLogs.length ? state.requestLogs.map((log) => `
+        <div class="row">
+          <div class="row-main">
+            <p class="row-title">${escapeHtml(log.route)} · ${escapeHtml(log.model || "-")}</p>
+            <div class="row-meta"><span>${escapeHtml(log.created_at)}</span><span>${log.status_code}</span><span>${log.latency_ms} ms</span><span>${log.total_tokens ?? 0} tokens</span></div>
+            ${log.error ? `<div class="row-meta" style="color:var(--red)">${escapeHtml(log.error)}</div>` : ""}
+          </div>
+        </div>
+      `).join("") : `<div class="row"><div class="row-main"><p class="row-title">暂无请求日志</p></div></div>`;
+      el.launcherLogView.textContent = state.launcherLogs.join("\n") || "暂无启动日志";
+
+      el.advancedSettingList.innerHTML = state.advancedSettings.map((setting) => {
+        const label = settingLabels[setting.key] || setting.key;
+        if (setting.type === "bool") {
+          return `<label><span><input type="checkbox" data-setting-key="${escapeHtml(setting.key)}" style="width:auto;min-height:auto" ${setting.value ? "checked" : ""} /> ${escapeHtml(label)}</span></label>`;
+        }
+        const inputType = setting.type === "str" ? "text" : "number";
+        const step = setting.type === "float" ? "any" : "1";
+        return `<label>${escapeHtml(label)}<input type="${inputType}" step="${step}" data-setting-key="${escapeHtml(setting.key)}" value="${escapeHtml(setting.value)}" /></label>`;
+      }).join("");
+      el.platformApiKey.placeholder = system.platform_api_key_set
+        ? "平台密钥已设置；输入新值可替换，留空保存会关闭"
+        : "留空并保存可保持关闭";
+    }
+
+    function formatRecordTime(value) {
+      if (!value) return "-";
+      const normalized = /Z$|[+-]\d\d:\d\d$/.test(value) ? value : `${value.replace(" ", "T")}Z`;
+      const date = new Date(normalized);
+      return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function renderClassroomRecords() {
+      const records = state.classroomRecords || [];
+      const totals = records.reduce((result, record) => {
+        result.students += Number(record.student_count || 0);
+        result.turns += Number(record.turn_count || 0);
+        result.python += Number(record.python_count || 0);
+        return result;
+      }, { students: 0, turns: 0, python: 0 });
+      el.recordingNote.textContent = state.classroomRecordConfig.recording_enabled
+        ? `课堂内容仅保存在这台教师电脑中；学生使用匿名编号，不记录 IP。记录默认保留 ${state.classroomRecordConfig.retention_days} 天。`
+        : "课堂内容记录当前已关闭。管理员可在“系统 -> 高级设置”中启用。";
+      const summary = [
+        ["课堂数", records.length],
+        ["匿名学生合计", totals.students],
+        ["互动记录", totals.turns],
+        ["Python 运行", totals.python],
+      ];
+      el.recordSummary.innerHTML = summary.map(([label, value]) => `
+        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      `).join("");
+
+      const selectedId = state.selectedClassroomRecord?.session?.id || "";
+      el.recordSessionList.innerHTML = records.length ? records.map((record) => `
+        <button class="record-session-button ${record.id === selectedId ? "active" : ""}" type="button" data-record-id="${escapeHtml(record.id)}">
+          <strong>${escapeHtml(record.title)}</strong>
+          <span>${escapeHtml(record.teacher_display_name || record.teacher_username)} · ${escapeHtml(formatRecordTime(record.started_at))}</span>
+          <span>${record.student_count} 名匿名学生 · ${record.chat_count} 次对话 · ${record.python_count} 次 Python</span>
+        </button>
+      `).join("") : `<div class="row"><div class="row-main"><p class="row-title">暂无课堂记录</p><div class="row-meta">学生开始对话或运行 Python 后会出现在这里。</div></div></div>`;
+      el.recordSessionList.querySelectorAll("[data-record-id]").forEach((button) => {
+        button.addEventListener("click", () => loadClassroomRecord(button.dataset.recordId));
+      });
+    }
+
+    function renderClassroomRecordDetail() {
+      const detail = state.selectedClassroomRecord;
+      if (!detail?.session) {
+        el.recordDetailTitle.textContent = "选择一节课堂";
+        el.recordDetailMeta.textContent = "选择左侧课堂后查看记录。";
+        el.recordStudentFilter.innerHTML = `<option value="all">全部学生</option>`;
+        el.recordTurnList.innerHTML = `<div class="recording-note">暂无可显示的课堂内容。</div>`;
+        el.deleteRecord.hidden = true;
+        return;
+      }
+
+      const session = detail.session;
+      const turns = detail.turns || [];
+      const studentIds = [...new Set(turns.map((turn) => turn.student_session_id))];
+      const studentLabels = new Map(studentIds.map((id, index) => [id, `学生 ${String(index + 1).padStart(2, "0")}`]));
+      const previousStudent = el.recordStudentFilter.value;
+      el.recordStudentFilter.innerHTML = [
+        `<option value="all">全部学生</option>`,
+        ...studentIds.map((id) => `<option value="${escapeHtml(id)}">${escapeHtml(studentLabels.get(id))}</option>`),
+      ].join("");
+      if (studentIds.includes(previousStudent)) el.recordStudentFilter.value = previousStudent;
+
+      el.recordDetailTitle.textContent = session.title;
+      el.recordDetailMeta.textContent = `${session.teacher_display_name || session.teacher_username} · ${formatRecordTime(session.started_at)} 至 ${session.ended_at ? formatRecordTime(session.ended_at) : "当前课堂"}`;
+      el.deleteRecord.hidden = false;
+      const kind = el.recordKindFilter.value;
+      const student = el.recordStudentFilter.value;
+      const visibleTurns = turns.filter((turn) => (
+        (kind === "all" || turn.kind === kind)
+        && (student === "all" || turn.student_session_id === student)
+      ));
+      el.recordTurnList.innerHTML = visibleTurns.length ? visibleTurns.map((turn) => {
+        const typeLabel = turn.kind === "python" ? "Python" : "AI 对话";
+        const inputLabel = turn.kind === "python" ? "提交代码" : "学生问题";
+        const outputLabel = turn.kind === "python" ? "运行输出" : "AI 回答";
+        const statusClass = Number(turn.status_code) >= 400 || turn.timed_out ? "" : "green";
+        const timing = turn.kind === "python" && turn.queue_wait_ms != null
+          ? `${turn.latency_ms} ms（排队 ${turn.queue_wait_ms} ms）`
+          : `${turn.latency_ms} ms`;
+        return `
+          <article class="record-turn">
+            <div class="record-turn-heading">
+              <span class="badge">${escapeHtml(studentLabels.get(turn.student_session_id) || "匿名学生")}</span>
+              <span class="badge ${statusClass}">${escapeHtml(typeLabel)}</span>
+              <span class="subtle">${escapeHtml(formatRecordTime(turn.created_at))} · ${escapeHtml(timing)}</span>
+            </div>
+            <strong>${escapeHtml(inputLabel)}</strong>
+            <pre class="record-content">${escapeHtml(turn.input_content || "（空）")}</pre>
+            <strong>${escapeHtml(outputLabel)}</strong>
+            <pre class="record-content record-output">${escapeHtml(turn.output_content || "（无输出）")}</pre>
+          </article>
+        `;
+      }).join("") : `<div class="recording-note">当前筛选条件下没有记录。</div>`;
+    }
+
     async function login() {
+      if (state.needsSetup) {
+        await setupAdmin();
+        return;
+      }
       state.baseUrl = el.baseUrl.value.trim();
       state.username = el.adminUsername.value.trim();
       const password = el.adminPassword.value;
@@ -1052,6 +1574,7 @@
         if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
         state.adminToken = data.access_token || data.token;
         state.currentTeacher = data.teacher || null;
+        state.sessionExpiresAt = Date.now() + Number(data.expires_in || 0) * 1000;
         if (!state.adminToken) throw new Error("登录成功但后端没有返回 access_token。");
         el.adminPassword.value = "";
         saveLoginSession();
@@ -1073,6 +1596,48 @@
       }
     }
 
+    async function setupAdmin() {
+      state.baseUrl = el.baseUrl.value.trim();
+      state.username = el.adminUsername.value.trim();
+      const password = el.adminPassword.value;
+      const confirmation = el.confirmPassword.value;
+      if (password.length < 10) {
+        showToast("管理员密码至少需要 10 个字符。", true);
+        return;
+      }
+      if (password !== confirmation) {
+        showToast("两次输入的密码不一致。", true);
+        return;
+      }
+      el.loginButton.disabled = true;
+      setStatus("正在初始化");
+      try {
+        const response = await fetch(api("/auth/setup"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: state.username, password }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
+        state.adminToken = data.access_token;
+        state.currentTeacher = data.teacher;
+        state.sessionExpiresAt = Date.now() + Number(data.expires_in || 0) * 1000;
+        state.needsSetup = false;
+        el.adminPassword.value = "";
+        el.confirmPassword.value = "";
+        saveLoginSession();
+        applySetupMode();
+        updateLoginState();
+        await connectWithToken();
+        showToast("管理员创建完成。请妥善保管密码。 ");
+      } catch (error) {
+        setStatus("初始化失败");
+        showToast(`初始化失败：${error.message}`, true);
+      } finally {
+        el.loginButton.disabled = false;
+      }
+    }
+
     async function connectWithToken() {
       state.baseUrl = el.baseUrl.value.trim();
       if (!state.baseUrl || !state.adminToken) {
@@ -1086,13 +1651,17 @@
         ["知识库", loadSources],
         ["知识库文件", loadFiles],
         ["教师信息", loadTeachers],
+        ["课堂记录", loadClassroomRecords],
+        ["课堂链接", loadClassroom],
       ];
+      if (isAdmin()) steps.push(["系统状态", loadSystem]);
       const failures = [];
       for (const [label, loader] of steps) {
         try {
           await loader();
         } catch (error) {
           failures.push(`${label}: ${error.message}`);
+          if (!state.adminToken) break;
         }
       }
       if (failures.length) {
@@ -1137,6 +1706,84 @@
     async function loadTeachers() {
       state.teachers = await request("/admin/teachers");
       renderTeachers();
+    }
+
+    async function loadSystem() {
+      const [system, dashboard, logs, launcherLogs, advanced] = await Promise.all([
+        request("/admin/system/status"),
+        request("/admin/dashboard"),
+        request("/admin/logs?limit=50"),
+        request("/admin/system/launcher-logs?limit=300"),
+        request("/admin/system/settings"),
+      ]);
+      state.systemStatus = system;
+      state.dashboard = dashboard;
+      state.requestLogs = logs || [];
+      state.launcherLogs = launcherLogs.lines || [];
+      state.advancedSettings = advanced.settings || [];
+      renderSystem();
+    }
+
+    async function loadClassroomRecords(preferredId = "") {
+      const data = await request("/teacher/classroom-records?limit=100");
+      state.classroomRecordConfig = {
+        recording_enabled: Boolean(data.recording_enabled),
+        retention_days: Number(data.retention_days || 30),
+      };
+      state.classroomRecords = data.records || [];
+      const currentId = preferredId || state.selectedClassroomRecord?.session?.id || "";
+      const targetId = state.classroomRecords.some((record) => record.id === currentId)
+        ? currentId
+        : state.classroomRecords[0]?.id || "";
+      renderClassroomRecords();
+      if (targetId) {
+        await loadClassroomRecord(targetId);
+      } else {
+        state.selectedClassroomRecord = null;
+        renderClassroomRecordDetail();
+      }
+    }
+
+    async function loadClassroomRecord(recordId) {
+      state.selectedClassroomRecord = await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}?limit=2000`);
+      renderClassroomRecords();
+      renderClassroomRecordDetail();
+    }
+
+    async function deleteSelectedClassroomRecord() {
+      const recordId = state.selectedClassroomRecord?.session?.id;
+      if (!recordId) return;
+      if (!confirm("确定永久删除这节课堂的全部本地记录吗？此操作无法撤销。")) return;
+      try {
+        await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}`, { method: "DELETE" });
+        state.selectedClassroomRecord = null;
+        await loadClassroomRecords();
+        showToast("课堂记录已删除。");
+      } catch (error) {
+        showToast(`删除课堂记录失败：${error.message}`, true);
+      }
+    }
+
+    async function loadClassroom() {
+      const data = await request("/admin/classroom");
+      state.classroomToken = data.class_token || "";
+      const params = new URLSearchParams({
+        teacher_id: state.currentTeacher?.username || state.username,
+        class_token: state.classroomToken,
+      });
+      el.classroomUrl.value = `${state.baseUrl.replace(/\/+$/, "")}/student.html#${params}`;
+    }
+
+    async function rotateClassroomToken() {
+      if (!confirm("换一个课堂链接后，之前发给学生的链接会立即失效。确定继续吗？")) return;
+      try {
+        const data = await request("/admin/classroom/rotate", { method: "POST" });
+        state.classroomToken = data.class_token || "";
+        await loadClassroom();
+        await copyText(el.classroomUrl.value, "新课堂链接");
+      } catch (error) {
+        showToast(`更换课堂链接失败：${error.message}`, true);
+      }
     }
 
     async function switchModel(modelId) {
@@ -1202,6 +1849,18 @@
       }
     }
 
+    async function deleteSource(sourceId) {
+      if (!confirm(`确定删除知识库 ${sourceId} 及其中所有文件吗？`)) return;
+      try {
+        await request(`/knowledge/sources/${encodeURIComponent(sourceId)}`, { method: "DELETE" });
+        localStorage.removeItem(mountedSourceStorageKey());
+        await Promise.all([loadSources(), loadFiles()]);
+        showToast("知识库已删除。");
+      } catch (error) {
+        showToast(`删除知识库失败：${error.message}`, true);
+      }
+    }
+
     function fillModelForm(modelId) {
       const model = state.catalog.find((item) => item.id === modelId);
       if (!model) return;
@@ -1215,7 +1874,7 @@
       showToast("已填入模型表单。若不修改 API Key，请保持为空。");
     }
 
-    async function saveModel() {
+    async function saveModel({ silent = false } = {}) {
       const payload = {
         id: el.modelId.value.trim(),
         name: el.modelName.value.trim(),
@@ -1227,19 +1886,71 @@
       };
       if (!payload.id || !payload.name) {
         showToast("请填写模型 ID 和显示名称。", true);
-        return;
+        return null;
       }
       if (payload.source === "openai_compatible" && !payload.base_url) {
         showToast("直连 OpenAI-compatible 模型必须填写 Base URL。", true);
-        return;
+        return null;
       }
       try {
         await request("/admin/models", { method: "POST", body: JSON.stringify(payload) });
         el.modelApiKey.value = "";
         await loadModels();
-        showToast(`已保存模型：${payload.name}`);
+        if (!silent) showToast(`已保存模型：${payload.name}`);
+        return payload.id;
       } catch (error) {
         showToast(`保存模型失败：${error.message}`, true);
+        return null;
+      }
+    }
+
+    async function testModel(modelId = "") {
+      let targetId = modelId;
+      if (!targetId) {
+        targetId = await saveModel({ silent: true });
+      }
+      if (!targetId) return;
+      try {
+        const result = await request(`/admin/providers/${encodeURIComponent(targetId)}/test`, { method: "POST" });
+        if (!result.ok) throw new Error(result.error || `HTTP ${result.status_code || "unknown"}`);
+        showToast(`连接成功：供应商返回 ${result.model_count ?? 0} 个模型。`);
+      } catch (error) {
+        showToast(`连接测试失败：${error.message}`, true);
+      }
+    }
+
+    async function deleteModel(modelId) {
+      if (!confirm(`确定删除模型 ${modelId} 及其加密 API Key 吗？`)) return;
+      try {
+        await request(`/model-catalog/${encodeURIComponent(modelId)}`, { method: "DELETE" });
+        await loadModels();
+        showToast("模型已删除。");
+      } catch (error) {
+        showToast(`删除模型失败：${error.message}`, true);
+      }
+    }
+
+    async function changePassword() {
+      const currentPassword = el.currentPassword.value;
+      const newPassword = el.newPassword.value;
+      if (!currentPassword || newPassword.length < 10) {
+        showToast("请填写当前密码，新密码至少 10 个字符。", true);
+        return;
+      }
+      try {
+        const data = await request("/auth/password", {
+          method: "POST",
+          body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+        });
+        state.adminToken = data.access_token;
+        state.currentTeacher = data.teacher;
+        state.sessionExpiresAt = Date.now() + Number(data.expires_in || 0) * 1000;
+        el.currentPassword.value = "";
+        el.newPassword.value = "";
+        saveLoginSession();
+        showToast("密码已修改，其他登录会话已失效。 ");
+      } catch (error) {
+        showToast(`修改密码失败：${error.message}`, true);
       }
     }
 
@@ -1332,8 +2043,93 @@
       }
     }
 
+    async function requestSystemAction(action) {
+      const label = action === "restart" ? "重启" : "停止";
+      const warning = action === "restart"
+        ? "确定重启 EduGate 吗？页面会短暂断开并自动在正确地址重新打开。"
+        : "确定停止 EduGate 吗？停止后网页将不可用，再次使用需要双击启动脚本。";
+      if (!confirm(warning)) return;
+      try {
+        await request("/admin/system/action", { method: "POST", body: JSON.stringify({ action }) });
+        showToast(`已安排${label}服务。`);
+        setStatus(`${label}中`);
+      } catch (error) {
+        showToast(`${label}失败：${error.message}`, true);
+      }
+    }
+
+    async function saveAdvancedSettings() {
+      const values = {};
+      el.advancedSettingList.querySelectorAll("[data-setting-key]").forEach((input) => {
+        values[input.dataset.settingKey] = input.type === "checkbox" ? input.checked : input.value;
+      });
+      try {
+        await request("/admin/system/settings", {
+          method: "PUT",
+          body: JSON.stringify({ values }),
+        });
+        showToast("高级设置已保存，请重启服务使其生效。 ");
+      } catch (error) {
+        showToast(`保存高级设置失败：${error.message}`, true);
+      }
+    }
+
+    async function savePlatformKey() {
+      try {
+        const result = await request("/admin/system/platform-key", {
+          method: "PUT",
+          body: JSON.stringify({ api_key: el.platformApiKey.value.trim() || null }),
+        });
+        el.platformApiKey.value = "";
+        state.systemStatus.platform_api_key_set = result.platform_api_key_set;
+        renderSystem();
+        showToast(result.platform_api_key_set ? "平台 API Key 已加密保存。" : "平台兼容接口已关闭。");
+      } catch (error) {
+        showToast(`保存平台密钥失败：${error.message}`, true);
+      }
+    }
+
+    async function downloadBackup() {
+      try {
+        const response = await fetch(api("/admin/system/backup"), { headers: authHeaders(false) });
+        if (!response.ok) throw new Error(await response.text());
+        const blob = await response.blob();
+        const disposition = response.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename="?([^";]+)"?/i);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = match?.[1] || "EduGate-backup.zip";
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast("完整备份已生成。 ");
+      } catch (error) {
+        showToast(`下载备份失败：${error.message}`, true);
+      }
+    }
+
+    async function restoreBackup() {
+      const file = el.restoreBackupFile.files[0];
+      if (!file) {
+        showToast("请选择 EduGate 备份 ZIP。", true);
+        return;
+      }
+      if (!confirm("恢复会替换当前账号、策略和知识库并立即重启。确定继续吗？")) return;
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        await request("/admin/system/restore", { method: "POST", body: form, json: false });
+        setStatus("恢复并重启中");
+        showToast("备份已验证，EduGate 正在恢复并重启。 ");
+      } catch (error) {
+        showToast(`恢复失败：${error.message}`, true);
+      }
+    }
+
     el.loginButton.addEventListener("click", login);
-    el.logoutButton.addEventListener("click", () => {
+    el.logoutButton.addEventListener("click", async () => {
+      try {
+        if (state.adminToken) await request("/auth/logout", { method: "POST" });
+      } catch {}
       clearSession();
       showToast("已退出教师端。");
     });
@@ -1345,9 +2141,26 @@
     document.querySelector("#reload-files").addEventListener("click", loadFiles);
     document.querySelector("#reload-catalog").addEventListener("click", loadModels);
     document.querySelector("#reload-teachers").addEventListener("click", loadTeachers);
+    document.querySelector("#refresh-records").addEventListener("click", () => loadClassroomRecords());
     document.querySelector("#save-scenario").addEventListener("click", saveScenario);
     document.querySelector("#save-source").addEventListener("click", saveSource);
     document.querySelector("#save-model").addEventListener("click", saveModel);
+    document.querySelector("#test-model").addEventListener("click", () => testModel());
+    document.querySelector("#change-password").addEventListener("click", changePassword);
+    document.querySelector("#copy-classroom-url").addEventListener("click", () => {
+      if (el.classroomUrl.value) copyText(el.classroomUrl.value, "学生课堂链接");
+    });
+    document.querySelector("#rotate-classroom-token").addEventListener("click", rotateClassroomToken);
+    document.querySelector("#refresh-system").addEventListener("click", loadSystem);
+    document.querySelector("#restart-system").addEventListener("click", () => requestSystemAction("restart"));
+    document.querySelector("#shutdown-system").addEventListener("click", () => requestSystemAction("shutdown"));
+    document.querySelector("#save-advanced-settings").addEventListener("click", saveAdvancedSettings);
+    document.querySelector("#save-platform-key").addEventListener("click", savePlatformKey);
+    document.querySelector("#download-backup").addEventListener("click", downloadBackup);
+    document.querySelector("#restore-backup").addEventListener("click", restoreBackup);
+    el.deleteRecord.addEventListener("click", deleteSelectedClassroomRecord);
+    el.recordKindFilter.addEventListener("change", renderClassroomRecordDetail);
+    el.recordStudentFilter.addEventListener("change", renderClassroomRecordDetail);
     document.querySelector("#upload-file").addEventListener("click", uploadFile);
     document.querySelector("#save-teacher").addEventListener("click", saveTeacher);
     el.aiEnabledSwitch.addEventListener("click", toggleAIEnabled);
@@ -1359,17 +2172,26 @@
     el.tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         const name = tab.dataset.tab;
+        state.activeTab = name;
         el.tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === name));
         el.controlView.hidden = name !== "control";
+        el.recordsView.hidden = name !== "records";
         el.settingsView.hidden = name !== "settings";
+        el.systemView.hidden = name !== "system" || !isAdmin();
+        if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
       });
     });
 
-    loadSession();
-    renderAll();
-    if (state.adminToken) {
-      connectWithToken().catch(() => {});
+    async function boot() {
+      loadSession();
+      renderAll();
+      await checkAuthStatus();
+      if (state.adminToken && !state.needsSetup) {
+        connectWithToken().catch(() => {});
+      }
     }
+
+    boot();
   </script>
 </body>
 </html>
