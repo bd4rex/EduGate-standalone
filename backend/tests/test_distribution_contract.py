@@ -188,6 +188,36 @@ def test_teacher_tabs_and_primary_status_copy_are_chinese_first() -> None:
     assert 'role="status" aria-live="polite"' in page
 
 
+def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> None:
+    page = _read("frontend/admin.html")
+
+    assert "--brand: #2563eb" in page
+    assert "--accent: #0aa9bd" in page
+    assert ".session-card" in page and "border-left: 4px solid var(--accent)" in page
+    assert "linear-gradient(135deg, #654ff0, #4f3de0)" not in page
+    assert "关闭后，学生将暂时无法获得 AI 回答。" in page
+    assert "点击开关会调用 <code>/config/model</code>" not in page
+    assert "@media (max-width: 900px)" in page
+    assert ".system-grid, .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in page
+    assert 'class="system-action-group critical"' in page
+
+
+def test_teacher_console_replaces_native_visible_file_inputs_and_compacts_source_actions() -> None:
+    page = _read("frontend/admin.html")
+
+    assert 'class="file-input-hidden" id="knowledge-file"' in page
+    assert 'id="knowledge-file-name">未选择文件</span>' in page
+    assert 'class="file-input-hidden" id="restore-backup-file"' in page
+    assert 'id="restore-backup-file-name">未选择文件</span>' in page
+    assert 'id="knowledge-file-trigger" type="button">选择文件</button>' in page
+    assert 'id="restore-backup-file-trigger" type="button">选择备份</button>' in page
+    assert 'aria-hidden="true" tabindex="-1"' in page
+    assert "updateFilePicker(el.knowledgeFile, el.knowledgeFileName)" in page
+    assert "updateFilePicker(el.restoreBackupFile, el.restoreBackupFileName)" in page
+    assert '<details class="action-menu">' in page
+    assert "<summary>更多操作</summary>" in page
+
+
 def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
     brand_dir = ROOT / "frontend" / "assets" / "brand"
     expected_assets = {
