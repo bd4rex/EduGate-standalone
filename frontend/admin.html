@@ -69,7 +69,8 @@
     }
 
     h1, h2, h3, p { margin-top: 0; }
-    h1 { margin-bottom: 4px; font-size: 30px; letter-spacing: 0; }
+    h1 { margin-bottom: 4px; font-size: 30px; line-height: 1.25; letter-spacing: 0; }
+    h2 { margin-bottom: 0; font-size: 20px; font-weight: 900; line-height: 1.35; letter-spacing: 0; }
     .subtle { color: var(--muted); }
     .topbar p { margin-bottom: 0; }
 
@@ -202,7 +203,7 @@
 
     .section { margin-bottom: 26px; }
     .section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    .section-title h2 { min-width: 0; margin: 0; font-size: 20px; letter-spacing: 0; }
+    .section-title h2 { min-width: 0; margin: 0; }
 
     .list-card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
     .row {
@@ -217,7 +218,7 @@
     .row:last-child { border-bottom: 0; }
     .row.active { background: var(--brand-soft); }
     .row-main { min-width: 0; }
-    .row-title { margin: 0; font-size: 18px; font-weight: 900; }
+    .row-title { margin: 0; font-size: 16px; font-weight: 900; line-height: 1.45; }
     .row-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; color: var(--muted); font-size: 13px; }
     .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 8px; background: #eef1f6; color: #596274; font-size: 12px; font-weight: 900; }
     .badge.green { background: var(--green-soft); color: var(--green); }
@@ -249,6 +250,7 @@
     .switch.active::after { transform: translateX(38px); }
 
     .side-panel { position: sticky; top: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); padding: 18px; }
+    .side-panel > h2 { margin-bottom: 14px; }
     .form-grid { display: grid; gap: 14px; }
     .range-row { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; }
     input[type="range"] { padding: 0; min-height: auto; accent-color: var(--brand); }
@@ -381,6 +383,7 @@
       color: var(--ink);
       font-size: 20px;
       font-weight: 900;
+      line-height: 1.35;
     }
     .collapsible-panel[open] > summary { margin-bottom: 4px; }
     .compact-panel > summary { font-size: 18px; }

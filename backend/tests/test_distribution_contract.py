@@ -201,6 +201,8 @@ def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> 
     assert "@media (max-width: 900px)" in page
     assert ".system-grid, .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in page
     assert 'class="system-action-group critical"' in page
+    assert 'h2 { margin-bottom: 0; font-size: 20px; font-weight: 900; line-height: 1.35;' in page
+    assert '.row-title { margin: 0; font-size: 16px; font-weight: 900; line-height: 1.45; }' in page
     assert '.system-metric-value { display: flex; min-height: 34px; align-items: center;' in page
     assert '.system-metric-value { min-height: 44px; }' in page
     assert page.count('<div class="system-metric-value">') == 1
