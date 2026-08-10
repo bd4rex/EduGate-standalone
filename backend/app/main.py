@@ -79,7 +79,37 @@ sessions = SessionStore(settings.session_ttl_seconds)
 classroom_access = ClassroomAccess()
 student_sessions = StudentSessionStore(settings.student_session_ttl_seconds)
 rate_limiter = SlidingWindowRateLimiter()
-model_semaphore = asyncio.Semaphore(settings.model_max_concurrency)
+
+
+class ModelConcurrencyLimiter:
+    def __init__(self, capacity: int) -> None:
+        self.capacity = max(1, capacity)
+        self._semaphore = asyncio.Semaphore(self.capacity)
+        self._running = 0
+        self._waiting = 0
+
+    async def __aenter__(self) -> "ModelConcurrencyLimiter":
+        self._waiting += 1
+        try:
+            await self._semaphore.acquire()
+        finally:
+            self._waiting -= 1
+        self._running += 1
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        self._running -= 1
+        self._semaphore.release()
+
+    def stats(self) -> dict[str, int]:
+        return {
+            "running": self._running,
+            "waiting": self._waiting,
+            "capacity": self.capacity,
+        }
+
+
+model_semaphore = ModelConcurrencyLimiter(settings.model_max_concurrency)
 python_pool = PythonExecutionPool(
     max_workers=settings.python_runner_max_concurrency,
     max_queue_size=settings.python_runner_max_queue,
@@ -1860,6 +1890,15 @@ async def admin_system_status() -> dict[str, Any]:
         supervised=system_control.supervised,
         started_at=system_control.started_at,
         platform_key_set=secret_store.has("system:platform_api_key") or bool(settings.platform_api_key),
+        ),
+        "model_pool": (
+            model_semaphore.stats()
+            if isinstance(model_semaphore, ModelConcurrencyLimiter)
+            else {
+                "running": 0,
+                "waiting": 0,
+                "capacity": settings.model_max_concurrency,
+            }
         ),
         "python_runner_pool": python_pool.stats(),
         "database_writer": business_db.writer_stats(),

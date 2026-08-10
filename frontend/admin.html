@@ -907,6 +907,7 @@
       sources: [],
       files: [],
       systemStatus: null,
+      systemStatusRefreshing: false,
       dashboard: null,
       requestLogs: [],
       launcherLogs: [],
@@ -1538,11 +1539,20 @@
 
     function renderSystem() {
       const system = state.systemStatus || {};
+      const modelPool = system.model_pool || {};
       const pool = system.python_runner_pool || {};
+      const modelRunning = modelPool.running ?? 0;
+      const modelWaiting = modelPool.waiting ?? 0;
+      const modelCapacity = modelPool.capacity ?? 0;
+      const modelStatus = modelWaiting > 0
+        ? `满载 ${modelRunning} / ${modelCapacity} · 等待 ${modelWaiting}`
+        : modelRunning > 0
+        ? `工作中 ${modelRunning} / ${modelCapacity}`
+        : `空闲 0 / ${modelCapacity}`;
       el.systemUptime.textContent = `已运行 ${formatDuration(system.uptime_seconds)}`;
       const metrics = [
         ["局域网地址", system.lan_base_url || "-", "lan-url"],
-        ["Python 运行器", system.python_runner_enabled ? "开启" : "关闭"],
+        ["模型工作状态", modelStatus],
         ["Python 执行槽位", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
         ["Python 排队任务", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
       ];
@@ -1864,6 +1874,19 @@
       state.launcherLogs = launcherLogs.lines || [];
       state.advancedSettings = advanced.settings || [];
       renderSystem();
+    }
+
+    async function refreshSystemStatus() {
+      if (!state.adminToken || el.systemView.hidden || state.systemStatusRefreshing) return;
+      state.systemStatusRefreshing = true;
+      try {
+        state.systemStatus = await request("/admin/system/status");
+        renderSystem();
+      } catch (error) {
+        console.debug("System status refresh skipped", error);
+      } finally {
+        state.systemStatusRefreshing = false;
+      }
     }
 
     async function loadClassroomRecords(preferredId = "") {
@@ -2374,6 +2397,7 @@
       }
     }
 
+    setInterval(refreshSystemStatus, 2000);
     boot();
   </script>
 </body>
