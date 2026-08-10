@@ -766,10 +766,16 @@ def test_model_concurrency_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(main_module.client, "chat_completion", fake_chat_completion)
 
     async def exercise() -> None:
-        monkeypatch.setattr(main_module, "model_semaphore", asyncio.Semaphore(2))
-        await asyncio.gather(
-            *(main_module._chat_completion({"model": "concurrency-test"}) for _ in range(64))
-        )
+        limiter = main_module.ModelConcurrencyLimiter(2)
+        monkeypatch.setattr(main_module, "model_semaphore", limiter)
+        tasks = [
+            asyncio.create_task(main_module._chat_completion({"model": "concurrency-test"}))
+            for _ in range(64)
+        ]
+        await asyncio.sleep(0.005)
+        assert limiter.stats() == {"running": 2, "waiting": 62, "capacity": 2}
+        await asyncio.gather(*tasks)
+        assert limiter.stats() == {"running": 0, "waiting": 0, "capacity": 2}
 
     asyncio.run(exercise())
     assert peak == 2
@@ -828,6 +834,11 @@ def test_system_management_requires_supervised_launcher(
 
     assert status_response.status_code == 200
     assert status_response.json()["supervised"] is False
+    assert status_response.json()["model_pool"] == {
+        "running": 0,
+        "waiting": 0,
+        "capacity": settings.model_max_concurrency,
+    }
     assert status_response.json()["database_writer"]["enabled"] is True
     assert status_response.json()["database_writer"]["queue_capacity"] >= 128
     assert action_response.status_code == 409

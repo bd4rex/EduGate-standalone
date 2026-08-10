@@ -294,6 +294,8 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
     assert 'id="records-view"' in page
     assert "/teacher/classroom-records" in page
     assert "PYTHON_RUNNER_MAX_CONCURRENCY" in page
+    assert "模型工作状态" in page
+    assert "model_pool" in page
     assert "CLASSROOM_RECORDING_ENABLED" in page
     assert "PYTHON_RUNNER_MAX_CONCURRENCY=4" in example
     assert "PYTHON_RUNNER_MAX_QUEUE=64" in example
