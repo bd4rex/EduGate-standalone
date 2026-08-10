@@ -344,11 +344,11 @@
     }
 
     .system-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: stretch; gap: 12px; }
-    .system-metric { display: flex; min-width: 0; flex-direction: column; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
-    .system-metric span { display: block; min-height: 18px; color: var(--muted); font-size: 12px; font-weight: 800; line-height: 18px; }
-    .system-metric strong { display: block; min-width: 0; overflow-wrap: anywhere; font-size: 17px; line-height: 24px; }
-    .system-metric > strong { margin-top: 6px; }
-    .system-metric-value { display: flex; min-height: 36px; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 6px; }
+    .system-metric { display: flex; min-width: 0; flex-direction: column; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+    .system-metric span { display: block; min-height: 16px; color: var(--muted); font-size: 12px; font-weight: 800; line-height: 16px; }
+    .system-metric strong { display: block; min-width: 0; overflow-wrap: anywhere; font-size: 17px; line-height: 22px; }
+    .system-metric > strong { margin-top: 4px; }
+    .system-metric-value { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
     .system-metric-value strong { padding-top: 0; }
     #record-summary .system-metric { padding: 12px 14px; }
     #record-summary .system-metric strong { margin-top: 5px; }
@@ -465,6 +465,7 @@
     @media (hover: none), (pointer: coarse) {
       .button, input, select { min-height: 48px; }
       .button.mini { min-height: 44px; }
+      .system-metric-value { min-height: 44px; }
       .tab { min-height: 58px; }
       .record-session-button { min-height: 60px; padding: 18px; }
       input[type="range"] { min-height: 44px; }
@@ -760,7 +761,7 @@
               </div>
               <div class="system-action-group critical">
                 <button class="button danger" id="shutdown-system" type="button">停止服务</button>
-                <button class="button ghost" id="open-app-directory" type="button">打开程序目录</button>
+                <button class="button ghost" id="open-app-directory" type="button">打开目录</button>
               </div>
             </div>
           </div>

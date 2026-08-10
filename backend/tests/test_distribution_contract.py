@@ -120,6 +120,7 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     open_directory = page.index('id="open-app-directory"')
     assert shutdown < open_directory
     assert 'request("/admin/system/open-app-dir"' in page
+    assert 'id="open-app-directory" type="button">打开目录</button>' in page
     assert 'id="copy-lan-url"' in page
     assert '["数据目录", system.data_dir' not in page
     assert '["剩余磁盘",' not in page
@@ -200,7 +201,8 @@ def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> 
     assert "@media (max-width: 900px)" in page
     assert ".system-grid, .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in page
     assert 'class="system-action-group critical"' in page
-    assert '.system-metric-value { display: flex; min-height: 36px; align-items: flex-start;' in page
+    assert '.system-metric-value { display: flex; min-height: 34px; align-items: center;' in page
+    assert '.system-metric-value { min-height: 44px; }' in page
     assert page.count('<div class="system-metric-value">') == 1
 
 
