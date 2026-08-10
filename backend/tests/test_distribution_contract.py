@@ -269,6 +269,8 @@ def test_chinese_and_english_project_docs_link_to_each_other() -> None:
     english_design = _read("docs/Execution-and-Classroom-Records-Design.md")
     chinese_benchmark = _read("docs/模型并发基准报告-2026-08-10.md")
     english_benchmark = _read("docs/Model-Concurrency-Benchmark-2026-08-10.md")
+    chinese_double_load = _read("docs/双倍压力测试报告-2026-08-10.md")
+    english_double_load = _read("docs/Double-Load-Test-Report-2026-08-10.md")
 
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in chinese
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in english
@@ -280,6 +282,8 @@ def test_chinese_and_english_project_docs_link_to_each_other() -> None:
     assert "[中文](并发执行与课堂记录设计.md)" in english_design
     assert "[English](Model-Concurrency-Benchmark-2026-08-10.md)" in chinese_benchmark
     assert "[中文](模型并发基准报告-2026-08-10.md)" in english_benchmark
+    assert "[English](Double-Load-Test-Report-2026-08-10.md)" in chinese_double_load
+    assert "[中文](双倍压力测试报告-2026-08-10.md)" in english_double_load
 
 
 def test_python_pool_and_classroom_record_controls_are_distributed() -> None:

@@ -83,4 +83,4 @@ desktop\build_windows.bat
 
 输出位于 `dist\EduGate-Standalone`。打包脚本使用清华 PyPI 镜像，并把独立 Python 运行时加入输出目录。
 
-详细说明见 [安装与故障排查](docs/安装与故障排查.txt)、[使用手册](docs/使用手册.txt)、[并发执行与课堂记录设计](docs/并发执行与课堂记录设计.md)、[模型并发基准报告](docs/模型并发基准报告-2026-08-10.md)、[验收清单](docs/单机版验收清单.txt) 和 [回归测试矩阵](docs/回归测试矩阵.md)。英文读者可从 [English README](README.en.md) 开始。
+详细说明见 [安装与故障排查](docs/安装与故障排查.txt)、[使用手册](docs/使用手册.txt)、[并发执行与课堂记录设计](docs/并发执行与课堂记录设计.md)、[模型并发基准报告](docs/模型并发基准报告-2026-08-10.md)、[双倍压力测试报告](docs/双倍压力测试报告-2026-08-10.md)、[验收清单](docs/单机版验收清单.txt) 和 [回归测试矩阵](docs/回归测试矩阵.md)。英文读者可从 [English README](README.en.md) 开始。
