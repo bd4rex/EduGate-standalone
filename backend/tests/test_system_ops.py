@@ -45,6 +45,17 @@ def test_advanced_settings_round_trip(tmp_path: Path, monkeypatch) -> None:
     assert values["MODEL_MAX_CONCURRENCY"] == 6
 
 
+def test_model_concurrency_default_matches_classroom_benchmark(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "config_path", str(tmp_path / "missing.env"))
+
+    values = {item["key"]: item["value"] for item in read_advanced_settings()["settings"]}
+
+    assert values["MODEL_MAX_CONCURRENCY"] == 16
+
+
 def test_backup_contains_consistent_databases_and_knowledge(tmp_path: Path, monkeypatch) -> None:
     data_dir = tmp_path / "data"
     knowledge_dir = data_dir / "knowledge_files"

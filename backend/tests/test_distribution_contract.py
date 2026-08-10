@@ -267,6 +267,8 @@ def test_chinese_and_english_project_docs_link_to_each_other() -> None:
     english_matrix = _read("docs/Regression-Test-Matrix.md")
     chinese_design = _read("docs/并发执行与课堂记录设计.md")
     english_design = _read("docs/Execution-and-Classroom-Records-Design.md")
+    chinese_benchmark = _read("docs/模型并发基准报告-2026-08-10.md")
+    english_benchmark = _read("docs/Model-Concurrency-Benchmark-2026-08-10.md")
 
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in chinese
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in english
@@ -276,6 +278,8 @@ def test_chinese_and_english_project_docs_link_to_each_other() -> None:
     assert "[中文](回归测试矩阵.md)" in english_matrix
     assert "[English](Execution-and-Classroom-Records-Design.md)" in chinese_design
     assert "[中文](并发执行与课堂记录设计.md)" in english_design
+    assert "[English](Model-Concurrency-Benchmark-2026-08-10.md)" in chinese_benchmark
+    assert "[中文](模型并发基准报告-2026-08-10.md)" in english_benchmark
 
 
 def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
@@ -289,6 +293,7 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
     assert "CLASSROOM_RECORDING_ENABLED" in page
     assert "PYTHON_RUNNER_MAX_CONCURRENCY=4" in example
     assert "PYTHON_RUNNER_MAX_QUEUE=64" in example
+    assert "MODEL_MAX_CONCURRENCY=16" in example
     assert "CLASSROOM_RECORDING_ENABLED=true" in example
     assert "DB_WRITE_QUEUE_SIZE=4096" in example
     assert "DB_WRITE_BATCH_SIZE=100" in example

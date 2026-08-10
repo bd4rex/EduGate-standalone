@@ -24,7 +24,7 @@ SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
     "STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES": {"type": "int", "default": 256, "min": 1, "max": 10000, "restart": True},
     "CLASSROOM_RATE_LIMIT_PER_MINUTE": {"type": "int", "default": 30, "min": 1, "max": 1000, "restart": True},
     "LOGIN_RATE_LIMIT_PER_5_MINUTES": {"type": "int", "default": 10, "min": 1, "max": 100, "restart": True},
-    "MODEL_MAX_CONCURRENCY": {"type": "int", "default": 4, "min": 1, "max": 32, "restart": True},
+    "MODEL_MAX_CONCURRENCY": {"type": "int", "default": 16, "min": 1, "max": 32, "restart": True},
     "REQUEST_TIMEOUT_SECONDS": {"type": "float", "default": 60, "min": 5, "max": 600, "restart": True},
     "STREAM_READ_TIMEOUT_SECONDS": {"type": "float", "default": 120, "min": 10, "max": 1800, "restart": True},
     "STREAM_HEARTBEAT_SECONDS": {"type": "float", "default": 15, "min": 2, "max": 120, "restart": True},

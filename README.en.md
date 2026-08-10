@@ -65,4 +65,4 @@ python -m pytest -q --basetemp=.pytest-tmp
 
 Build the Windows bundle with `desktop\build_windows.bat`. Output is written to `dist\EduGate-Standalone`; the build uses the Tsinghua mirror and adds the standalone student-code Python runtime.
 
-See the [execution and classroom records design](docs/Execution-and-Classroom-Records-Design.md) and [English regression test matrix](docs/Regression-Test-Matrix.md). The detailed [installation guide](docs/安装与故障排查.txt), [user guide](docs/使用手册.txt), and [acceptance checklist](docs/单机版验收清单.txt) are maintained primarily in Chinese. Return to the [Chinese project documentation](README.md) at any time.
+See the [execution and classroom records design](docs/Execution-and-Classroom-Records-Design.md), [model concurrency benchmark](docs/Model-Concurrency-Benchmark-2026-08-10.md), and [English regression test matrix](docs/Regression-Test-Matrix.md). The detailed [installation guide](docs/安装与故障排查.txt), [user guide](docs/使用手册.txt), and [acceptance checklist](docs/单机版验收清单.txt) are maintained primarily in Chinese. Return to the [Chinese project documentation](README.md) at any time.

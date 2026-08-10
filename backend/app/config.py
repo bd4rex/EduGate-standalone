@@ -83,7 +83,7 @@ class Settings:
     student_join_rate_limit: int = int(os.getenv("STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES", "256"))
     classroom_rate_limit: int = int(os.getenv("CLASSROOM_RATE_LIMIT_PER_MINUTE", "30"))
     login_rate_limit: int = int(os.getenv("LOGIN_RATE_LIMIT_PER_5_MINUTES", "10"))
-    model_max_concurrency: int = int(os.getenv("MODEL_MAX_CONCURRENCY", "4"))
+    model_max_concurrency: int = int(os.getenv("MODEL_MAX_CONCURRENCY", "16"))
     langfuse_base_url: str | None = os.getenv("LANGFUSE_BASE_URL") or None
     langfuse_public_key: str | None = os.getenv("LANGFUSE_PUBLIC_KEY") or None
     langfuse_secret_key: str | None = os.getenv("LANGFUSE_SECRET_KEY") or None
