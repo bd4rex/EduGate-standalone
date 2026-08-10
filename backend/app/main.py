@@ -211,7 +211,10 @@ API_DOCS = {
     ("GET", "/models"): ("List upstream models", "Read models from the configured upstream provider when available."),
     ("POST", "/chat"): ("Student chat", "Without teacher_id this uses open default; with teacher_id it uses that teacher policy."),
     ("POST", "/chat/stream"): ("Student stream chat", "POST + text/event-stream chat API."),
-    ("POST", "/classroom/join"): ("Join classroom", "Exchange the classroom link token for an anonymous student session."),
+    ("POST", "/classroom/join"): (
+        "Join classroom",
+        "Silently exchange the classroom link token and stable browser device ID for a student session.",
+    ),
     ("POST", "/v1/chat/completions"): ("OpenAI compatible chat", "Third-party client entry."),
     ("GET", "/config"): ("Get teacher config", "Read current login teacher policy."),
     ("POST", "/config/model"): ("Switch teacher model", "Switch current login teacher model."),
@@ -225,6 +228,14 @@ API_DOCS = {
     ("DELETE", "/admin/teachers/{username}"): ("Disable teacher", "Disable a teacher account."),
     ("DELETE", "/admin/teachers/{username}/hard-delete"): ("Delete teacher", "Hard delete a teacher account."),
     ("GET", "/admin/models"): ("Admin models", "Read model catalog."),
+    ("POST", "/admin/models/discover"): (
+        "Discover provider models",
+        "Read available model IDs from an OpenAI-compatible provider.",
+    ),
+    ("POST", "/admin/models/batch-import"): (
+        "Batch import models",
+        "Validate and import selected provider model IDs and display names into the local catalog.",
+    ),
     ("POST", "/admin/models"): ("Upsert model", "Create or update model catalog item."),
     ("PATCH", "/admin/models/{model_id}"): ("Patch model", "Update model catalog item."),
     ("POST", "/admin/models/{model_id}/set-default"): ("Set current model", "Set current admin teacher policy model."),
@@ -235,7 +246,10 @@ API_DOCS = {
     ("POST", "/admin/session/source"): ("Set source", "Legacy compatibility API."),
     ("GET", "/model-catalog"): ("Model catalog", "Read model catalog."),
     ("POST", "/model-catalog"): ("Upsert model catalog", "Admin model catalog upsert."),
-    ("DELETE", "/model-catalog/{model_id}"): ("Delete model catalog", "Delete model catalog item."),
+    ("DELETE", "/model-catalog/{model_id}"): (
+        "Delete model catalog",
+        "Delete a model, optionally switching active references to a replacement model atomically.",
+    ),
     ("GET", "/knowledge/sources"): ("Knowledge sources", "List knowledge sources."),
     ("POST", "/knowledge/sources"): ("Upsert knowledge source", "Create or update knowledge source."),
     ("DELETE", "/knowledge/sources/{source_id}"): ("Delete knowledge source", "Delete source and indexes."),
@@ -427,6 +441,21 @@ class ModelCatalogPublicItem(BaseModel):
     api_key_set: bool = False
 
 
+class ModelProviderConnectionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: str = Field(default="OpenAI Compatible", min_length=1, max_length=120)
+    base_url: str = Field(..., min_length=1, max_length=2048)
+    api_key: str | None = Field(default=None, min_length=1, max_length=4096)
+    credential_model_id: str | None = Field(default=None, min_length=1, max_length=300)
+
+
+class ModelBatchImportRequest(ModelProviderConnectionRequest):
+    model_ids: list[str] = Field(..., min_length=1, max_length=200)
+    display_names: dict[str, str] = Field(default_factory=dict)
+    description: str = Field(default="", max_length=500)
+
+
 class RuntimeConfigData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -435,6 +464,7 @@ class RuntimeConfigData(BaseModel):
     )
     teacher_policies: dict[str, TeachingScenario] = Field(default_factory=dict)
     model_catalog: dict[str, ModelCatalogItem] = Field(default_factory=dict)
+    legacy_runtime_migration_complete: bool = False
 
 
 class ModelSwitchRequest(BaseModel):
@@ -537,6 +567,7 @@ class StudentJoinRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     computer_name: str = Field(default="", max_length=80)
+    device_id: str = Field(default="", max_length=128)
 
 
 class SystemActionRequest(BaseModel):
@@ -578,9 +609,11 @@ class RuntimeConfig:
         self._lock = threading.RLock()
         self.data = self._load()
         self._migrate_plaintext_secrets()
-        if self._migrate_open_default():
+        if not self.data.legacy_runtime_migration_complete:
+            self._migrate_open_default()
+            self._ensure_standalone_default_model()
+            self.data.legacy_runtime_migration_complete = True
             self.save()
-        self._ensure_standalone_default_model()
 
     def _load(self) -> RuntimeConfigData:
         if not self._path.exists():
@@ -610,7 +643,6 @@ class RuntimeConfig:
                 self.data.model_catalog[settings.default_model] = current.model_copy(
                     update={"description": "本地课堂默认上游模型，上课前请填写接口地址和 API 密钥。"}
                 )
-                self.save()
             return
         credential_id = f"model:{settings.default_model}"
         if settings.upstream_api_key:
@@ -624,7 +656,6 @@ class RuntimeConfig:
             base_url=settings.upstream_base_url or None,
             credential_id=credential_id,
         )
-        self.save()
 
     def _migrate_plaintext_secrets(self) -> None:
         changed = False
@@ -715,12 +746,59 @@ class RuntimeConfig:
             self.save()
             return request
 
-    def delete_model(self, model_id: str) -> None:
+    def upsert_models(self, requests: list[ModelCatalogItem]) -> list[ModelCatalogItem]:
+        for request in requests:
+            if request.source == "openai_compatible" and not request.base_url:
+                raise HTTPException(status_code=400, detail="base_url is required for OpenAI-compatible models")
         with self._lock:
-            model = self.data.model_catalog.pop(model_id, None)
-            if model:
-                self.save()
-                secret_store.delete(model.credential_id)
+            models: list[ModelCatalogItem] = []
+            for request in requests:
+                current = self.data.model_catalog.get(request.id)
+                credential_id = (current.credential_id if current else None) or f"model:{request.id}"
+                if request.api_key:
+                    secret_store.set(credential_id, request.api_key)
+                model = request.model_copy(update={"credential_id": credential_id, "api_key": None})
+                self.data.model_catalog[model.id] = model
+                models.append(model)
+            self.save()
+            return models
+
+    def delete_model(self, model_id: str, *, replacement_model_id: str | None = None) -> list[str]:
+        with self._lock:
+            model = self.data.model_catalog.get(model_id)
+            if model is None:
+                return []
+            references = [
+                scenario_id
+                for scenario_id, scenario in {
+                    **self.data.scenarios,
+                    **{f"teacher:{key}": value for key, value in self.data.teacher_policies.items()},
+                }.items()
+                if scenario.model == model_id
+            ]
+            if references and not replacement_model_id:
+                raise HTTPException(
+                    status_code=409,
+                    detail="该模型仍被课堂配置使用。请先选择或导入另一个可用模型，再删除。",
+                )
+            if references:
+                replacement = self.data.model_catalog.get(replacement_model_id or "")
+                if replacement is None or replacement.id == model_id:
+                    raise HTTPException(status_code=400, detail="替代模型不存在或与待删除模型相同。")
+                for scenario_id, scenario in list(self.data.scenarios.items()):
+                    if scenario.model == model_id:
+                        self.data.scenarios[scenario_id] = scenario.model_copy(
+                            update={"model": replacement.id}
+                        )
+                for username, scenario in list(self.data.teacher_policies.items()):
+                    if scenario.model == model_id:
+                        self.data.teacher_policies[username] = scenario.model_copy(
+                            update={"model": replacement.id}
+                        )
+            self.data.model_catalog.pop(model_id)
+            self.save()
+            secret_store.delete(model.credential_id)
+            return references
 
 
 runtime_config = RuntimeConfig(settings.runtime_config_path)
@@ -730,9 +808,12 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _computer_name(value: str | None, client_ip: str) -> str:
+def _computer_name(value: str | None, client_ip: str, device_id: str = "") -> str:
     cleaned = " ".join((value or "").split())[:80]
-    return cleaned or f"电脑-{client_ip}"
+    if cleaned:
+        return cleaned
+    device_suffix = "".join(character for character in device_id if character.isalnum())[-6:].upper()
+    return f"电脑-{device_suffix}" if device_suffix else f"电脑-{client_ip}"
 
 
 def _is_loopback(request: Request) -> bool:
@@ -1088,6 +1169,50 @@ def _public_model_catalog() -> dict[str, ModelCatalogPublicItem]:
         model_id: _public_model(model)
         for model_id, model in runtime_config.data.model_catalog.items()
     }
+
+
+def _provider_api_key(request: ModelProviderConnectionRequest) -> tuple[str, bool]:
+    if request.api_key:
+        return request.api_key, False
+
+    normalized_base_url = request.base_url.rstrip("/").casefold()
+    candidates: list[ModelCatalogItem] = []
+    if request.credential_model_id:
+        model = runtime_config.data.model_catalog.get(request.credential_model_id)
+        if model is None:
+            raise HTTPException(status_code=404, detail="找不到用于复用密钥的已有模型。")
+        candidates.append(model)
+    else:
+        candidates.extend(runtime_config.data.model_catalog.values())
+
+    for model in candidates:
+        if model.source != "openai_compatible" or not model.base_url:
+            continue
+        if model.base_url.rstrip("/").casefold() != normalized_base_url:
+            continue
+        api_key = secret_store.get(model.credential_id)
+        if api_key:
+            return api_key, True
+    raise HTTPException(status_code=400, detail="请填写 API Key，或先从同一接口地址的已有模型填入表单。")
+
+
+async def _discover_provider_models(
+    request: ModelProviderConnectionRequest,
+) -> tuple[list[dict[str, str]], str, bool]:
+    api_key, used_saved_key = _provider_api_key(request)
+    try:
+        models = await client.list_openai_models(base_url=request.base_url, api_key=api_key)
+    except httpx.HTTPStatusError as error:
+        detail = error.response.text[:300].strip() or error.response.reason_phrase
+        raise HTTPException(
+            status_code=502,
+            detail=f"上游模型列表接口返回 HTTP {error.response.status_code}：{detail}",
+        ) from error
+    except httpx.TimeoutException as error:
+        raise HTTPException(status_code=504, detail="获取上游模型列表超时。") from error
+    except httpx.HTTPError as error:
+        raise HTTPException(status_code=502, detail=f"无法连接上游模型列表接口：{error!s}") from error
+    return models, api_key, used_saved_key
 
 
 def _direct_openai_model(model_id: str) -> ModelCatalogItem | None:
@@ -1984,11 +2109,22 @@ async def classroom_join(
         window_seconds=300,
     ):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom join limit exceeded")
+    client_ip = _client_ip(request)
+    device_id = (join_request.device_id if join_request else "").strip()
     token, record = student_sessions.issue(
         current_classroom_token,
         existing_token=x_student_token,
-        computer_name=_computer_name(join_request.computer_name if join_request else "", _client_ip(request)),
-        client_ip=_client_ip(request),
+        computer_name=_computer_name(
+            join_request.computer_name if join_request else "",
+            client_ip,
+            device_id,
+        ),
+        client_ip=client_ip,
+        student_id=(
+            classroom_access.legacy_student_id(f"device:{device_id}")
+            if device_id
+            else None
+        ),
     )
     return StudentJoinResponse(
         student_token=token,
@@ -2155,6 +2291,52 @@ async def admin_models() -> list[ModelCatalogPublicItem]:
     return [_public_model(model) for model in runtime_config.data.model_catalog.values()]
 
 
+@app.post("/admin/models/discover", dependencies=[Depends(require_super_admin)])
+async def admin_discover_models(request: ModelProviderConnectionRequest) -> dict[str, Any]:
+    models, _, used_saved_key = await _discover_provider_models(request)
+    return {
+        "models": models,
+        "model_count": len(models),
+        "used_saved_api_key": used_saved_key,
+    }
+
+
+@app.post("/admin/models/batch-import", dependencies=[Depends(require_super_admin)])
+async def admin_batch_import_models(request: ModelBatchImportRequest) -> dict[str, Any]:
+    discovered, api_key, used_saved_key = await _discover_provider_models(request)
+    available_ids = {item["id"] for item in discovered}
+    selected_ids = list(dict.fromkeys(model_id.strip() for model_id in request.model_ids if model_id.strip()))
+    if not selected_ids:
+        raise HTTPException(status_code=400, detail="请至少选择一个要导入的模型。")
+    unknown_ids = [model_id for model_id in selected_ids if model_id not in available_ids]
+    if unknown_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"上游模型列表中不存在：{', '.join(unknown_ids[:10])}",
+        )
+    description = request.description.strip() or "从上游 /models 批量导入"
+    models = runtime_config.upsert_models(
+        [
+            ModelCatalogItem(
+                id=model_id,
+                name=(" ".join(request.display_names.get(model_id, "").split())[:120] or model_id),
+                provider=request.provider.strip(),
+                description=description,
+                source="openai_compatible",
+                base_url=request.base_url.strip(),
+                api_key=api_key,
+            )
+            for model_id in selected_ids
+        ]
+    )
+    return {
+        "status": "imported",
+        "imported_count": len(models),
+        "used_saved_api_key": used_saved_key,
+        "models": [_public_model(model).model_dump() for model in models],
+    }
+
+
 @app.post("/admin/models", response_model=ModelCatalogPublicItem, dependencies=[Depends(require_super_admin)])
 async def admin_upsert_model(request: ModelCatalogItem) -> ModelCatalogPublicItem:
     return _public_model(runtime_config.upsert_model(request))
@@ -2313,19 +2495,21 @@ async def upsert_model_catalog_item(request: ModelCatalogItem) -> ModelCatalogPu
 
 
 @app.delete("/model-catalog/{model_id}", dependencies=[Depends(require_super_admin)])
-async def delete_model_catalog_item(model_id: str) -> dict[str, str]:
-    in_use = [
-        scenario_id
-        for scenario_id, scenario in {
-            **runtime_config.data.scenarios,
-            **{f"teacher:{key}": value for key, value in runtime_config.data.teacher_policies.items()},
-        }.items()
-        if scenario.model == model_id
-    ]
-    if in_use:
-        raise HTTPException(status_code=409, detail=f"Model is used by: {', '.join(in_use)}")
-    runtime_config.delete_model(model_id)
-    return {"status": "deleted"}
+async def delete_model_catalog_item(
+    model_id: str,
+    replacement_model_id: str | None = None,
+) -> dict[str, Any]:
+    if model_id not in runtime_config.data.model_catalog:
+        raise HTTPException(status_code=404, detail=f"找不到模型：{model_id}")
+    references = runtime_config.delete_model(
+        model_id,
+        replacement_model_id=replacement_model_id,
+    )
+    return {
+        "status": "deleted",
+        "replacement_model_id": replacement_model_id if references else None,
+        "replaced_references": references,
+    }
 
 
 @app.get("/knowledge/sources", response_model=list[KnowledgeSource])

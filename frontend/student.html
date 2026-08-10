@@ -292,98 +292,6 @@
       background: #fff5f5;
     }
 
-    .identity-summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-top: 10px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #fff;
-      font-size: 13px;
-      color: var(--subtext);
-    }
-
-    .identity-summary[hidden] {
-      display: none;
-    }
-
-    .identity-summary strong {
-      color: var(--text);
-      font-weight: 700;
-    }
-
-    .identity-summary .btn {
-      min-height: 44px;
-      flex: 0 0 auto;
-    }
-
-    .identity-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background: rgba(20, 34, 55, 0.58);
-    }
-
-    .identity-modal[hidden] {
-      display: none;
-    }
-
-    .identity-dialog {
-      width: min(440px, 100%);
-      padding: 24px;
-      border-radius: 14px;
-      background: #fff;
-      box-shadow: 0 24px 64px rgba(20, 34, 55, 0.24);
-    }
-
-    .identity-dialog h2 {
-      margin: 0 0 8px;
-      font-size: 22px;
-    }
-
-    .identity-dialog p {
-      margin: 0 0 18px;
-      color: var(--subtext);
-      font-size: 14px;
-      line-height: 1.7;
-    }
-
-    .identity-dialog label {
-      display: grid;
-      gap: 8px;
-      font-size: 14px;
-      font-weight: 700;
-    }
-
-    .identity-dialog input {
-      width: 100%;
-      min-height: 48px;
-      border: 1px solid var(--line-dark);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font: inherit;
-      color: var(--text);
-      outline: none;
-    }
-
-    .identity-dialog input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(47, 111, 218, 0.12);
-    }
-
-    .identity-dialog .btn {
-      width: 100%;
-      min-height: 48px;
-      margin-top: 16px;
-    }
-
     .chat-history {
       flex: 1;
       padding: 16px;
@@ -504,16 +412,6 @@
       }
     }
 
-    @media (max-width: 560px) {
-      .identity-summary {
-        align-items: stretch;
-        flex-direction: column;
-      }
-
-      .identity-dialog {
-        padding: 20px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -640,10 +538,6 @@
           <div id="statusBar" class="status-bar">
             已准备就绪。点击下方快捷按钮或直接输入问题即可开始。
           </div>
-          <div id="identitySummary" class="identity-summary" hidden>
-            <span>本机：<strong id="identityComputerName"></strong> · IP：<strong id="identityClientIp"></strong></span>
-            <button id="changeComputerNameBtn" class="btn" type="button">修改电脑名</button>
-          </div>
         </div>
 
         <div id="chatHistory" class="chat-history"></div>
@@ -668,18 +562,6 @@
         </div>
       </aside>
     </div>
-  </div>
-
-  <div id="computerNameModal" class="identity-modal" hidden>
-    <form id="computerNameForm" class="identity-dialog">
-      <h2>加入课堂</h2>
-      <p>请填写这台电脑的名称或座位号，方便老师在课堂记录中找到你的提问。浏览器无法自动读取 Windows 电脑名。</p>
-      <label>
-        电脑名或座位号
-        <input id="computerNameInput" maxlength="80" autocomplete="off" placeholder="例如：LAB-PC-27 或 第3排2号" required />
-      </label>
-      <button id="joinClassroomBtn" class="btn btn-primary" type="submit">进入课堂</button>
-    </form>
   </div>
 
   <script>
@@ -733,7 +615,7 @@
     ].join(":");
     const HISTORY_STORAGE_KEY = `edugate-student-history:v1:${CLASSROOM_STORAGE_SCOPE}`;
     const SESSION_STORAGE_KEY = `edugate-student-session:v1:${CLASSROOM_STORAGE_SCOPE}`;
-    const COMPUTER_NAME_STORAGE_KEY = "edugate-student-computer-name:v1";
+    const DEVICE_ID_STORAGE_KEY = "edugate-student-device-id:v1";
 
     function loadStoredMessages() {
       try {
@@ -774,24 +656,23 @@
       } catch {}
     }
 
-    function loadStoredComputerName() {
+    function loadOrCreateDeviceId() {
       try {
-        return (localStorage.getItem(COMPUTER_NAME_STORAGE_KEY) || "").trim();
+        const stored = (localStorage.getItem(DEVICE_ID_STORAGE_KEY) || "").trim();
+        if (stored) return stored;
+        const created = globalThis.crypto?.randomUUID
+          ? globalThis.crypto.randomUUID()
+          : `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+        localStorage.setItem(DEVICE_ID_STORAGE_KEY, created);
+        return created;
       } catch {
-        return "";
+        return `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
       }
-    }
-
-    function saveStoredComputerName(value) {
-      try {
-        localStorage.setItem(COMPUTER_NAME_STORAGE_KEY, value);
-      } catch {}
     }
 
     let messages = loadStoredMessages();
     let studentToken = loadStoredStudentToken();
-    let computerName = loadStoredComputerName();
-    let clientIp = "";
+    const deviceId = loadOrCreateDeviceId();
     let classroomReady = false;
     let activeController = null;
 
@@ -803,14 +684,6 @@
     const sendThinkingBtnEl = document.getElementById("sendThinkingBtn");
     const stopBtnEl = document.getElementById("stopBtn");
     const clearBtnEl = document.getElementById("clearBtn");
-    const identitySummaryEl = document.getElementById("identitySummary");
-    const identityComputerNameEl = document.getElementById("identityComputerName");
-    const identityClientIpEl = document.getElementById("identityClientIp");
-    const changeComputerNameBtnEl = document.getElementById("changeComputerNameBtn");
-    const computerNameModalEl = document.getElementById("computerNameModal");
-    const computerNameFormEl = document.getElementById("computerNameForm");
-    const computerNameInputEl = document.getElementById("computerNameInput");
-    const joinClassroomBtnEl = document.getElementById("joinClassroomBtn");
 
     function escapeHtml(str) {
       return String(str)
@@ -878,18 +751,6 @@
       sendBtnEl.textContent = isGenerating ? "AI 正在生成……" : "发送问题";
     }
 
-    function renderStudentIdentity() {
-      identityComputerNameEl.textContent = computerName || "未命名电脑";
-      identityClientIpEl.textContent = clientIp || "正在识别";
-      identitySummaryEl.hidden = !classroomReady;
-    }
-
-    function openComputerNameDialog() {
-      computerNameInputEl.value = computerName;
-      computerNameModalEl.hidden = false;
-      window.setTimeout(() => computerNameInputEl.focus(), 0);
-    }
-
     function getRecentMessages() {
       return messages.slice(-MAX_MESSAGES_TO_SEND);
     }
@@ -933,12 +794,7 @@
       return { ...extra, "X-Class-Token": CLASS_TOKEN };
     }
 
-    async function joinClassroom(requestedComputerName = computerName) {
-      const cleanComputerName = (requestedComputerName || "").trim();
-      if (!cleanComputerName) {
-        openComputerNameDialog();
-        throw new Error("请填写电脑名或座位号");
-      }
+    async function joinClassroom() {
       const headers = {
         "X-Class-Token": CLASS_TOKEN,
         "Content-Type": "application/json"
@@ -947,7 +803,7 @@
       const response = await fetch(JOIN_URL, {
         method: "POST",
         headers,
-        body: JSON.stringify({ computer_name: cleanComputerName })
+        body: JSON.stringify({ device_id: deviceId })
       });
       if (!response.ok) {
         throw new Error("加入课堂失败，HTTP 状态码：" + response.status);
@@ -956,11 +812,7 @@
       studentToken = data.student_token || "";
       if (!studentToken) throw new Error("教师端没有返回学生会话令牌。");
       saveStoredStudentToken(studentToken);
-      computerName = (data.computer_name || cleanComputerName).trim();
-      clientIp = data.client_ip || "未知";
-      saveStoredComputerName(computerName);
       classroomReady = true;
-      renderStudentIdentity();
       setGeneratingState(false);
     }
 
@@ -1202,31 +1054,6 @@
       setStatus("本地对话历史已清空。", "ok");
     });
 
-    changeComputerNameBtnEl.addEventListener("click", openComputerNameDialog);
-
-    computerNameFormEl.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const requestedComputerName = computerNameInputEl.value.trim();
-      if (!requestedComputerName) {
-        computerNameInputEl.focus();
-        return;
-      }
-      joinClassroomBtnEl.disabled = true;
-      setStatus("正在加入课堂……", "warn");
-      try {
-        await joinClassroom(requestedComputerName);
-        computerNameModalEl.hidden = true;
-        setStatus(TEACHER_ID ? "已使用教师策略：" + TEACHER_ID : "已加入课堂。", "ok");
-      } catch (error) {
-        classroomReady = false;
-        renderStudentIdentity();
-        setGeneratingState(false);
-        setStatus(error.message + "，请确认课堂仍在进行。", "error");
-      } finally {
-        joinClassroomBtnEl.disabled = false;
-      }
-    });
-
     chatInputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -1240,14 +1067,11 @@
     setGeneratingState(false);
     if (!CLASS_TOKEN) {
       setStatus("课堂链接缺少访问令牌，请重新打开老师提供的完整链接。", "error");
-    } else if (!computerName) {
-      setStatus("请先填写电脑名或座位号后加入课堂。", "warn");
-      openComputerNameDialog();
     } else {
-      setStatus("正在加入课堂……", "warn");
+      setStatus("正在连接课堂……", "warn");
       joinClassroom()
         .then(() => {
-          setStatus(TEACHER_ID ? "已使用教师策略：" + TEACHER_ID : "已加入课堂。", "ok");
+          setStatus(TEACHER_ID ? "已使用教师策略：" + TEACHER_ID : "课堂已连接。", "ok");
         })
         .catch((error) => {
           classroomReady = false;

@@ -10,7 +10,10 @@ from fastapi.testclient import TestClient
 
 from app.main import (
     ModelCatalogItem,
+    RuntimeConfig,
+    RuntimeConfigData,
     ScenarioUpdateRequest,
+    TeachingScenario,
     _sync_portable_admin_password,
     _stream_with_heartbeat,
     app,
@@ -438,6 +441,97 @@ def test_provider_test_performs_real_probe(
     }
 
 
+def test_provider_models_can_be_discovered_and_batch_imported(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed_keys: list[str] = []
+
+    async def fake_list(*, base_url: str, api_key: str) -> list[dict[str, str]]:
+        assert base_url == "https://provider.example/custom/v1"
+        observed_keys.append(api_key)
+        return [
+            {"id": "deepseek-v4-flash-0731", "owned_by": "test"},
+            {"id": "qwen-max", "owned_by": "test"},
+        ]
+
+    monkeypatch.setattr("app.main.client.list_openai_models", fake_list)
+    connection = {
+        "provider": "Test Provider",
+        "base_url": "https://provider.example/custom/v1",
+        "api_key": "batch-secret",
+    }
+    discovered = client.post(
+        "/admin/models/discover",
+        headers=admin_headers,
+        json=connection,
+    )
+    imported = client.post(
+        "/admin/models/batch-import",
+        headers=admin_headers,
+        json={
+            **connection,
+            "model_ids": ["qwen-max", "deepseek-v4-flash-0731"],
+            "display_names": {"qwen-max": "通义千问 Max"},
+        },
+    )
+
+    assert discovered.status_code == 200
+    assert discovered.json()["model_count"] == 2
+    assert imported.status_code == 200
+    assert imported.json()["imported_count"] == 2
+    assert all(model["api_key_set"] for model in imported.json()["models"])
+    assert next(model for model in imported.json()["models"] if model["id"] == "qwen-max")["name"] == "通义千问 Max"
+    assert secret_store.get("model:qwen-max") == "batch-secret"
+
+    renamed = client.patch(
+        "/admin/models/qwen-max",
+        headers=admin_headers,
+        json={
+            "id": "qwen-max",
+            "name": "课堂用千问 Max",
+            "provider": "Test Provider",
+            "description": "Renamed after import",
+            "source": "openai_compatible",
+            "base_url": "https://provider.example/custom/v1",
+            "api_key": None,
+        },
+    )
+    assert renamed.status_code == 200
+    assert renamed.json()["name"] == "课堂用千问 Max"
+    assert secret_store.get("model:qwen-max") == "batch-secret"
+
+    reused = client.post(
+        "/admin/models/discover",
+        headers=admin_headers,
+        json={
+            "provider": "Test Provider",
+            "base_url": "https://provider.example/custom/v1",
+            "credential_model_id": "qwen-max",
+        },
+    )
+    assert reused.status_code == 200
+    assert reused.json()["used_saved_api_key"] is True
+    assert observed_keys == ["batch-secret", "batch-secret", "batch-secret"]
+    runtime_config.delete_model("qwen-max")
+    runtime_config.delete_model("deepseek-v4-flash-0731")
+
+
+def test_completed_runtime_migration_does_not_restore_legacy_default(tmp_path: Path) -> None:
+    path = tmp_path / "runtime_config.json"
+    data = RuntimeConfigData(
+        scenarios={"default": TeachingScenario(model="replacement-model")},
+        legacy_runtime_migration_complete=True,
+    )
+    path.write_text(data.model_dump_json(indent=2), encoding="utf-8")
+
+    reloaded = RuntimeConfig(str(path))
+
+    assert reloaded.data.scenarios["default"].model == "replacement-model"
+    assert settings.default_model not in reloaded.data.model_catalog
+
+
 def test_regular_teacher_cannot_manage_models_but_can_control_own_policy(
     client: TestClient,
 ) -> None:
@@ -593,12 +687,18 @@ def test_teacher_can_view_only_owned_identified_classroom_records(
     join_response = client.post(
         "/classroom/join",
         headers={"X-Class-Token": classroom_access.token()},
-        json={"computer_name": "LAB-PC-27"},
+        json={"device_id": "classroom-device-LAB027"},
     )
     assert join_response.status_code == 200
     joined = join_response.json()
-    assert joined["computer_name"] == "LAB-PC-27"
+    assert joined["computer_name"] == "电脑-LAB027"
     assert joined["client_ip"] == "192.168.10.27"
+    repeated_join = client.post(
+        "/classroom/join",
+        headers={"X-Class-Token": classroom_access.token()},
+        json={"device_id": "classroom-device-LAB027"},
+    ).json()
+    assert repeated_join["student_session_id"] == joined["student_session_id"]
     response = client.post(
         "/chat",
         headers={"X-Student-Token": joined["student_token"]},
@@ -620,7 +720,7 @@ def test_teacher_can_view_only_owned_identified_classroom_records(
     assert detail["turns"][-1]["input_content"] == "记录里的问题"
     assert detail["turns"][-1]["output_content"] == "记录里的回答"
     assert detail["turns"][-1]["student_session_id"] == joined["student_session_id"]
-    assert detail["turns"][-1]["computer_name"] == "LAB-PC-27"
+    assert detail["turns"][-1]["computer_name"] == "电脑-LAB027"
     assert detail["turns"][-1]["client_ip"] == "192.168.10.27"
 
     admin_records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
@@ -781,21 +881,32 @@ def test_model_concurrency_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
     assert peak == 2
 
 
-def test_referenced_model_and_knowledge_source_cannot_be_deleted(
+def test_referenced_model_can_be_replaced_while_knowledge_source_stays_protected(
     client: TestClient,
     admin_headers: dict[str, str],
 ) -> None:
     model_id = "referenced-model"
+    replacement_id = "replacement-model"
     source_id = "referenced-source"
-    runtime_config.upsert_model(
-        ModelCatalogItem(
-            id=model_id,
-            name="Referenced Model",
-            provider="Test",
-            source="openai_compatible",
-            base_url="https://provider.example/v1",
-            api_key="test-secret",
-        )
+    runtime_config.upsert_models(
+        [
+            ModelCatalogItem(
+                id=model_id,
+                name="Referenced Model",
+                provider="Test",
+                source="openai_compatible",
+                base_url="https://provider.example/v1",
+                api_key="test-secret",
+            ),
+            ModelCatalogItem(
+                id=replacement_id,
+                name="Replacement Model",
+                provider="Test",
+                source="openai_compatible",
+                base_url="https://provider.example/v1",
+                api_key="replacement-secret",
+            ),
+        ]
     )
     source_response = client.post(
         "/knowledge/sources",
@@ -807,17 +918,32 @@ def test_referenced_model_and_knowledge_source_cannot_be_deleted(
         settings.admin_username,
         ScenarioUpdateRequest(model=model_id, knowledge_source_id=source_id),
     )
+    runtime_config.update_scenario("default", ScenarioUpdateRequest(model=model_id))
 
     model_response = client.delete(f"/model-catalog/{model_id}", headers=admin_headers)
+    replaced_response = client.delete(
+        f"/model-catalog/{model_id}?replacement_model_id={replacement_id}",
+        headers=admin_headers,
+    )
     source_response = client.delete(f"/knowledge/sources/{source_id}", headers=admin_headers)
 
     assert model_response.status_code == 409
+    assert replaced_response.status_code == 200
+    assert set(replaced_response.json()["replaced_references"]) == {
+        "default",
+        f"teacher:{settings.admin_username}",
+    }
+    assert runtime_config.data.scenarios["default"].model == replacement_id
+    assert runtime_config.get_teacher_policy(settings.admin_username).model == replacement_id
+    assert model_id not in runtime_config.data.model_catalog
+    assert secret_store.get(f"model:{model_id}") is None
     assert source_response.status_code == 409
     runtime_config.update_teacher_policy(
         settings.admin_username,
         ScenarioUpdateRequest(model=settings.default_model, knowledge_source_id=None),
     )
-    runtime_config.delete_model(model_id)
+    runtime_config.update_scenario("default", ScenarioUpdateRequest(model=settings.default_model))
+    runtime_config.delete_model(replacement_id)
     knowledge_store.delete_source(source_id)
 
 

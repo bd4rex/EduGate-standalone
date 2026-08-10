@@ -101,6 +101,7 @@ class StudentSessionStore:
         existing_token: str | None = None,
         computer_name: str = "",
         client_ip: str = "",
+        student_id: str | None = None,
     ) -> tuple[str, StudentSessionRecord]:
         now = time.time()
         with self._lock:
@@ -119,7 +120,7 @@ class StudentSessionStore:
                     return existing_token, updated
             token = secrets.token_urlsafe(32)
             record = StudentSessionRecord(
-                student_id=secrets.token_urlsafe(12),
+                student_id=student_id or secrets.token_urlsafe(12),
                 classroom_token=classroom_token,
                 computer_name=computer_name,
                 client_ip=client_ip,

@@ -87,7 +87,7 @@ def test_default_join_budget_covers_reloads_for_64_students() -> None:
     assert "STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES=256" in example
 
 
-def test_student_page_persists_history_and_collects_computer_identity() -> None:
+def test_student_page_persists_history_and_joins_silently() -> None:
     page = _read("frontend/student.html")
 
     assert "POST" in page and "/classroom/join" in page
@@ -96,10 +96,12 @@ def test_student_page_persists_history_and_collects_computer_identity() -> None:
     assert "localStorage.setItem(" in page
     assert "messages.slice(-MAX_MESSAGES_TO_SEND)" in page
     assert "sessionStorage.setItem(SESSION_STORAGE_KEY" in page
-    assert "COMPUTER_NAME_STORAGE_KEY" in page
-    assert 'JSON.stringify({ computer_name: cleanComputerName })' in page
-    assert 'id="computerNameInput"' in page
-    assert 'id="identityClientIp"' in page
+    assert "DEVICE_ID_STORAGE_KEY" in page
+    assert "crypto.randomUUID" in page
+    assert 'JSON.stringify({ device_id: deviceId })' in page
+    assert 'id="computerNameModal"' not in page
+    assert 'id="computerNameInput"' not in page
+    assert "电脑名或座位号" not in page
 
 
 def test_system_view_remains_admin_only() -> None:
@@ -107,6 +109,33 @@ def test_system_view_remains_admin_only() -> None:
 
     assert 'data-tab="system" role="tab" aria-selected="false" aria-controls="system-view" data-admin-only' in page
     assert '<section id="system-view" hidden data-admin-only>' in page
+
+
+def test_upstream_models_can_be_discovered_selected_and_batch_imported() -> None:
+    page = _read("frontend/admin.html")
+
+    assert 'id="model-provider-name"' in page
+    assert 'id="model-api-key"' in page
+    assert 'id="model-api-url"' in page
+    assert 'id="model-api-path"' in page
+    assert 'id="reset-model-provider"' in page
+    assert 'id="discover-models"' in page
+    assert 'role="dialog" aria-modal="true"' in page
+    assert 'id="model-discovery-filter" type="search"' in page
+    assert 'id="model-discovery-list"' in page
+    assert 'id="import-discovered-models"' in page
+    assert 'data-discovered-display-name=' in page
+    assert 'data-catalog-name=' in page
+    assert 'type="checkbox"' in page
+    assert "/admin/models/discover" in page
+    assert "/admin/models/batch-import" in page
+    assert "display_names" in page
+    assert "replacement_model_id" in page
+    assert 'id="model-id"' not in page
+    assert 'id="model-source"' not in page
+    assert 'id="model-description"' not in page
+    assert 'id="save-model"' not in page
+    assert 'id="test-model"' not in page
 
 
 def test_system_view_prioritizes_classroom_operations() -> None:

@@ -22,7 +22,7 @@ POST /auth/login
 POST /auth/logout
 POST /auth/password
 
-POST /classroom/join         X-Class-Token，提交电脑名并换取独立学生会话
+POST /classroom/join         X-Class-Token，静默提交浏览器设备标识并换取独立学生会话
 POST /chat                   X-Student-Token；兼容 X-Class-Token
 POST /chat/stream            X-Student-Token；兼容 X-Class-Token
 POST /run_python             X-Student-Token；默认关闭
@@ -37,6 +37,8 @@ GET  /teacher/classroom-records       X-Admin-Token，教师仅可看自己的�
 GET  /teacher/classroom-records/{id}  X-Admin-Token
 DELETE /teacher/classroom-records/{id} X-Admin-Token
 POST /admin/models           管理员
+POST /admin/models/discover  管理员，获取上游可用模型
+POST /admin/models/batch-import 管理员，勾选后批量导入模型
 POST /admin/providers/{id}/test 管理员
 GET  /admin/system/status      管理员
 GET  /admin/system/settings    管理员
@@ -96,4 +98,4 @@ CORS_ORIGINS=
 python -m pytest -q --basetemp=.pytest-tmp
 ```
 
-测试覆盖首次初始化、学生电脑名与 IP 记录、独立学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、课堂记录权限与保留策略、DPAPI 密钥、供应商探测、备份恢复、上传/PDF 限制、Python 多槽位任务池、实时输出、子进程隔离、无窗口分发契约和流式心跳。
+测试覆盖首次初始化、静默设备标识与 IP 记录、独立学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、课堂记录权限与保留策略、便携密钥、上游模型发现与批量导入、备份恢复、上传/PDF 限制、Python 多槽位任务池、实时输出、子进程隔离、无窗口分发契约和流式心跳。

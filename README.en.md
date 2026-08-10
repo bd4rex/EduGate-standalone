@@ -14,7 +14,7 @@ EduGate Standalone runs on a teacher's 64-bit Windows computer for one teacher a
 
 1. Extract or copy the complete `EduGate-Standalone` folder. Do not copy only the EXE.
 2. Double-click `EduGate-Standalone.exe`. The browser opens the teacher console and signs in locally.
-3. Open **System -> Upstream Model API Management**, enter the model ID, base URL, and API key, then save and test the connection.
+3. Open **System -> Upstream Model API Management**, enter a source name, API key, API URL, and optional path, then select **Fetch**. Search the modal, edit display names, and batch-import the checked models.
 4. Select **Start class**, then copy the student link from the bottom of **Control** and share it with students.
 5. Select **End class** after the lesson. Student links and sessions are revoked while the teacher console stays online. Use **System -> Stop service** only when exiting EduGate.
 
@@ -38,9 +38,9 @@ Portable `data\secrets.json` is deliberately not tied to a Windows account so AP
 
 ## Classroom workflow
 
-Start and end controls sit beside the student entry at the bottom of Control. Starting creates a fresh student link; ending revokes that link and all student sessions without stopping the teacher console. On first entry, students supply a computer name or seat label, while the teacher service records the request IP. Each classroom token still creates an independent session, so rate limits remain per session even behind a shared proxy IP. The student page keeps the latest 50 local messages per classroom and sends only the latest 10 to the model. Generating a new classroom link revokes old links and sessions.
+Start and end controls sit beside the student entry at the bottom of Control. Starting creates a fresh student link; ending revokes that link and all student sessions without stopping the teacher console. Students join silently without entering a name, computer name, or seat label. The browser keeps a stable local device ID; the teacher service derives a device label from it and records the request IP. Sessions and rate limits remain independent even behind a shared proxy IP. The student page keeps the latest 50 local messages per classroom and sends only the latest 10 to the model. Generating a new classroom link revokes old links and sessions.
 
-The **Records** view groups AI conversations and Python results by student computer name and IP. These records remain on the teacher computer and are retained for 30 days by default. The **System** view provides status, a copyable LAN address, direct access to the program folder, logs, backup and restore, collapsed-by-default advanced settings, restart, and shutdown.
+The **Records** view groups AI conversations and Python results by the generated device label and IP. Recording is silent and requires no student participation. These records remain on the teacher computer and are retained for 30 days by default. The **System** view provides status, a copyable LAN address, direct access to the program folder, logs, backup and restore, collapsed-by-default advanced settings, restart, and shutdown.
 
 The **Resources** view puts the knowledge-base list first. Each source can be edited, opened in the teacher computer's file explorer, and incrementally synchronized from that folder. A scan adds new supported files, reindexes changed files, and removes indexes for files deleted from the folder. The default `general` source cannot be deleted; other sources can be removed when no classroom policy uses them. The lower-frequency create/edit form is collapsed by default.
 

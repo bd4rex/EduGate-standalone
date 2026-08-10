@@ -267,6 +267,38 @@
     input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28); }
     .checkbox-row { display: flex; min-height: 44px; align-items: center; gap: 10px; color: var(--muted); cursor: pointer; }
     .checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px; min-height: 22px; margin: 0; accent-color: var(--brand); }
+    .upstream-provider { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .upstream-provider-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .upstream-provider-heading h3, .imported-model-heading h3 { margin: 0; font-size: 16px; }
+    .upstream-provider-body { padding: 18px; }
+    .provider-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr); gap: 14px; }
+    .provider-form-grid .full { grid-column: 1 / -1; }
+    .api-endpoint-preview { grid-column: 1 / -1; margin: -2px 0 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .provider-actions { justify-content: flex-end; margin-top: 16px; }
+    .imported-models { margin-top: 16px; }
+    .imported-model-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .catalog-model-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(200px, 0.9fr) auto; gap: 14px; align-items: center; min-height: 70px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .catalog-model-row:last-child { border-bottom: 0; }
+    .catalog-model-id { min-width: 0; font-weight: 850; overflow-wrap: anywhere; }
+    .catalog-model-id .row-meta { margin-top: 5px; }
+    .catalog-display-name { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .catalog-display-name input { min-height: 44px; }
+    .model-discovery[hidden] { display: none; }
+    .model-discovery { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 24px; background: rgba(15, 23, 42, 0.48); }
+    .model-discovery-dialog { display: flex; width: min(900px, 100%); max-height: min(820px, calc(100vh - 48px)); flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 22px 60px rgba(15, 23, 42, 0.25); }
+    .model-discovery-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .model-discovery-header h2 { margin: 0; font-size: 19px; }
+    .model-discovery-toolbar { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+    .model-discovery-toolbar label { max-width: none; }
+    .model-discovery-status { margin: 0; padding: 10px 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    .model-discovery-list { min-height: 220px; max-height: 520px; overflow: auto; }
+    .model-discovery-row { display: grid; grid-template-columns: 22px minmax(170px, 1fr) minmax(190px, 0.8fr) auto; min-height: 62px; align-items: center; gap: 12px; padding: 9px 18px; border-bottom: 1px solid var(--line); }
+    .model-discovery-row:last-child { border-bottom: 0; }
+    .model-discovery-row:hover { background: var(--soft); }
+    .model-discovery-row > input[type="checkbox"] { width: 22px; height: 22px; min-height: 22px; margin: 0; accent-color: var(--brand); }
+    .model-discovery-name { min-width: 0; overflow-wrap: anywhere; font-weight: 800; }
+    .model-discovery-display { min-height: 42px; }
+    .model-discovery-footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 14px 18px; border-top: 1px solid var(--line); }
     .file-input-hidden {
       position: absolute !important;
       width: 1px !important;
@@ -398,6 +430,11 @@
       font-weight: 900;
       line-height: 1.35;
     }
+    .collapsible-panel > summary:focus { outline: none; }
+    .collapsible-panel > summary:focus-visible {
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 3px rgba(37, 99, 235, 0.34);
+    }
     .collapsible-panel[open] > summary { margin-bottom: 4px; }
     .compact-panel > summary { font-size: 18px; }
     .system-status-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -476,6 +513,12 @@
       .upload-layout { grid-template-columns: 1fr; }
       .upload-layout .hint { grid-column: auto; }
       .system-actions { justify-content: flex-start; }
+      .catalog-model-row { grid-template-columns: 1fr; }
+      .catalog-model-row .button { width: 100%; }
+      .model-discovery { padding: 12px; }
+      .model-discovery-dialog { max-height: calc(100vh - 24px); }
+      .model-discovery-row { grid-template-columns: 22px minmax(0, 1fr); }
+      .model-discovery-display, .model-discovery-row .badge { grid-column: 2; }
     }
 
     @media (hover: none), (pointer: coarse) {
@@ -818,32 +861,51 @@
         <section class="section">
           <details class="collapsible-panel model-api-panel" id="model-api-panel">
             <summary>上游模型 API 管理</summary>
-            <div class="section-title" style="margin-top:4px">
-              <p class="hint" style="margin:0">配置上游模型公司、接口地址和密钥；课堂使用哪个模型仍在“控制”页选择。</p>
-              <button class="button soft" id="reload-catalog" type="button">刷新模型目录</button>
-            </div>
-            <div class="list-card" style="padding:18px">
-              <div class="stack">
-                <label>模型 ID<input id="model-id" placeholder="例如 gpt-4o-mini 或 deepseek-v4-flash" /></label>
-                <label>显示名称<input id="model-name" placeholder="例如 GPT-4o Mini" /></label>
-                <label>供应商名称<input id="model-provider" placeholder="例如 OpenAI / DeepSeek / 校内模型服务" /></label>
-                <label>模型来源
-                  <select id="model-source">
-                    <option value="openai_compatible">EduGate 直连 OpenAI-compatible</option>
-                    <option value="litellm">兼容旧 LiteLLM</option>
-                  </select>
-                </label>
-                <label>OpenAI-compatible Base URL<input id="model-base-url" placeholder="例如 https://api.deepseek.com/v1 或 https://api.openai.com/v1" /></label>
-                <label>API Key<input id="model-api-key" type="password" placeholder="直连模型必填；更新资料不改 key 可留空" /></label>
-                <label>说明<input id="model-description" placeholder="例如 低成本课堂问答模型" /></label>
-                <div class="actions">
-                  <button class="button soft" id="test-model" type="button">测试连接</button>
-                  <button class="button primary" id="save-model">新增/更新模型</button>
+            <p class="hint" style="margin:4px 0 14px">配置一个模型服务来源，再从它提供的模型中选择需要的项目。</p>
+            <div class="upstream-provider">
+              <div class="upstream-provider-heading">
+                <h3 id="provider-card-title">上游模型服务</h3>
+                <span class="badge">OpenAI API 兼容</span>
+              </div>
+              <div class="upstream-provider-body">
+                <div class="provider-form-grid">
+                  <label class="full">名称<input id="model-provider-name" placeholder="例如 阿里云测试，用于标记模型来源" /></label>
+                  <label class="full">API Key<input id="model-api-key" type="password" autocomplete="off" placeholder="首次获取时填写；已有同地址模型可留空复用" /></label>
+                  <label>API URL<input id="model-api-url" inputmode="url" placeholder="例如 https://api.example.com" /></label>
+                  <label>API 路径<input id="model-api-path" placeholder="留空自动使用 /v1" /></label>
+                  <p class="api-endpoint-preview" id="model-endpoint-preview">完整接口地址将在这里显示</p>
                 </div>
-                <p class="hint">连接测试会实际请求供应商的模型列表接口。API Key 保存在程序文件夹的 <code>data</code> 中，不会回显到页面；复制整个文件夹即可沿用。</p>
+                <div class="actions provider-actions">
+                  <button class="button ghost" id="reset-model-provider" type="button">重置</button>
+                  <button class="button primary" id="discover-models" type="button">获取</button>
+                </div>
+                <p class="hint">获取会同时检查连接并读取上游模型列表。API Key 只保存在程序目录中，不会回显。</p>
               </div>
             </div>
-            <div class="list-card" id="catalog-list" style="margin-top:16px"></div>
+            <div class="imported-models">
+              <div class="imported-model-heading">
+                <h3>已导入模型</h3>
+                <span class="hint" id="catalog-count">0 个</span>
+              </div>
+              <div class="list-card" id="catalog-list"></div>
+            </div>
+            <div class="model-discovery" id="model-discovery" hidden>
+              <div class="model-discovery-dialog" role="dialog" aria-modal="true" aria-labelledby="model-discovery-title">
+                <div class="model-discovery-header">
+                  <h2 id="model-discovery-title">选择要导入的模型</h2>
+                  <button class="button ghost" id="close-model-discovery" type="button">关闭</button>
+                </div>
+                <div class="model-discovery-toolbar">
+                  <label>快速检索<input id="model-discovery-filter" type="search" placeholder="输入模型 ID 或来源，结果会立即筛选" /></label>
+                </div>
+                <p class="model-discovery-status" id="model-discovery-status"></p>
+                <div class="model-discovery-list" id="model-discovery-list"></div>
+                <div class="model-discovery-footer">
+                  <button class="button ghost" id="cancel-model-import" type="button">取消</button>
+                  <button class="button primary" id="import-discovered-models" type="button" disabled>导入已选（0）</button>
+                </div>
+              </div>
+            </div>
           </details>
         </section>
 
@@ -904,6 +966,10 @@
       config: null,
       models: [],
       catalog: [],
+      discoveredModels: [],
+      selectedDiscoveredModelIds: new Set(),
+      discoveredModelNames: {},
+      providerFormInitialized: false,
       sources: [],
       files: [],
       systemStatus: null,
@@ -951,14 +1017,19 @@
       knowledgeFileTrigger: document.querySelector("#knowledge-file-trigger"),
       knowledgeFileName: document.querySelector("#knowledge-file-name"),
       fileList: document.querySelector("#file-list"),
-      modelId: document.querySelector("#model-id"),
-      modelName: document.querySelector("#model-name"),
-      modelProvider: document.querySelector("#model-provider"),
-      modelSource: document.querySelector("#model-source"),
-      modelBaseUrl: document.querySelector("#model-base-url"),
+      modelProviderName: document.querySelector("#model-provider-name"),
+      modelApiUrl: document.querySelector("#model-api-url"),
+      modelApiPath: document.querySelector("#model-api-path"),
       modelApiKey: document.querySelector("#model-api-key"),
-      modelDescription: document.querySelector("#model-description"),
+      providerCardTitle: document.querySelector("#provider-card-title"),
+      modelEndpointPreview: document.querySelector("#model-endpoint-preview"),
       catalogList: document.querySelector("#catalog-list"),
+      catalogCount: document.querySelector("#catalog-count"),
+      modelDiscovery: document.querySelector("#model-discovery"),
+      modelDiscoveryFilter: document.querySelector("#model-discovery-filter"),
+      modelDiscoveryStatus: document.querySelector("#model-discovery-status"),
+      modelDiscoveryList: document.querySelector("#model-discovery-list"),
+      importDiscoveredModels: document.querySelector("#import-discovered-models"),
       sourceAdminList: document.querySelector("#source-admin-list"),
       classControls: document.querySelector("#class-controls"),
       startClass: document.querySelector("#start-class"),
@@ -1441,39 +1512,73 @@
     }
 
     function renderCatalog() {
+      el.catalogCount.textContent = `${state.catalog.length} 个`;
       if (!state.catalog.length) {
-        el.catalogList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">暂无模型目录</p><div class="row-meta">添加 OpenAI-compatible 直连模型后即可接入模型公司 API。</div></div></div>`;
+        el.catalogList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">暂无已导入模型</p><div class="row-meta">填写上方接口信息并点击“获取”，再从弹窗中勾选导入。</div></div></div>`;
         return;
       }
       el.catalogList.innerHTML = state.catalog.map((model) => `
-        <div class="row">
-          <div class="row-main">
-            <p class="row-title">${escapeHtml(model.name || model.id)}</p>
+        <div class="catalog-model-row">
+          <div class="catalog-model-id">
+            ${escapeHtml(model.id)}
             <div class="row-meta">
-              <span class="badge">${escapeHtml(model.id)}</span>
-              <span>${escapeHtml(model.provider || "-")}</span>
-              <span>${model.source === "openai_compatible" ? "EduGate 直连" : "兼容旧 LiteLLM"}</span>
-              ${model.base_url ? `<span>${escapeHtml(model.base_url)}</span>` : ""}
-              ${model.api_key_set ? `<span class="badge green">已配置密钥</span>` : ""}
-              ${model.available === false ? `<span class="badge">当前未检测到可用</span>` : `<span class="badge green">可用</span>`}
+              <span class="badge">${escapeHtml(model.provider || "未命名来源")}</span>
+              ${model.api_key_set ? `<span class="badge green">已配置</span>` : ""}
             </div>
-            <div class="row-meta">${escapeHtml(model.description || "")}</div>
           </div>
-          <div class="actions">
-            <button class="button soft" type="button" data-catalog-test="${escapeHtml(model.id)}">测试</button>
-            <button class="button ghost" type="button" data-catalog-edit="${escapeHtml(model.id)}">填入表单</button>
-            <button class="button danger" type="button" data-catalog-delete="${escapeHtml(model.id)}">删除</button>
-          </div>
+          <label class="catalog-display-name">显示名
+            <input data-catalog-name="${escapeHtml(model.id)}" value="${escapeHtml(model.name || model.id)}" maxlength="120" />
+          </label>
+          <button class="button danger" type="button" data-catalog-delete="${escapeHtml(model.id)}">删除</button>
         </div>
       `).join("");
-      el.catalogList.querySelectorAll("[data-catalog-edit]").forEach((button) => {
-        button.addEventListener("click", () => fillModelForm(button.dataset.catalogEdit));
-      });
-      el.catalogList.querySelectorAll("[data-catalog-test]").forEach((button) => {
-        button.addEventListener("click", () => testModel(button.dataset.catalogTest));
+      el.catalogList.querySelectorAll("[data-catalog-name]").forEach((input) => {
+        input.addEventListener("change", () => renameModel(input.dataset.catalogName, input.value));
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") input.blur();
+        });
       });
       el.catalogList.querySelectorAll("[data-catalog-delete]").forEach((button) => {
         button.addEventListener("click", () => deleteModel(button.dataset.catalogDelete));
+      });
+    }
+
+    function renderDiscoveredModels() {
+      const filter = el.modelDiscoveryFilter.value.trim().toLowerCase();
+      const importedIds = new Set(state.catalog.map((model) => model.id));
+      const visible = state.discoveredModels.filter((model) =>
+        !filter || model.id.toLowerCase().includes(filter) || String(model.owned_by || "").toLowerCase().includes(filter)
+      );
+      const selectedCount = state.selectedDiscoveredModelIds.size;
+      const importedCount = state.discoveredModels.filter((model) => importedIds.has(model.id)).length;
+      el.importDiscoveredModels.textContent = `导入已选（${selectedCount}）`;
+      el.importDiscoveredModels.disabled = selectedCount === 0;
+      el.modelDiscoveryStatus.textContent = `共 ${state.discoveredModels.length} 个模型，当前显示 ${visible.length} 个，已导入 ${importedCount} 个，已选择 ${selectedCount} 个。`;
+      el.modelDiscoveryList.innerHTML = visible.length ? visible.map((model) => {
+        const imported = importedIds.has(model.id);
+        const checked = state.selectedDiscoveredModelIds.has(model.id);
+        const catalogModel = state.catalog.find((item) => item.id === model.id);
+        const displayName = state.discoveredModelNames[model.id] ?? catalogModel?.name ?? model.id;
+        return `
+          <div class="model-discovery-row">
+            <input type="checkbox" aria-label="选择模型 ${escapeHtml(model.id)}" data-discovered-model-id="${escapeHtml(model.id)}" ${checked ? "checked" : ""} ${imported ? "checked disabled" : ""} />
+            <span class="model-discovery-name">${escapeHtml(model.id)}</span>
+            <input class="model-discovery-display" aria-label="${escapeHtml(model.id)} 的显示名" data-discovered-display-name="${escapeHtml(model.id)}" value="${escapeHtml(displayName)}" maxlength="120" ${imported ? "disabled" : ""} />
+            ${imported ? `<span class="badge green">已导入</span>` : (model.owned_by ? `<span class="badge">${escapeHtml(model.owned_by)}</span>` : `<span></span>`)}
+          </div>
+        `;
+      }).join("") : `<div class="row"><div class="row-main"><p class="row-title">没有匹配的模型</p><div class="row-meta">换一个关键词试试。</div></div></div>`;
+      el.modelDiscoveryList.querySelectorAll("[data-discovered-model-id]").forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) state.selectedDiscoveredModelIds.add(checkbox.dataset.discoveredModelId);
+          else state.selectedDiscoveredModelIds.delete(checkbox.dataset.discoveredModelId);
+          renderDiscoveredModels();
+        });
+      });
+      el.modelDiscoveryList.querySelectorAll("[data-discovered-display-name]").forEach((input) => {
+        input.addEventListener("input", () => {
+          state.discoveredModelNames[input.dataset.discoveredDisplayName] = input.value;
+        });
       });
     }
 
@@ -1843,6 +1948,7 @@
       if (isAdmin()) {
         const modelsRaw = await request("/models");
         state.models = mergeModels(normalizeModels(modelsRaw), state.catalog);
+        initializeProviderForm();
         renderCatalog();
       } else {
         state.models = mergeModels([], state.catalog);
@@ -2111,70 +2217,225 @@
       }
     }
 
-    function fillModelForm(modelId) {
+    function providerBaseUrl() {
+      const apiUrl = el.modelApiUrl.value.trim().replace(/\/+$/, "");
+      let apiPath = el.modelApiPath.value.trim();
+      if (!apiUrl) return "";
+      try {
+        const existingPath = new URL(apiUrl).pathname.replace(/^\/+|\/+$/g, "");
+        const requestedPath = apiPath.replace(/^\/+|\/+$/g, "");
+        if (existingPath && (!requestedPath || existingPath === requestedPath || existingPath.endsWith(`/${requestedPath}`))) {
+          return apiUrl;
+        }
+      } catch {}
+      if (!apiPath) {
+        try {
+          apiPath = new URL(apiUrl).pathname === "/" ? "/v1" : "";
+        } catch {}
+      }
+      if (!apiPath) return apiUrl;
+      return `${apiUrl}/${apiPath.replace(/^\/+|\/+$/g, "")}`;
+    }
+
+    function completionEndpoint(baseUrl = providerBaseUrl()) {
+      const clean = baseUrl.replace(/\/+$/, "");
+      if (!clean) return "";
+      return clean.endsWith("/chat/completions") ? clean : `${clean}/chat/completions`;
+    }
+
+    function updateProviderPreview() {
+      const name = el.modelProviderName.value.trim();
+      el.providerCardTitle.textContent = name || "上游模型服务";
+      const endpoint = completionEndpoint();
+      el.modelEndpointPreview.textContent = endpoint ? `完整对话接口：${endpoint}` : "完整接口地址将在这里显示";
+    }
+
+    function splitProviderBaseUrl(baseUrl) {
+      try {
+        const parsed = new URL(baseUrl);
+        return {
+          apiUrl: parsed.origin,
+          apiPath: parsed.pathname === "/" ? "/v1" : parsed.pathname.replace(/\/+$/, ""),
+        };
+      } catch {
+        return { apiUrl: baseUrl || "", apiPath: "/v1" };
+      }
+    }
+
+    function initializeProviderForm() {
+      if (state.providerFormInitialized) return;
+      const activeId = currentScenario()?.model;
+      const model = state.catalog.find((item) => item.id === activeId && item.source === "openai_compatible")
+        || state.catalog.find((item) => item.source === "openai_compatible");
+      if (model) {
+        const parts = splitProviderBaseUrl(model.base_url || "");
+        el.modelProviderName.value = model.provider || "";
+        el.modelApiUrl.value = parts.apiUrl;
+        el.modelApiPath.value = parts.apiPath;
+      } else {
+        el.modelApiPath.value = "/v1";
+      }
+      state.providerFormInitialized = true;
+      updateProviderPreview();
+    }
+
+    function closeModelDiscovery() {
+      el.modelDiscovery.hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    function resetProviderForm() {
+      el.modelProviderName.value = "";
+      el.modelApiUrl.value = "";
+      el.modelApiPath.value = "/v1";
+      el.modelApiKey.value = "";
+      state.discoveredModels = [];
+      state.discoveredModelNames = {};
+      state.selectedDiscoveredModelIds = new Set();
+      closeModelDiscovery();
+      updateProviderPreview();
+      el.modelProviderName.focus();
+    }
+
+    function providerConnectionPayload() {
+      const baseUrl = providerBaseUrl();
+      const apiKey = el.modelApiKey.value.trim();
+      const normalizedBaseUrl = baseUrl.replace(/\/+$/, "").toLowerCase();
+      const savedCredentialModel = state.catalog.find((model) =>
+        model.source === "openai_compatible" &&
+        model.api_key_set &&
+        String(model.base_url || "").replace(/\/+$/, "").toLowerCase() === normalizedBaseUrl
+      );
+      return {
+        provider: el.modelProviderName.value.trim(),
+        base_url: baseUrl,
+        api_key: apiKey || null,
+        credential_model_id: apiKey ? null : (savedCredentialModel?.id || null),
+      };
+    }
+
+    async function discoverProviderModels() {
+      const payload = providerConnectionPayload();
+      if (!payload.provider) {
+        showToast("请填写用于标记来源的名称。", true);
+        el.modelProviderName.focus();
+        return;
+      }
+      if (!payload.base_url) {
+        showToast("请填写 API URL。", true);
+        el.modelApiUrl.focus();
+        return;
+      }
+      if (!payload.api_key && !payload.credential_model_id) {
+        showToast("请填写 API Key；已有同地址模型时可以留空复用。", true);
+        el.modelApiKey.focus();
+        return;
+      }
+      const button = document.querySelector("#discover-models");
+      button.disabled = true;
+      button.textContent = "正在获取…";
+      try {
+        const result = await request("/admin/models/discover", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        state.discoveredModels = result.models || [];
+        state.discoveredModelNames = Object.fromEntries(
+          state.discoveredModels.map((model) => [
+            model.id,
+            state.catalog.find((item) => item.id === model.id)?.name || model.id,
+          ])
+        );
+        state.selectedDiscoveredModelIds = new Set();
+        el.modelDiscoveryFilter.value = "";
+        el.modelDiscovery.hidden = false;
+        document.body.style.overflow = "hidden";
+        renderDiscoveredModels();
+        el.modelDiscoveryFilter.focus();
+      } catch (error) {
+        showToast(`获取模型失败：${error.message}`, true);
+      } finally {
+        button.disabled = false;
+        button.textContent = "获取";
+      }
+    }
+
+    async function importDiscoveredModels() {
+      const modelIds = Array.from(state.selectedDiscoveredModelIds);
+      if (!modelIds.length) return;
+      const payload = {
+        ...providerConnectionPayload(),
+        model_ids: modelIds,
+        display_names: Object.fromEntries(modelIds.map((id) => [id, state.discoveredModelNames[id] || id])),
+        description: `从 ${el.modelProviderName.value.trim()} 获取`,
+      };
+      el.importDiscoveredModels.disabled = true;
+      try {
+        const result = await request("/admin/models/batch-import", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        el.modelApiKey.value = "";
+        state.selectedDiscoveredModelIds = new Set();
+        await loadModels();
+        closeModelDiscovery();
+        showToast(`已导入 ${result.imported_count || modelIds.length} 个模型。`);
+      } catch (error) {
+        showToast(`批量导入失败：${error.message}`, true);
+      } finally {
+        renderDiscoveredModels();
+      }
+    }
+
+    async function renameModel(modelId, value) {
       const model = state.catalog.find((item) => item.id === modelId);
       if (!model) return;
-      el.modelId.value = model.id || "";
-      el.modelName.value = model.name || model.id || "";
-      el.modelProvider.value = model.provider || "";
-      el.modelSource.value = model.source || "openai_compatible";
-      el.modelBaseUrl.value = model.base_url || "";
-      el.modelApiKey.value = "";
-      el.modelDescription.value = model.description || "";
-      showToast("已填入模型表单。若不修改 API Key，请保持为空。");
-    }
-
-    async function saveModel({ silent = false } = {}) {
-      const payload = {
-        id: el.modelId.value.trim(),
-        name: el.modelName.value.trim(),
-        provider: el.modelProvider.value.trim() || "OpenAI Compatible",
-        source: el.modelSource.value,
-        base_url: el.modelBaseUrl.value.trim() || null,
-        api_key: el.modelApiKey.value.trim() || null,
-        description: el.modelDescription.value.trim(),
-      };
-      if (!payload.id || !payload.name) {
-        showToast("请填写模型 ID 和显示名称。", true);
-        return null;
+      const name = value.trim();
+      if (!name) {
+        renderCatalog();
+        showToast("显示名不能为空。", true);
+        return;
       }
-      if (payload.source === "openai_compatible" && !payload.base_url) {
-        showToast("直连 OpenAI-compatible 模型必须填写 Base URL。", true);
-        return null;
-      }
+      if (name === model.name) return;
       try {
-        await request("/admin/models", { method: "POST", body: JSON.stringify(payload) });
-        el.modelApiKey.value = "";
+        await request(`/admin/models/${encodeURIComponent(modelId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            id: model.id,
+            name,
+            provider: model.provider,
+            description: model.description || "",
+            source: model.source,
+            base_url: model.base_url,
+            api_key: null,
+          }),
+        });
         await loadModels();
-        if (!silent) showToast(`已保存模型：${payload.name}`);
-        return payload.id;
+        showToast(`显示名已更新为：${name}`);
       } catch (error) {
-        showToast(`保存模型失败：${error.message}`, true);
-        return null;
-      }
-    }
-
-    async function testModel(modelId = "") {
-      let targetId = modelId;
-      if (!targetId) {
-        targetId = await saveModel({ silent: true });
-      }
-      if (!targetId) return;
-      try {
-        const result = await request(`/admin/providers/${encodeURIComponent(targetId)}/test`, { method: "POST" });
-        if (!result.ok) throw new Error(result.error || `HTTP ${result.status_code || "unknown"}`);
-        showToast(`连接成功：供应商返回 ${result.model_count ?? 0} 个模型。`);
-      } catch (error) {
-        showToast(`连接测试失败：${error.message}`, true);
+        renderCatalog();
+        showToast(`修改显示名失败：${error.message}`, true);
       }
     }
 
     async function deleteModel(modelId) {
-      if (!confirm(`确定删除模型 ${modelId} 及其 API Key 吗？`)) return;
+      const currentModelId = currentScenario()?.model || "";
+      const candidates = state.catalog.filter((model) =>
+        model.id !== modelId &&
+        (model.source !== "openai_compatible" || (model.base_url && model.api_key_set))
+      );
+      const replacement = candidates.find((model) => model.id === currentModelId) || candidates[0] || null;
+      const replacementHint = replacement
+        ? `如果它仍被课堂配置引用，将自动切换到 ${replacement.name || replacement.id}。`
+        : "如果它仍被课堂配置使用，需要先导入并选择另一个可用模型。";
+      if (!confirm(`确定删除模型 ${modelId} 及其 API Key 吗？\n\n${replacementHint}`)) return;
       try {
-        await request(`/model-catalog/${encodeURIComponent(modelId)}`, { method: "DELETE" });
-        await loadModels();
-        showToast("模型已删除。");
+        const query = replacement ? `?replacement_model_id=${encodeURIComponent(replacement.id)}` : "";
+        const result = await request(`/model-catalog/${encodeURIComponent(modelId)}${query}`, { method: "DELETE" });
+        await Promise.all([loadConfig(), loadModels()]);
+        showToast(result.replacement_model_id
+          ? `模型已删除，课堂配置已切换到 ${result.replacement_model_id}。`
+          : "模型已删除。");
       } catch (error) {
         showToast(`删除模型失败：${error.message}`, true);
       }
@@ -2327,13 +2588,22 @@
     document.querySelector("#reload-sources").addEventListener("click", loadSources);
     document.querySelector("#refresh-source-admin").addEventListener("click", loadSources);
     document.querySelector("#reload-files").addEventListener("click", loadFiles);
-    document.querySelector("#reload-catalog").addEventListener("click", loadModels);
     document.querySelector("#refresh-records").addEventListener("click", () => loadClassroomRecords());
     document.querySelector("#save-scenario").addEventListener("click", saveScenario);
     document.querySelector("#save-source").addEventListener("click", saveSource);
     el.cancelSourceEdit.addEventListener("click", () => resetSourceEditor({ close: true }));
-    document.querySelector("#save-model").addEventListener("click", saveModel);
-    document.querySelector("#test-model").addEventListener("click", () => testModel());
+    document.querySelector("#discover-models").addEventListener("click", discoverProviderModels);
+    document.querySelector("#reset-model-provider").addEventListener("click", resetProviderForm);
+    document.querySelector("#close-model-discovery").addEventListener("click", closeModelDiscovery);
+    document.querySelector("#cancel-model-import").addEventListener("click", closeModelDiscovery);
+    el.modelProviderName.addEventListener("input", updateProviderPreview);
+    el.modelApiUrl.addEventListener("input", updateProviderPreview);
+    el.modelApiPath.addEventListener("input", updateProviderPreview);
+    el.modelDiscoveryFilter.addEventListener("input", renderDiscoveredModels);
+    el.importDiscoveredModels.addEventListener("click", importDiscoveredModels);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !el.modelDiscovery.hidden) closeModelDiscovery();
+    });
     el.copyClassroomUrl.addEventListener("click", () => {
       if (el.classroomUrl.value) copyText(el.classroomUrl.value, "学生课堂链接");
     });

@@ -94,14 +94,16 @@ class LiteLLMClient:
                 yield chunk
 
     async def probe_openai_provider(self, *, base_url: str, api_key: str) -> dict[str, Any]:
+        models = await self.list_openai_models(base_url=base_url, api_key=api_key)
+        return {"ok": True, "model_count": len(models)}
+
+    async def list_openai_models(self, *, base_url: str, api_key: str) -> list[dict[str, str]]:
         response = await self._client.get(
             _openai_url(base_url, "/models"),
             headers=_openai_headers(api_key),
         )
         response.raise_for_status()
-        data = response.json()
-        models = data.get("data", []) if isinstance(data, dict) else []
-        return {"ok": True, "model_count": len(models)}
+        return _normalize_openai_models(response.json())
 
 
 def _openai_url(base_url: str, path: str) -> str:
@@ -122,3 +124,26 @@ def _openai_headers(api_key: str) -> dict[str, str]:
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}",
     }
+
+
+def _normalize_openai_models(payload: Any) -> list[dict[str, str]]:
+    if isinstance(payload, dict):
+        raw_models = payload.get("data", payload.get("models", []))
+    else:
+        raw_models = payload
+    if not isinstance(raw_models, list):
+        return []
+
+    models: dict[str, dict[str, str]] = {}
+    for item in raw_models:
+        if isinstance(item, str):
+            model_id = item.strip()
+            owned_by = ""
+        elif isinstance(item, dict):
+            model_id = str(item.get("id") or item.get("model_name") or item.get("name") or "").strip()
+            owned_by = str(item.get("owned_by") or item.get("provider") or "").strip()
+        else:
+            continue
+        if model_id:
+            models[model_id] = {"id": model_id, "owned_by": owned_by}
+    return sorted(models.values(), key=lambda item: item["id"].casefold())
