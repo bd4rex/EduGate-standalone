@@ -203,6 +203,19 @@ def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> 
     assert 'class="system-action-group critical"' in page
     assert 'h2 { margin-bottom: 0; font-size: 20px; font-weight: 900; line-height: 1.35;' in page
     assert '.row-title { margin: 0; font-size: 16px; font-weight: 900; line-height: 1.45; }' in page
+    assert '.tab.active:focus-visible { box-shadow: inset 0 -5px 0' in page
+    assert '.checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px;' in page
+    assert 'input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px;' in page
+    assert '.upload-card { width: 100%; padding: 16px; }' in page
+    assert 'id="refresh-source-admin" type="button">刷新知识库</button>' in page
+    assert '.control-grid > div > .section:last-child { margin-bottom: 0; }' in page
+    assert '.classroom-entry { margin-top: 26px; margin-bottom: 0;' in page
+    assert '["请求数", dashboard.total_requests ?? 0]' in page
+    assert '["Tokens", dashboard.total_tokens ?? 0]' in page
+    assert '["总请求", dashboard.total_requests ?? 0]' not in page
+    assert '["总 Tokens", dashboard.total_tokens ?? 0]' not in page
+    assert 'class="brand-title-row"' in page
+    assert page.index('EduGate 教师端控制台</h1>') < page.index('id="system-status"') < page.index('教师控制 · 本地 AI 教学网关')
     assert '.system-metric-value { display: flex; min-height: 34px; align-items: center;' in page
     assert '.system-metric-value { min-height: 44px; }' in page
     assert page.count('<div class="system-metric-value">') == 1

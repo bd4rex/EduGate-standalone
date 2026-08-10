@@ -80,6 +80,10 @@
       gap: 14px;
       min-width: 0;
     }
+    .brand-copy { min-width: 0; }
+    .brand-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+    .brand-title-row h1 { margin-bottom: 0; }
+    .brand-copy > p { margin-top: 4px; }
 
     .brand-mark {
       width: 112px;
@@ -178,12 +182,15 @@
     .button.ghost { color: #4d596d; background: #edf1f6; }
     .button.danger { color: var(--red); border: 1px solid #f2c3bd; background: var(--red-soft); }
     .button:disabled { cursor: not-allowed; opacity: 0.55; }
-    .button:focus-visible, .tab:focus-visible, .switch:focus-visible, .record-session-button:focus-visible {
+    .button:focus-visible, .switch:focus-visible, .record-session-button:focus-visible {
       outline: 3px solid rgba(37, 99, 235, 0.35);
       outline-offset: 3px;
     }
+    .tab:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.45); }
+    .tab.active:focus-visible { box-shadow: inset 0 -5px 0 rgba(29, 78, 216, 0.32); }
 
     .control-grid { display: grid; grid-template-columns: 1fr 350px; gap: 22px; align-items: start; }
+    .control-grid > div > .section:last-child { margin-bottom: 0; }
 
     .session-card {
       margin-bottom: 24px;
@@ -253,7 +260,13 @@
     .side-panel > h2 { margin-bottom: 14px; }
     .form-grid { display: grid; gap: 14px; }
     .range-row { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; }
-    input[type="range"] { padding: 0; min-height: auto; accent-color: var(--brand); }
+    input[type="range"] { min-height: 44px; padding: 0; appearance: none; -webkit-appearance: none; background: transparent; accent-color: var(--brand); }
+    input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--line-strong); }
+    input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -9px; border: 3px solid #fff; border-radius: 50%; appearance: none; background: var(--brand); box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28); }
+    input[type="range"]::-moz-range-track { height: 6px; border: 0; border-radius: 3px; background: var(--line-strong); }
+    input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28); }
+    .checkbox-row { display: flex; min-height: 44px; align-items: center; gap: 10px; color: var(--muted); cursor: pointer; }
+    .checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px; min-height: 22px; margin: 0; accent-color: var(--brand); }
     .file-input-hidden {
       position: absolute !important;
       width: 1px !important;
@@ -298,7 +311,7 @@
     .settings-grid.single { grid-template-columns: 1fr; }
     .stack { display: grid; gap: 14px; }
     .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; }
-    .upload-card { max-width: 900px; padding: 16px; }
+    .upload-card { width: 100%; padding: 16px; }
     .upload-layout { display: grid; grid-template-columns: minmax(220px, 0.9fr) minmax(320px, 1.2fr) auto; gap: 14px; align-items: end; }
     .upload-layout .hint { grid-column: 1 / -1; margin: 0; }
     .session-actions {
@@ -331,7 +344,7 @@
     }
     .classroom-link > label { min-width: 0; }
     .classroom-link input { min-width: 0; text-overflow: ellipsis; }
-    .classroom-entry { margin-top: 28px; margin-bottom: 0; scroll-margin-top: 90px; }
+    .classroom-entry { margin-top: 26px; margin-bottom: 0; scroll-margin-top: 90px; }
 
     .login-state {
       display: inline-flex;
@@ -531,12 +544,14 @@
     <header class="topbar">
       <div class="brand-lockup">
         <img class="brand-mark" src="assets/brand/edugate-icon.svg" alt="" />
-        <div>
-          <h1>EduGate 教师端控制台</h1>
+        <div class="brand-copy">
+          <div class="brand-title-row">
+            <h1>EduGate 教师端控制台</h1>
+            <div class="status-pill" id="system-status"><span class="dot"></span><span>未连接</span></div>
+          </div>
           <p class="subtle">教师控制 · 本地 AI 教学网关</p>
         </div>
       </div>
-      <div class="status-pill" id="system-status"><span class="dot"></span><span>未连接</span></div>
     </header>
 
     <nav class="tabs" id="main-tabs" role="tablist" aria-label="教师端页面">
@@ -626,7 +641,7 @@
                 </div>
               </label>
               <label>回答长度上限（Tokens，可留空）<input id="max-tokens" type="number" min="1" placeholder="例如 800" /></label>
-              <label><span><input id="knowledge-strict" type="checkbox" style="width:auto;min-height:auto" /> 严格知识库模式</span></label>
+              <label class="checkbox-row"><input id="knowledge-strict" type="checkbox" /><span>严格知识库模式</span></label>
               <button class="button primary" id="save-scenario">保存当前 AI 策略</button>
               <p class="hint">保存后，这套模型、提示词、知识库和参数会立即应用到学生课堂。</p>
             </div>
@@ -702,7 +717,7 @@
           <section class="section">
             <div class="section-title">
               <h2>知识库管理</h2>
-              <button class="button soft" id="refresh-source-admin" type="button">刷新</button>
+              <button class="button soft" id="refresh-source-admin" type="button">刷新知识库</button>
             </div>
             <div class="list-card" id="source-admin-list"></div>
 
@@ -1546,8 +1561,8 @@
 
       const dashboard = state.dashboard || {};
       const dashboardItems = [
-        ["总请求", dashboard.total_requests ?? 0],
-        ["总 Tokens", dashboard.total_tokens ?? 0],
+        ["请求数", dashboard.total_requests ?? 0],
+        ["Tokens", dashboard.total_tokens ?? 0],
         ["平均延迟", `${dashboard.average_latency_ms ?? 0} ms`],
         ["错误数", dashboard.error_count ?? 0],
       ];
@@ -1569,7 +1584,7 @@
       el.advancedSettingList.innerHTML = state.advancedSettings.map((setting) => {
         const label = settingLabels[setting.key] || setting.key;
         if (setting.type === "bool") {
-          return `<label><span><input type="checkbox" data-setting-key="${escapeHtml(setting.key)}" style="width:auto;min-height:auto" ${setting.value ? "checked" : ""} /> ${escapeHtml(label)}</span></label>`;
+          return `<label class="checkbox-row"><input type="checkbox" data-setting-key="${escapeHtml(setting.key)}" ${setting.value ? "checked" : ""} /><span>${escapeHtml(label)}</span></label>`;
         }
         const inputType = setting.type === "str" ? "text" : "number";
         const step = setting.type === "float" ? "any" : "1";
