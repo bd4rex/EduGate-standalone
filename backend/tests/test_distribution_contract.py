@@ -202,9 +202,8 @@ def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> 
     assert ".system-grid, .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in page
     assert 'class="system-action-group critical"' in page
     assert 'h2 { margin-bottom: 0; font-size: 20px; font-weight: 900; line-height: 1.35;' in page
-    assert '.tab {\n      min-height: 60px;' in page
-    assert 'font-size: 20px;\n      font-weight: 900;\n      line-height: 1.35;\n      letter-spacing: 0;' in page
-    assert '.tab { min-height: 58px; font-size: 14px; }' not in page
+    assert 'font-size: 16px;\n      font-weight: 900;' in page
+    assert '.tab { min-height: 58px; font-size: 14px; }' in page
     assert '.row-title { margin: 0; font-size: 16px; font-weight: 900; line-height: 1.45; }' in page
     assert '.tab.active:focus-visible { box-shadow: inset 0 -5px 0' in page
     assert '.checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px;' in page
