@@ -1,7 +1,123 @@
 import sqlite3
+import threading
+import time
 from pathlib import Path
 
 from app.db import BusinessDB
+
+
+def _log_request(db: BusinessDB, index: int) -> None:
+    db.log_request(
+        route="/chat",
+        scenario_id="default",
+        teacher_id="admin",
+        model="test-model",
+        knowledge_source_id=None,
+        user_message_preview=f"message-{index}",
+        status_code=200,
+        latency_ms=index,
+        usage={"total_tokens": index + 1},
+    )
+
+
+def test_async_writer_batches_logs_and_classroom_records(tmp_path: Path) -> None:
+    db = BusinessDB(
+        str(tmp_path / "async-writer.sqlite3"),
+        write_queue_size=128,
+        write_batch_size=64,
+        write_flush_interval_ms=20,
+    )
+    db.init()
+    db.seed_teacher(username="admin", password="edugate", display_name="Admin", role="admin")
+    db.start_writer()
+    try:
+        for index in range(20):
+            _log_request(db, index)
+            db.record_classroom_turn(
+                classroom_instance_id="async-classroom",
+                teacher_username="admin",
+                student_session_id=f"student-{index}",
+                kind="chat",
+                input_content=f"question-{index}",
+                output_content=f"answer-{index}",
+                status_code=200,
+                latency_ms=index,
+            )
+
+        assert db.flush_writes(timeout=5) is True
+        assert len(db.list_logs(limit=50)) == 20
+        records = db.list_classroom_records(teacher_username="admin")
+        assert records[0]["turn_count"] == 20
+        stats = db.writer_stats()
+        assert stats["written"] == 40
+        assert 1 <= stats["batches"] < stats["written"]
+        assert stats["dropped"] == 0
+
+        db.end_classroom_instance("async-classroom")
+        detail = db.get_classroom_record(records[0]["id"], teacher_username="admin")
+        assert detail is not None and detail["session"]["ended_at"] is not None
+    finally:
+        assert db.stop_writer(timeout=5) is True
+
+
+def test_async_writer_queue_is_bounded_and_reports_drops(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    db = BusinessDB(
+        str(tmp_path / "bounded-writer.sqlite3"),
+        write_queue_size=128,
+        write_batch_size=1,
+        write_flush_interval_ms=1,
+    )
+    db.init()
+    entered = threading.Event()
+    release = threading.Event()
+    original_insert = db._insert_request_log
+
+    def blocked_insert(conn, payload) -> None:
+        entered.set()
+        release.wait(timeout=5)
+        original_insert(conn, payload)
+
+    monkeypatch.setattr(db, "_insert_request_log", blocked_insert)
+    db.start_writer()
+    try:
+        _log_request(db, 0)
+        assert entered.wait(timeout=2)
+        for index in range(1, 132):
+            _log_request(db, index)
+        assert db.writer_stats()["dropped"] >= 3
+    finally:
+        release.set()
+        assert db.stop_writer(timeout=5) is True
+
+
+def test_async_writer_runs_cleanup_on_a_timer(tmp_path: Path, monkeypatch) -> None:
+    db = BusinessDB(
+        str(tmp_path / "cleanup-writer.sqlite3"),
+        cleanup_interval_seconds=0.05,
+        write_flush_interval_ms=1,
+    )
+    db.init()
+    cleanup_calls = 0
+    original_cleanup = db._cleanup_storage
+
+    def tracked_cleanup(conn) -> None:
+        nonlocal cleanup_calls
+        cleanup_calls += 1
+        original_cleanup(conn)
+
+    monkeypatch.setattr(db, "_cleanup_storage", tracked_cleanup)
+    db.start_writer()
+    try:
+        deadline = time.monotonic() + 2
+        while db.writer_stats()["last_cleanup_at"] is None and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert cleanup_calls >= 1
+        assert db.writer_stats()["last_cleanup_at"] is not None
+    finally:
+        assert db.stop_writer(timeout=5) is True
 
 
 def test_sqlite_business_db_stores_teachers_and_logs(tmp_path: Path) -> None:

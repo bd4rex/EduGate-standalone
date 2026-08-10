@@ -290,6 +290,10 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
     assert "PYTHON_RUNNER_MAX_CONCURRENCY=4" in example
     assert "PYTHON_RUNNER_MAX_QUEUE=64" in example
     assert "CLASSROOM_RECORDING_ENABLED=true" in example
+    assert "DB_WRITE_QUEUE_SIZE=4096" in example
+    assert "DB_WRITE_BATCH_SIZE=100" in example
+    assert "DB_WRITE_FLUSH_INTERVAL_MS=20" in example
+    assert "DB_CLEANUP_INTERVAL_SECONDS=300" in example
     assert "turn.computer_name" in page
     assert "turn.client_ip" in page
     assert "匿名学生" not in page

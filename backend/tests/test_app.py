@@ -828,6 +828,8 @@ def test_system_management_requires_supervised_launcher(
 
     assert status_response.status_code == 200
     assert status_response.json()["supervised"] is False
+    assert status_response.json()["database_writer"]["enabled"] is True
+    assert status_response.json()["database_writer"]["queue_capacity"] >= 128
     assert action_response.status_code == 409
 
 

@@ -109,6 +109,10 @@ class Settings:
     max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "200"))
     log_message_preview: bool = _as_bool("LOG_MESSAGE_PREVIEW", False)
     log_max_records: int = int(os.getenv("LOG_MAX_RECORDS", "5000"))
+    db_write_queue_size: int = int(os.getenv("DB_WRITE_QUEUE_SIZE", "4096"))
+    db_write_batch_size: int = int(os.getenv("DB_WRITE_BATCH_SIZE", "100"))
+    db_write_flush_interval_ms: int = int(os.getenv("DB_WRITE_FLUSH_INTERVAL_MS", "20"))
+    db_cleanup_interval_seconds: int = int(os.getenv("DB_CLEANUP_INTERVAL_SECONDS", "300"))
     cors_origins: tuple[str, ...] = tuple(
         origin.strip()
         for origin in os.getenv("CORS_ORIGINS", "").split(",")

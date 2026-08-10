@@ -68,6 +68,10 @@ business_db = BusinessDB(
     classroom_record_retention_days=settings.classroom_record_retention_days,
     classroom_record_max_records=settings.classroom_record_max_records,
     classroom_record_max_content_chars=settings.classroom_record_max_content_chars,
+    write_queue_size=settings.db_write_queue_size,
+    write_batch_size=settings.db_write_batch_size,
+    write_flush_interval_ms=settings.db_write_flush_interval_ms,
+    cleanup_interval_seconds=settings.db_cleanup_interval_seconds,
 )
 secret_store = SecretStore(settings.secret_store_path, mode=settings.secret_store_mode)
 langfuse = LangfuseClient()
@@ -257,6 +261,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         display_name="教师管理员",
         role="admin",
     )
+    business_db.start_writer()
     if settings.portable_mode:
         classroom_access.end()
     await python_pool.start()
@@ -266,6 +271,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await python_pool.stop()
         if python_record_tasks:
             await asyncio.gather(*list(python_record_tasks), return_exceptions=True)
+        await asyncio.to_thread(business_db.stop_writer)
         await asyncio.to_thread(business_db.checkpoint)
         await asyncio.to_thread(knowledge_store.checkpoint)
         await client.close()
@@ -1856,6 +1862,7 @@ async def admin_system_status() -> dict[str, Any]:
         platform_key_set=secret_store.has("system:platform_api_key") or bool(settings.platform_api_key),
         ),
         "python_runner_pool": python_pool.stats(),
+        "database_writer": business_db.writer_stats(),
     }
 
 

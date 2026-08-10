@@ -41,9 +41,15 @@ Each turn stores a random internal student-session ID, student-supplied computer
 - Administrators may review and delete all local teacher records.
 - `CLASSROOM_RECORDING_ENABLED=false` stops new content collection without deleting existing data.
 - Defaults are 30-day retention, 20,000 total turns, and 12,000 characters for each input and output field.
-- Cleanup runs when a turn is stored or a teacher opens the records list.
+- Cleanup runs on the database writer timer every 300 seconds by default, and once at startup.
 - Records live in `edugate.sqlite3`, are included in full backups, and cascade-delete with their classroom.
 - Technical request logs and classroom content are separate controls. `LOG_MESSAGE_PREVIEW=false` does not disable classroom records, and disabling classroom records does not change technical logging.
+
+## Asynchronous SQLite writes
+
+Technical request logs and classroom turns enter a bounded in-memory queue. A dedicated SQLite writer combines them into transactions of up to 100 items, with a default maximum wait of 20 milliseconds. The default queue capacity is 4,096 items. A full queue drops only new log items and increments a warning counter, so log pressure cannot consume unbounded memory or hold up classroom responses.
+
+Reading or deleting records, ending a class, creating a backup, and shutting down insert a write barrier and wait for all earlier items to commit. The system status endpoint reports queued, written, batched, dropped, and failed counts plus the last cleanup time. `DB_WRITE_QUEUE_SIZE`, `DB_WRITE_BATCH_SIZE`, `DB_WRITE_FLUSH_INTERVAL_MS`, and `DB_CLEANUP_INTERVAL_SECONDS` tune this behavior and require a restart.
 
 ## Teacher experience
 
