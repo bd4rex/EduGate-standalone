@@ -664,6 +664,16 @@
     .icon-chevron { --icon-url: url("assets/icons/tabler/chevron-down.svg"); }
     .icon-save { --icon-url: url("assets/icons/tabler/device-floppy.svg"); }
     .icon-circle-check { --icon-url: url("assets/icons/tabler/circle-check.svg"); }
+    .icon-database { --icon-url: url("assets/icons/tabler/database.svg"); }
+    .icon-upload { --icon-url: url("assets/icons/tabler/upload.svg"); }
+    .icon-school { --icon-url: url("assets/icons/tabler/school.svg"); }
+    .icon-desktop { --icon-url: url("assets/icons/tabler/device-desktop.svg"); }
+    .icon-message { --icon-url: url("assets/icons/tabler/message.svg"); }
+    .icon-code { --icon-url: url("assets/icons/tabler/code.svg"); }
+    .icon-file-description { --icon-url: url("assets/icons/tabler/file-description.svg"); }
+    .icon-folder-open { --icon-url: url("assets/icons/tabler/folder-open.svg"); }
+    .icon-dots { --icon-url: url("assets/icons/tabler/dots-vertical.svg"); }
+    .icon-cloud-upload { --icon-url: url("assets/icons/tabler/cloud-upload.svg"); }
 
     .visually-hidden {
       position: absolute !important;
@@ -680,7 +690,7 @@
     body { background: var(--bg); }
     .shell {
       width: 100%;
-      max-width: 1536px;
+      max-width: 1680px;
       min-height: 100vh;
       margin: 0 auto;
       overflow: visible;
@@ -995,6 +1005,290 @@
       .temperature-control { grid-template-columns: auto minmax(80px, 1fr) auto; }
       .temperature-control #temperature-value { grid-column: 1 / -1; }
     }
+
+    /* Reference-matched secondary workspaces */
+    .section-icon-title { display: flex; align-items: center; gap: 12px; }
+    .section-icon-title .ui-icon { width: 25px; height: 25px; flex-basis: 25px; color: var(--brand); }
+
+    .records-overview-card { min-height: 313px; padding: 26px !important; }
+    .records-overview-card .section-title { margin-bottom: 18px !important; }
+    .records-overview-card .section-title .button { min-width: 134px; }
+    #recording-note.recording-note {
+      display: flex;
+      min-height: 56px;
+      align-items: center;
+      gap: 13px;
+      padding: 13px 17px;
+      border-color: #cbdcff;
+      border-radius: 8px;
+      background: #f7faff;
+      color: #435370;
+    }
+    #recording-note .ui-icon { width: 24px; height: 24px; flex-basis: 24px; color: var(--brand); }
+    #record-summary { margin-top: 24px !important; }
+    #record-summary .record-summary-card {
+      min-height: 98px;
+      flex-direction: row;
+      align-items: center;
+      gap: 18px;
+      padding: 16px 18px;
+      background: #fff;
+    }
+    .record-summary-icon {
+      display: grid !important;
+      width: 58px;
+      height: 58px;
+      min-height: 58px !important;
+      flex: 0 0 58px;
+      place-items: center;
+      border-radius: 50%;
+      background: #eaf2ff;
+      color: var(--brand);
+    }
+    .record-summary-card.green .record-summary-icon { background: #e9f9f0; color: #14a768; }
+    .record-summary-card.violet .record-summary-icon { background: #eeeeff; color: #5d5ee8; }
+    .record-summary-card.orange .record-summary-icon { background: #fff1e5; color: #ed7823; }
+    .record-summary-icon .ui-icon { width: 29px; height: 29px; flex-basis: 29px; }
+    .record-summary-copy { min-height: 0 !important; }
+    #record-summary .record-summary-copy > span { min-height: 0; font-size: 14px; }
+    #record-summary .record-summary-copy strong { margin-top: 4px; font-size: 25px; line-height: 1.1; }
+    .record-layout { grid-template-columns: minmax(360px, .52fr) minmax(0, 1fr); }
+    .records-list-card,
+    .records-detail-card { min-height: 344px; padding: 24px 26px !important; }
+    .record-session-list { min-height: 238px; max-height: 680px; }
+    .record-empty-state {
+      display: grid;
+      min-height: 238px;
+      place-items: center;
+      align-content: center;
+      gap: 10px;
+      padding: 24px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 9px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .record-empty-state .ui-icon { width: 48px; height: 48px; color: #c8cfda; }
+    .record-empty-state p { margin: 0; }
+    .record-empty-state .row-title { color: var(--ink); font-size: 18px; }
+    .record-toolbar { gap: 18px; margin-bottom: 24px; }
+    .record-toolbar select { min-height: 54px; }
+    .record-detail-empty {
+      display: flex;
+      min-height: 98px;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: #8b96a8;
+      font-size: 16px;
+    }
+    .record-detail-empty .ui-icon { width: 30px; height: 30px; color: #c7ced9; }
+
+    #settings-view { gap: 18px; }
+    #settings-view { padding-top: 10px; }
+    #records-view { padding-top: 20px; }
+    .resource-knowledge-section,
+    .resource-upload-section,
+    .resource-files-section { padding: 22px 26px 26px !important; }
+    .knowledge-source-frame { overflow: hidden; border: 1px solid var(--line); border-radius: 10px; }
+    .knowledge-source-frame > .list-card { border: 0 !important; border-radius: 0 !important; }
+    .resource-source-row { min-height: 132px; padding: 20px 22px; }
+    .resource-source-row .row-main { flex: 1 1 auto; }
+    .resource-source-row .row-title { font-size: 18px; }
+    .resource-icon-tile {
+      display: grid;
+      width: 64px;
+      height: 64px;
+      flex: 0 0 64px;
+      place-items: center;
+      border-radius: 16px;
+      background: #f2f6fc;
+      color: var(--brand);
+    }
+    .resource-icon-tile .ui-icon { width: 32px; height: 32px; flex-basis: 32px; }
+    .resource-icon-tile.neutral { color: #7a879b; }
+    .resource-description { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+    .resource-source-row .row-actions { gap: 14px; }
+    .resource-source-row .row-actions > .button { min-width: 150px; }
+    .resource-source-row .action-menu { min-width: 152px; }
+    .resource-source-row .action-menu > summary { gap: 9px; border: 1px solid var(--line); background: var(--soft); }
+    .resource-source-row .action-menu .ui-icon { width: 18px; height: 18px; }
+    .knowledge-source-frame > .compact-panel { border-top: 1px solid var(--line); border-radius: 0; }
+    .knowledge-source-frame > .compact-panel > summary { min-height: 58px; padding: 12px 24px; font-size: 16px; }
+    .source-editor-body { padding: 0 24px 20px; }
+    .resource-upload-section .section-title { margin-bottom: 16px !important; }
+    .resource-upload-section { min-height: 241px; }
+    .resource-upload-section .upload-card { padding: 0; border: 0; }
+    .resource-upload-section .upload-layout {
+      grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.35fr) auto;
+      column-gap: 30px;
+      row-gap: 14px;
+    }
+    .resource-upload-section .file-picker { min-height: 54px; }
+    .resource-upload-section select { min-height: 54px; }
+    .resource-upload-section #upload-file { min-width: 166px; min-height: 54px; }
+    .resource-upload-section .hint { margin-top: 0; }
+    .resource-files-section { min-height: 214px; }
+    .resource-files-section .list-card { min-height: 92px; }
+    .resource-file-empty,
+    .resource-file-row { display: flex; min-height: 92px; align-items: center; gap: 22px; padding: 16px 22px; }
+    .resource-file-empty .resource-icon-tile,
+    .resource-file-row .resource-icon-tile { width: 54px; height: 54px; flex-basis: 54px; border-radius: 14px; }
+    .resource-file-empty .resource-icon-tile .ui-icon,
+    .resource-file-row .resource-icon-tile .ui-icon { width: 27px; height: 27px; }
+
+    .system-request-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .system-request-block > .section-title { margin-bottom: 10px !important; }
+    .system-request-block #request-log-list { margin-top: 12px; }
+    .system-request-block #request-log-list .row { min-height: 48px; }
+
+    @media (max-width: 1100px) and (min-width: 761px) {
+      .topbar { min-height: 68px; padding: 9px 20px; }
+      .brand-lockup { gap: 12px; }
+      .brand-mark { width: 44px; height: 44px; flex-basis: 44px; }
+      .brand-copy h1 { font-size: 20px; }
+      .brand-copy > p { margin-top: 2px; font-size: 12px; }
+      .status-pill { min-height: 36px; padding: 0 14px; font-size: 13px; }
+      .tabs { min-height: 44px; padding: 0 22px; }
+      .tab { min-width: 112px; min-height: 44px; padding: 0 16px; gap: 8px; font-size: 13px; }
+      .tab .ui-icon { width: 17px; height: 17px; flex-basis: 17px; }
+      .content { padding: 9px 20px 16px; }
+      #system-view { gap: 5px; }
+      #system-view > .section { padding: 9px 13px; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 51, 78, .04); }
+      #system-view .section-title { margin-bottom: 8px; }
+      #system-view h2 { font-size: 15px; }
+      #system-view .button { min-height: 30px; padding: 0 13px; border-radius: 6px; font-size: 12px; }
+      #system-view .button.mini { min-height: 26px; padding: 0 9px; font-size: 10px; }
+      #system-view .system-actions { gap: 8px; }
+      #system-view .system-action-group { gap: 8px; }
+      #system-view .system-action-group.critical { padding-left: 8px; }
+      #system-view .system-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+      #system-view .system-metric { min-height: 54px; padding: 7px 10px; border-radius: 7px; }
+      #system-view .system-metric span { min-height: 13px; font-size: 10px; line-height: 13px; }
+      #system-view .system-metric strong { font-size: 14px; line-height: 18px; }
+      #system-view .system-metric-value { min-height: 24px; margin-top: 1px; }
+      #system-view .system-metric-value .button { min-height: 25px; }
+      #system-view .runtime-stat + .runtime-stat { padding-left: 8px; }
+      #system-view .system-request-block { margin-top: 8px; padding-top: 8px; }
+      #system-view .system-request-block > .section-title { margin-bottom: 6px !important; }
+      #system-view .system-request-block #request-log-list { margin-top: 8px; }
+      #system-view .system-request-block #request-log-list .row { min-height: 34px; padding: 7px 10px; }
+      #system-view .collapsible-panel > summary { min-height: 28px; padding: 2px 0; font-size: 15px; }
+      #system-view .collapsible-panel[open] > summary { margin-bottom: 3px; }
+      #system-view .list-card { border-radius: 7px; }
+      #system-view .list-card[style] { padding: 10px !important; }
+      #system-view .stack { gap: 8px; }
+      #system-view .hint { font-size: 10px; line-height: 1.45; }
+      #system-view .field-label,
+      #system-view label { gap: 3px; font-size: 10px; }
+      #system-view input,
+      #system-view select { min-height: 28px; padding: 0 9px; border-radius: 5px; font-size: 11px; }
+      #system-view .file-picker { min-height: 30px; border-radius: 5px; }
+      #system-view .file-picker-button { min-height: 28px; padding: 0 10px; font-size: 11px; }
+      #system-view .provider-picker { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 7px; }
+      #system-view .upstream-provider-heading { min-height: 34px; padding: 6px 11px; }
+      #system-view .upstream-provider-heading h3,
+      #system-view .imported-model-heading h3 { font-size: 12px; }
+      #system-view .upstream-provider-body { padding: 9px 11px; }
+      #system-view .provider-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+      #system-view .provider-form-grid .full { grid-column: auto; }
+      #system-view .api-endpoint-preview { grid-column: 1 / -1; margin: -2px 0 0; font-size: 9px; }
+      #system-view .provider-actions { margin-top: 7px; }
+      #system-view .provider-actions + .hint { margin: 6px 0 0; }
+      #system-view .imported-models { margin-top: 8px; }
+      #system-view .imported-model-heading { margin-bottom: 5px; }
+      #system-view .catalog-provider-heading { min-height: 28px; padding: 4px 9px; }
+      #system-view .catalog-model-row { min-height: 42px; grid-template-columns: minmax(150px, 1fr) minmax(220px, .9fr) auto; gap: 8px; padding: 5px 9px; }
+      #system-view .catalog-display-name input { min-height: 27px; }
+      #system-view .catalog-model-id { font-size: 11px; }
+      #system-view .catalog-model-key,
+      #system-view .row-meta { font-size: 9px; }
+      #system-view .badge { min-height: 17px; padding: 0 6px; border-radius: 5px; font-size: 9px; }
+      #system-view .log-view { max-height: 180px; padding: 8px 10px; font-size: 8px; line-height: 1.35; }
+      #system-view .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 18px; }
+      #system-view .setting-list label { grid-template-columns: minmax(95px, .7fr) minmax(0, 1.6fr); align-items: center; }
+      #system-view .setting-list .checkbox-row { display: flex; min-height: 28px; }
+      #system-view .setting-list input[type="checkbox"] { width: 15px; height: 15px; min-height: 15px; }
+      #system-view #advanced-setting-list + .stack { margin-top: 8px !important; }
+      #system-view .advanced-settings-panel .actions { gap: 8px; }
+      #system-view .footer-note { font-size: 10px; }
+
+      #system-view .system-overview-section { padding-top: 7px; padding-bottom: 7px; }
+      #system-view .system-overview-section .system-metric { min-height: 46px; padding-top: 5px; padding-bottom: 5px; }
+      #system-view #system-metrics .system-metric strong { font-size: 12px; }
+      #system-view #system-metrics .system-metric-value .button { min-height: 22px; padding: 0 6px; font-size: 9px; }
+      #system-view .system-overview-section .system-request-block #request-log-list .row { min-height: 28px; padding-top: 4px; padding-bottom: 4px; }
+      #system-view > .section:has(#backup-panel) { padding-top: 5px; padding-bottom: 6px; }
+      #system-view #backup-panel > summary { min-height: 24px; }
+      #system-view #backup-panel > .list-card { padding: 4px 6px !important; }
+      #system-view #backup-panel .stack { gap: 2px; }
+      #system-view #backup-panel .button { min-height: 24px; }
+      #system-view #backup-panel .file-picker { min-height: 24px; }
+      #system-view #backup-panel .file-picker-button { min-height: 22px; }
+      #system-view #backup-panel .hint { margin: 1px 0 0; line-height: 1.15; }
+
+      #system-view > .section:has(#model-api-panel) { padding-top: 5px; padding-bottom: 7px; }
+      #system-view #model-api-panel > summary { min-height: 24px; }
+      #system-view #model-api-panel > .hint { margin: 0 0 6px !important; line-height: 1.25; }
+      #system-view #model-api-panel .provider-picker { margin-bottom: 3px; }
+      #system-view #model-api-panel .upstream-provider-heading { min-height: 25px; padding: 3px 8px; }
+      #system-view #model-api-panel .upstream-provider-body { padding: 4px 8px; }
+      #system-view #model-api-panel .provider-form-grid { gap: 1px 9px; }
+      #system-view #model-api-panel input,
+      #system-view #model-api-panel select { min-height: 20px; height: 20px; padding-top: 0; padding-bottom: 0; }
+      #system-view #model-api-panel .api-endpoint-preview { line-height: 1.2; }
+      #system-view #model-api-panel .provider-actions { margin-top: 1px; }
+      #system-view #model-api-panel .provider-actions .button { min-height: 22px; }
+      #system-view #model-api-panel .provider-actions + .hint { margin: 1px 0 0; line-height: 1.1; }
+      #system-view #model-api-panel .imported-models { margin-top: 3px; }
+      #system-view #model-api-panel .imported-model-heading { margin-bottom: 2px; }
+      #system-view #model-api-panel .catalog-provider-heading { min-height: 21px; padding: 2px 7px; }
+      #system-view #model-api-panel .catalog-model-row { min-height: 30px; padding: 2px 7px; line-height: 1.15; }
+      #system-view #model-api-panel .catalog-display-name input { min-height: 20px; height: 20px; }
+
+      #system-view #system-log-panel > summary { min-height: 24px; }
+
+      #system-view > .section:has(#advanced-settings-panel) { padding-top: 5px; padding-bottom: 7px; }
+      #system-view #advanced-settings-panel > summary { min-height: 24px; }
+      #system-view #advanced-settings-panel > .list-card { padding: 7px 10px !important; }
+      #system-view #advanced-settings-panel .setting-list { gap: 1px 18px; }
+      #system-view #advanced-settings-panel .setting-list label { min-height: 21px; gap: 5px; line-height: 1.1; }
+      #system-view #advanced-settings-panel .setting-list input:not([type="checkbox"]) { min-height: 21px; height: 21px; padding: 0 7px; }
+      #system-view #advanced-settings-panel .setting-list .checkbox-row { min-height: 21px; }
+      #system-view #advanced-settings-panel #advanced-setting-list + .stack { gap: 5px; margin-top: 5px !important; }
+      #system-view #advanced-settings-panel #platform-api-key { min-height: 23px; }
+      #system-view #advanced-settings-panel .actions .button { min-height: 27px; }
+      #system-view #advanced-settings-panel .hint { margin: 0; }
+    }
+
+    @media (max-width: 900px) and (min-width: 761px) {
+      .record-layout { grid-template-columns: minmax(280px, .62fr) minmax(0, 1fr); }
+    }
+
+    @media (max-width: 760px) {
+      #record-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .record-layout { grid-template-columns: 1fr; }
+      .records-list-card,
+      .records-detail-card { min-height: 0; }
+      .resource-source-row { align-items: stretch; flex-direction: column; }
+      .resource-source-row .row-actions { width: 100%; }
+      .resource-source-row .row-actions > .button,
+      .resource-source-row .row-actions > .action-menu { width: 100%; }
+      .resource-upload-section .upload-layout { grid-template-columns: 1fr; }
+      .resource-upload-section .hint { grid-column: auto; }
+      .resource-upload-section #upload-file { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      #record-summary { grid-template-columns: 1fr; }
+      #record-summary .record-summary-card { min-height: 82px; }
+      .records-overview-card,
+      .resource-knowledge-section,
+      .resource-upload-section,
+      .resource-files-section { padding: 15px !important; }
+    }
   </style>
 </head>
 <body>
@@ -1165,25 +1459,25 @@
       </section>
 
       <section id="records-view" hidden>
-        <section class="section">
+        <section class="section records-overview-card">
           <div class="section-title">
             <div>
               <h2>课堂记录</h2>
               <p class="hint" style="margin:6px 0 0">按学生电脑名和 IP 查看 AI 对话与 Python 运行记录。</p>
             </div>
-            <button class="button soft" id="refresh-records" type="button">刷新记录</button>
+            <button class="button soft" id="refresh-records" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新记录</span></button>
           </div>
           <div class="recording-note" id="recording-note">正在读取本机记录设置。</div>
           <div class="system-grid record-summary" id="record-summary" style="margin-top:14px"></div>
         </section>
 
         <div class="record-layout">
-          <section class="section">
+          <section class="section records-list-card">
             <div class="section-title"><h2>课堂列表</h2></div>
             <div class="record-session-list" id="record-session-list"></div>
           </section>
 
-          <section class="section record-detail">
+          <section class="section record-detail records-detail-card">
             <div class="section-title">
               <div>
                 <h2 id="record-detail-title">选择一节课堂</h2>
@@ -1207,17 +1501,16 @@
       </section>
 
       <section id="settings-view" hidden>
-        <div class="settings-grid single">
-          <section class="section">
-            <div class="section-title">
-              <h2>知识库管理</h2>
-              <button class="button soft" id="refresh-source-admin" type="button">刷新知识库</button>
-            </div>
+        <section class="section resource-knowledge-section">
+          <div class="section-title">
+            <h2 class="section-icon-title"><span class="ui-icon icon-database" aria-hidden="true"></span><span>知识库管理</span></h2>
+            <button class="button soft" id="refresh-source-admin" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新知识库</span></button>
+          </div>
+          <div class="knowledge-source-frame">
             <div class="list-card" id="source-admin-list"></div>
-
-            <details class="collapsible-panel compact-panel" id="source-editor-panel" style="margin-top:14px">
+            <details class="collapsible-panel compact-panel" id="source-editor-panel">
               <summary>新建或编辑知识库</summary>
-              <div class="list-card" style="padding:18px">
+              <div class="source-editor-body">
                 <div class="stack">
                   <label>知识库 ID<input id="new-source-id" placeholder="例如 ip-address" /></label>
                   <label>知识库名称<input id="new-source-name" placeholder="例如 IP 地址教学知识库" /></label>
@@ -1229,30 +1522,32 @@
                 </div>
               </div>
             </details>
+          </div>
+        </section>
 
-            <div class="section-title" style="margin-top:20px"><h2>上传资料</h2></div>
-            <div class="list-card upload-card">
-              <div class="upload-layout">
-                <label>上传到哪个知识库<select id="upload-source"></select></label>
-                <div class="upload-file-field">
-                  <span class="field-label">选择文件</span>
-                  <div class="file-picker">
-                    <input class="file-input-hidden" id="knowledge-file" type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.xml,.log,.pdf" aria-hidden="true" tabindex="-1" hidden />
-                    <button class="file-picker-button" id="knowledge-file-trigger" type="button">选择文件</button>
-                    <span class="file-picker-name" id="knowledge-file-name">未选择文件</span>
-                  </div>
+        <section class="section resource-upload-section">
+          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-upload" aria-hidden="true"></span><span>上传资料</span></h2></div>
+          <div class="list-card upload-card">
+            <div class="upload-layout">
+              <label>上传到哪个知识库<select id="upload-source"></select></label>
+              <div class="upload-file-field">
+                <span class="field-label">选择文件</span>
+                <div class="file-picker">
+                  <input class="file-input-hidden" id="knowledge-file" type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.xml,.log,.pdf" aria-hidden="true" tabindex="-1" hidden />
+                  <button class="file-picker-button" id="knowledge-file-trigger" type="button">选择文件</button>
+                  <span class="file-picker-name" id="knowledge-file-name">未选择文件</span>
                 </div>
-                <button class="button primary" id="upload-file">上传并索引</button>
-                <p class="hint">支持 txt、md、csv、json、html、xml、log、pdf。PDF 会抽取文本，扫描版图片 PDF 可能无法识别。</p>
               </div>
+              <button class="button primary" id="upload-file"><span class="ui-icon icon-cloud-upload" aria-hidden="true"></span><span>上传并索引</span></button>
+              <p class="hint">支持 txt、md、csv、json、html、xml、log、pdf。PDF 会抽取文本，扫描版图片 PDF 可能无法识别。</p>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        <section class="section">
+        <section class="section resource-files-section">
           <div class="section-title">
-            <h2>已上传知识库文件</h2>
-            <button class="button soft" id="reload-files">刷新文件</button>
+            <h2 class="section-icon-title"><span class="ui-icon icon-file-description" aria-hidden="true"></span><span>已上传知识库文件</span></h2>
+            <button class="button soft" id="reload-files"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新文件</span></button>
           </div>
           <div class="list-card" id="file-list"></div>
         </section>
@@ -1260,7 +1555,7 @@
       </section>
 
       <section id="system-view" hidden data-admin-only>
-        <section class="section">
+        <section class="section system-overview-section">
           <div class="section-title">
             <div class="system-status-heading">
               <h2>运行状态</h2>
@@ -1278,16 +1573,15 @@
             </div>
           </div>
           <div class="system-grid" id="system-metrics"></div>
+          <div class="system-request-block">
+            <div class="section-title"><h2>请求统计</h2></div>
+            <div class="system-grid" id="dashboard-metrics"></div>
+            <div class="list-card" id="request-log-list"></div>
+          </div>
         </section>
 
         <section class="section">
-          <div class="section-title"><h2>请求统计</h2></div>
-          <div class="system-grid" id="dashboard-metrics"></div>
-          <div class="list-card" id="request-log-list" style="margin-top:14px"></div>
-        </section>
-
-        <section class="section">
-          <details class="collapsible-panel" id="backup-panel">
+          <details class="collapsible-panel" id="backup-panel" open>
             <summary>备份与恢复</summary>
             <div class="list-card" style="padding:18px">
               <div class="stack">
@@ -1310,7 +1604,7 @@
         </section>
 
         <section class="section">
-          <details class="collapsible-panel model-api-panel" id="model-api-panel">
+          <details class="collapsible-panel model-api-panel" id="model-api-panel" open>
             <summary>上游模型 API 管理</summary>
             <p class="hint" style="margin:4px 0 14px">可配置多个上游供应商；同名模型会按“供应商 + 上游模型 ID”分别管理。</p>
             <div class="provider-picker">
@@ -1372,14 +1666,14 @@
         </section>
 
         <section class="section">
-          <details class="collapsible-panel system-log-panel" id="system-log-panel">
+          <details class="collapsible-panel system-log-panel" id="system-log-panel" open>
             <summary>系统日志</summary>
             <pre class="log-view" id="launcher-log-view">暂无系统日志</pre>
           </details>
         </section>
 
         <section class="section">
-          <details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">
+          <details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel" open>
             <summary>高级设置</summary>
             <div class="list-card" style="padding:18px">
               <div class="setting-list" id="advanced-setting-list"></div>
@@ -1941,21 +2235,22 @@
         el.uploadSource.value = activeSource;
       }
       el.sourceAdminList.innerHTML = writableSources.map((source) => `
-        <div class="row">
+        <div class="row resource-source-row">
+          <span class="resource-icon-tile"><span class="ui-icon icon-book" aria-hidden="true"></span></span>
           <div class="row-main">
             <p class="row-title">${escapeHtml(source.name)}</p>
             <div class="row-meta">
               <span class="badge">${escapeHtml(source.id)}</span>
               <span>${source.file_count} 文件</span>
               <span>${source.chunk_count} 片段</span>
-              ${source.description ? `<span>${escapeHtml(source.description)}</span>` : ""}
-              ${source.id === "general" ? `<span class="badge">默认知识库，不可删除</span>` : ""}
+              ${source.id === "general" ? `<span class="badge">默认知识库</span><span class="badge">不可删除</span>` : ""}
             </div>
+            ${source.description ? `<p class="resource-description">${escapeHtml(source.description)}</p>` : ""}
           </div>
           <div class="actions row-actions">
-            <button class="button soft" type="button" data-source-open="${escapeHtml(source.id)}">打开文件夹</button>
+            <button class="button soft" type="button" data-source-open="${escapeHtml(source.id)}"><span class="ui-icon icon-folder-open" aria-hidden="true"></span><span>打开文件夹</span></button>
             <details class="action-menu">
-              <summary>更多操作</summary>
+              <summary><span class="ui-icon icon-dots" aria-hidden="true"></span><span>更多操作</span></summary>
               <div class="action-menu-panel">
                 <button class="button soft" type="button" data-source-scan="${escapeHtml(source.id)}">扫描同步</button>
                 <button class="button ghost" type="button" data-source-edit="${escapeHtml(source.id)}">编辑</button>
@@ -2148,11 +2443,12 @@
 
     function renderFiles() {
       if (!state.files.length) {
-        el.fileList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">暂无文件</p><div class="row-meta">上传 txt、md、pdf 等文件后，学生问答会检索这些内容。</div></div></div>`;
+        el.fileList.innerHTML = `<div class="resource-file-empty"><span class="resource-icon-tile neutral"><span class="ui-icon icon-file-description" aria-hidden="true"></span></span><div class="row-main"><p class="row-title">暂无文件</p><div class="row-meta">上传 txt、md、pdf 等文件后，学生问答会检索这些内容。</div></div></div>`;
         return;
       }
       el.fileList.innerHTML = state.files.map((file) => `
-        <div class="row">
+        <div class="row resource-file-row">
+          <span class="resource-icon-tile neutral"><span class="ui-icon icon-file-description" aria-hidden="true"></span></span>
           <div class="row-main">
             <p class="row-title">${escapeHtml(file.filename)}</p>
             <div class="row-meta">
@@ -2313,17 +2609,21 @@
         result.python += Number(record.python_count || 0);
         return result;
       }, { students: 0, turns: 0, python: 0 });
-      el.recordingNote.textContent = state.classroomRecordConfig.recording_enabled
+      const recordingMessage = state.classroomRecordConfig.recording_enabled
         ? `课堂记录包含自动生成的设备标签和请求 IP，仅保存在这台教师电脑中，默认保留 ${state.classroomRecordConfig.retention_days} 天。`
         : "课堂内容记录当前已关闭。管理员可在“系统 -> 高级设置”中启用。";
+      el.recordingNote.innerHTML = `<span class="ui-icon icon-info" aria-hidden="true"></span><span>${escapeHtml(recordingMessage)}</span>`;
       const summary = [
-        ["课堂数", records.length],
-        ["学生电脑合计", totals.students],
-        ["互动记录", totals.turns],
-        ["Python 运行", totals.python],
+        ["课堂数", records.length, "school", "blue"],
+        ["学生电脑合计", totals.students, "desktop", "green"],
+        ["互动记录", totals.turns, "message", "violet"],
+        ["Python 运行", totals.python, "code", "orange"],
       ];
-      el.recordSummary.innerHTML = summary.map(([label, value]) => `
-        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      el.recordSummary.innerHTML = summary.map(([label, value, icon, tone]) => `
+        <div class="system-metric record-summary-card ${tone}">
+          <span class="record-summary-icon"><span class="ui-icon icon-${icon}" aria-hidden="true"></span></span>
+          <span class="record-summary-copy"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></span>
+        </div>
       `).join("");
 
       const selectedId = state.selectedClassroomRecord?.session?.id || "";
@@ -2333,7 +2633,7 @@
           <span>${escapeHtml(record.teacher_display_name || record.teacher_username)} · ${escapeHtml(formatRecordTime(record.started_at))}</span>
           <span>${record.student_count} 台学生电脑 · ${record.chat_count} 次对话 · ${record.python_count} 次 Python</span>
         </button>
-      `).join("") : `<div class="row"><div class="row-main"><p class="row-title">暂无课堂记录</p><div class="row-meta">学生开始对话或运行 Python 后会出现在这里。</div></div></div>`;
+      `).join("") : `<div class="record-empty-state"><span class="ui-icon icon-records" aria-hidden="true"></span><p class="row-title">暂无课堂记录</p><p>学生开始对话或运行 Python 后会出现在这里。</p></div>`;
       el.recordSessionList.querySelectorAll("[data-record-id]").forEach((button) => {
         button.addEventListener("click", () => loadClassroomRecord(button.dataset.recordId));
       });
@@ -2345,7 +2645,7 @@
         el.recordDetailTitle.textContent = "选择一节课堂";
         el.recordDetailMeta.textContent = "选择左侧课堂后查看记录。";
         el.recordStudentFilter.innerHTML = `<option value="all">全部电脑</option>`;
-        el.recordTurnList.innerHTML = `<div class="recording-note">暂无可显示的课堂内容。</div>`;
+        el.recordTurnList.innerHTML = `<div class="record-detail-empty"><span class="ui-icon icon-file-description" aria-hidden="true"></span><span>暂无可显示的课堂内容。</span></div>`;
         el.deleteRecord.hidden = true;
         return;
       }

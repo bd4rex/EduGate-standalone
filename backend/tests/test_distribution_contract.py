@@ -205,19 +205,16 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     assert 'id="model-api-panel"' in system
     assert system.index('id="dashboard-metrics"') < system.index('id="model-api-panel"')
     assert system.index('id="model-api-panel"') < system.index('id="system-log-panel"')
-    assert 'id="model-api-panel" open' not in page
+    assert 'id="model-api-panel" open' in page
     assert "模型与供应商管理" not in page
     assert "下游 API 密钥" in page
     system_log = page.index('id="system-log-panel"')
     model_api = page.index('id="model-api-panel"')
     advanced = page.index('id="advanced-settings-panel"')
     assert model_api < system_log < advanced
-    assert '<details class="collapsible-panel system-log-panel" id="system-log-panel">' in page
-    assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">' in page
-    assert 'id="system-log-panel" open' not in page
-    assert 'id="advanced-settings-panel" open' not in page
-    assert '<details class="collapsible-panel" id="backup-panel">' in page
-    assert 'id="backup-panel" open' not in page
+    assert '<details class="collapsible-panel system-log-panel" id="system-log-panel" open>' in page
+    assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel" open>' in page
+    assert '<details class="collapsible-panel" id="backup-panel" open>' in page
     backup = page.split('id="backup-panel"', 1)[1].split("</details>", 1)[0]
     backup_actions = backup.split('<div class="actions" style="justify-content:flex-start">', 1)[1].split(
         "</div>", 1
@@ -241,7 +238,9 @@ def test_resource_view_exposes_complete_folder_management() -> None:
     assert 'data-source-delete=' in page
     assert '/open-folder`' in page
     assert '/scan`' in page
-    assert "默认知识库，不可删除" in page
+    assert '<span class="badge">默认知识库</span><span class="badge">不可删除</span>' in page
+    assert 'class="knowledge-source-frame"' in resources
+    assert 'class="resource-icon-tile"' in page
 
 
 def test_teacher_tabs_and_primary_status_copy_are_chinese_first() -> None:
@@ -280,7 +279,8 @@ def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> 
     assert '.checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px;' in page
     assert 'input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px;' in page
     assert '.upload-card { width: 100%; padding: 16px; }' in page
-    assert 'id="refresh-source-admin" type="button">刷新知识库</button>' in page
+    assert 'id="refresh-source-admin" type="button"><span class="ui-icon icon-refresh"' in page
+    assert '<span>刷新知识库</span></button>' in page
     assert 'class="dashboard-card classroom-overview-card"' in page
     assert 'class="dashboard-card classroom-entry"' in page
     assert 'class="dashboard-card classroom-ai-settings"' in page
@@ -311,7 +311,8 @@ def test_teacher_console_replaces_native_visible_file_inputs_and_compacts_source
     assert "updateFilePicker(el.knowledgeFile, el.knowledgeFileName)" in page
     assert "updateFilePicker(el.restoreBackupFile, el.restoreBackupFileName)" in page
     assert '<details class="action-menu">' in page
-    assert "<summary>更多操作</summary>" in page
+    assert '<summary><span class="ui-icon icon-dots"' in page
+    assert '<span>更多操作</span></summary>' in page
 
 
 def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
