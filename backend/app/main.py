@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import codecs
+import hashlib
 import ipaddress
 import json
 import logging
@@ -230,16 +231,20 @@ API_DOCS = {
     ("GET", "/admin/models"): ("Admin models", "Read model catalog."),
     ("POST", "/admin/models/discover"): (
         "Discover provider models",
-        "Read available model IDs from an OpenAI-compatible provider.",
+        "Read available model IDs from one identified OpenAI-compatible provider.",
     ),
     ("POST", "/admin/models/batch-import"): (
         "Batch import models",
-        "Validate and import selected provider model IDs and display names into the local catalog.",
+        "Import selected models under a provider-scoped local identity while retaining native upstream IDs.",
     ),
     ("POST", "/admin/models"): ("Upsert model", "Create or update model catalog item."),
     ("PATCH", "/admin/models/{model_id}"): ("Patch model", "Update model catalog item."),
     ("POST", "/admin/models/{model_id}/set-default"): ("Set current model", "Set current admin teacher policy model."),
     ("GET", "/admin/providers"): ("Providers", "Provider status."),
+    ("DELETE", "/admin/providers/{provider_id}"): (
+        "Delete provider",
+        "Delete one provider and all of its models, optionally switching active references first.",
+    ),
     ("POST", "/admin/providers/{name}/test"): ("Test provider", "Test provider connectivity."),
     ("GET", "/admin/sources"): ("Sources", "List knowledge sources."),
     ("POST", "/admin/sources"): ("Upsert source", "Create or update knowledge source."),
@@ -416,6 +421,16 @@ class TeachingScenario(BaseModel):
     knowledge_strict: bool = Field(default=False)
 
 
+def _provider_catalog_id(provider: str, base_url: str | None) -> str:
+    identity = f"{provider.strip().casefold()}\0{(base_url or '').strip().rstrip('/').casefold()}"
+    return f"provider-{hashlib.sha256(identity.encode('utf-8')).hexdigest()[:16]}"
+
+
+def _model_catalog_id(provider_id: str, upstream_model_id: str) -> str:
+    identity = f"{provider_id}\0{upstream_model_id.strip()}"
+    return f"model-{hashlib.sha256(identity.encode('utf-8')).hexdigest()[:24]}"
+
+
 class ModelCatalogItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -425,6 +440,8 @@ class ModelCatalogItem(BaseModel):
     description: str = ""
     source: Literal["litellm", "openai_compatible"] = "openai_compatible"
     base_url: str | None = Field(default=None, min_length=1)
+    provider_id: str | None = Field(default=None, min_length=1, max_length=80)
+    upstream_model_id: str | None = Field(default=None, min_length=1, max_length=500)
     credential_id: str | None = None
     api_key: str | None = Field(default=None, min_length=1)
 
@@ -438,6 +455,8 @@ class ModelCatalogPublicItem(BaseModel):
     description: str = ""
     source: Literal["litellm", "openai_compatible"] = "openai_compatible"
     base_url: str | None = None
+    provider_id: str
+    upstream_model_id: str
     api_key_set: bool = False
 
 
@@ -445,6 +464,7 @@ class ModelProviderConnectionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     provider: str = Field(default="OpenAI Compatible", min_length=1, max_length=120)
+    provider_id: str | None = Field(default=None, min_length=1, max_length=80)
     base_url: str = Field(..., min_length=1, max_length=2048)
     api_key: str | None = Field(default=None, min_length=1, max_length=4096)
     credential_model_id: str | None = Field(default=None, min_length=1, max_length=300)
@@ -614,6 +634,7 @@ class RuntimeConfig:
             self._ensure_standalone_default_model()
             self.data.legacy_runtime_migration_complete = True
             self.save()
+        self._migrate_model_identities()
 
     def _load(self) -> RuntimeConfigData:
         if not self._path.exists():
@@ -667,6 +688,22 @@ class RuntimeConfig:
             if model.credential_id != credential_id or model.api_key is not None:
                 self.data.model_catalog[model_id] = model.model_copy(
                     update={"credential_id": credential_id, "api_key": None}
+                )
+                changed = True
+        if changed:
+            self.save()
+
+    def _migrate_model_identities(self) -> None:
+        changed = False
+        for model_id, model in list(self.data.model_catalog.items()):
+            provider_id = model.provider_id or _provider_catalog_id(model.provider, model.base_url)
+            upstream_model_id = model.upstream_model_id or model.id
+            if model.provider_id != provider_id or model.upstream_model_id != upstream_model_id:
+                self.data.model_catalog[model_id] = model.model_copy(
+                    update={
+                        "provider_id": provider_id,
+                        "upstream_model_id": upstream_model_id,
+                    }
                 )
                 changed = True
         if changed:
@@ -736,6 +773,12 @@ class RuntimeConfig:
     def upsert_model(self, request: ModelCatalogItem) -> ModelCatalogItem:
         if request.source == "openai_compatible" and not request.base_url:
             raise HTTPException(status_code=400, detail="base_url is required for OpenAI-compatible models")
+        request = request.model_copy(
+            update={
+                "provider_id": request.provider_id or _provider_catalog_id(request.provider, request.base_url),
+                "upstream_model_id": request.upstream_model_id or request.id,
+            }
+        )
         with self._lock:
             current = self.data.model_catalog.get(request.id)
             credential_id = (current.credential_id if current else None) or f"model:{request.id}"
@@ -753,6 +796,12 @@ class RuntimeConfig:
         with self._lock:
             models: list[ModelCatalogItem] = []
             for request in requests:
+                request = request.model_copy(
+                    update={
+                        "provider_id": request.provider_id or _provider_catalog_id(request.provider, request.base_url),
+                        "upstream_model_id": request.upstream_model_id or request.id,
+                    }
+                )
                 current = self.data.model_catalog.get(request.id)
                 credential_id = (current.credential_id if current else None) or f"model:{request.id}"
                 if request.api_key:
@@ -762,6 +811,19 @@ class RuntimeConfig:
                 models.append(model)
             self.save()
             return models
+
+    def find_provider_model(self, provider_id: str, upstream_model_id: str) -> ModelCatalogItem | None:
+        normalized_upstream_id = upstream_model_id.strip()
+        with self._lock:
+            return next(
+                (
+                    model
+                    for model in self.data.model_catalog.values()
+                    if model.provider_id == provider_id
+                    and (model.upstream_model_id or model.id) == normalized_upstream_id
+                ),
+                None,
+            )
 
     def delete_model(self, model_id: str, *, replacement_model_id: str | None = None) -> list[str]:
         with self._lock:
@@ -799,6 +861,64 @@ class RuntimeConfig:
             self.save()
             secret_store.delete(model.credential_id)
             return references
+
+    def delete_provider(
+        self,
+        provider_id: str,
+        *,
+        replacement_model_id: str | None = None,
+    ) -> tuple[list[str], list[str]]:
+        with self._lock:
+            provider_models = [
+                model
+                for model in self.data.model_catalog.values()
+                if model.source == "openai_compatible"
+                and (model.provider_id or _provider_catalog_id(model.provider, model.base_url)) == provider_id
+            ]
+            if not provider_models:
+                return [], []
+
+            model_ids = {model.id for model in provider_models}
+            references = [
+                scenario_id
+                for scenario_id, scenario in {
+                    **self.data.scenarios,
+                    **{f"teacher:{key}": value for key, value in self.data.teacher_policies.items()},
+                }.items()
+                if scenario.model in model_ids
+            ]
+            replacement = None
+            if replacement_model_id:
+                replacement = self.data.model_catalog.get(replacement_model_id)
+                if replacement is None or replacement.id in model_ids:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="替代模型不存在，或仍属于待删除的供应商。",
+                    )
+            if references and replacement is None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="该供应商仍有模型被课堂配置使用。请先添加其他供应商的可用模型，再删除。",
+                )
+            if references and replacement is not None:
+                for scenario_id, scenario in list(self.data.scenarios.items()):
+                    if scenario.model in model_ids:
+                        self.data.scenarios[scenario_id] = scenario.model_copy(
+                            update={"model": replacement.id}
+                        )
+                for username, scenario in list(self.data.teacher_policies.items()):
+                    if scenario.model in model_ids:
+                        self.data.teacher_policies[username] = scenario.model_copy(
+                            update={"model": replacement.id}
+                        )
+
+            credential_ids = {model.credential_id for model in provider_models if model.credential_id}
+            for model_id in model_ids:
+                self.data.model_catalog.pop(model_id, None)
+            self.save()
+            for credential_id in credential_ids:
+                secret_store.delete(credential_id)
+            return sorted(model_ids), references
 
 
 runtime_config = RuntimeConfig(settings.runtime_config_path)
@@ -1160,6 +1280,8 @@ def _public_model(model: ModelCatalogItem) -> ModelCatalogPublicItem:
         description=model.description,
         source=model.source,
         base_url=model.base_url,
+        provider_id=model.provider_id or _provider_catalog_id(model.provider, model.base_url),
+        upstream_model_id=model.upstream_model_id or model.id,
         api_key_set=secret_store.has(model.credential_id),
     )
 
@@ -1176,6 +1298,7 @@ def _provider_api_key(request: ModelProviderConnectionRequest) -> tuple[str, boo
         return request.api_key, False
 
     normalized_base_url = request.base_url.rstrip("/").casefold()
+    requested_provider_id = request.provider_id or _provider_catalog_id(request.provider, request.base_url)
     candidates: list[ModelCatalogItem] = []
     if request.credential_model_id:
         model = runtime_config.data.model_catalog.get(request.credential_model_id)
@@ -1187,6 +1310,8 @@ def _provider_api_key(request: ModelProviderConnectionRequest) -> tuple[str, boo
 
     for model in candidates:
         if model.source != "openai_compatible" or not model.base_url:
+            continue
+        if model.provider_id != requested_provider_id:
             continue
         if model.base_url.rstrip("/").casefold() != normalized_base_url:
             continue
@@ -1247,7 +1372,10 @@ async def _chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
             return await client.openai_chat_completion(
                 base_url=direct_model.base_url,
                 api_key=api_key,
-                payload=payload,
+                payload={
+                    **payload,
+                    "model": direct_model.upstream_model_id or direct_model.id,
+                },
             )
     async with model_semaphore:
         return await client.chat_completion(payload)
@@ -1268,7 +1396,10 @@ async def _stream_chat_completion(payload: dict[str, Any]):
             async for chunk in client.stream_openai_chat_completion(
                 base_url=direct_model.base_url,
                 api_key=api_key,
-                payload=payload,
+                payload={
+                    **payload,
+                    "model": direct_model.upstream_model_id or direct_model.id,
+                },
             ):
                 yield chunk
         return
@@ -1759,6 +1890,8 @@ async def models() -> dict[str, Any]:
                     "id": model.id,
                     "object": "model",
                     "owned_by": model.provider,
+                    "provider_id": model.provider_id,
+                    "upstream_model_id": model.upstream_model_id or model.id,
                     "source": model.source,
                     "base_url": model.base_url,
                     "api_key_set": secret_store.has(model.credential_id),
@@ -2294,9 +2427,11 @@ async def admin_models() -> list[ModelCatalogPublicItem]:
 @app.post("/admin/models/discover", dependencies=[Depends(require_super_admin)])
 async def admin_discover_models(request: ModelProviderConnectionRequest) -> dict[str, Any]:
     models, _, used_saved_key = await _discover_provider_models(request)
+    provider_id = request.provider_id or _provider_catalog_id(request.provider, request.base_url)
     return {
         "models": models,
         "model_count": len(models),
+        "provider_id": provider_id,
         "used_saved_api_key": used_saved_key,
     }
 
@@ -2315,23 +2450,31 @@ async def admin_batch_import_models(request: ModelBatchImportRequest) -> dict[st
             detail=f"上游模型列表中不存在：{', '.join(unknown_ids[:10])}",
         )
     description = request.description.strip() or "从上游 /models 批量导入"
-    models = runtime_config.upsert_models(
-        [
+    provider_id = request.provider_id or _provider_catalog_id(request.provider, request.base_url)
+    model_requests: list[ModelCatalogItem] = []
+    for upstream_model_id in selected_ids:
+        existing = runtime_config.find_provider_model(provider_id, upstream_model_id)
+        model_requests.append(
             ModelCatalogItem(
-                id=model_id,
-                name=(" ".join(request.display_names.get(model_id, "").split())[:120] or model_id),
+                id=existing.id if existing else _model_catalog_id(provider_id, upstream_model_id),
+                name=(
+                    " ".join(request.display_names.get(upstream_model_id, "").split())[:120]
+                    or upstream_model_id
+                ),
                 provider=request.provider.strip(),
+                provider_id=provider_id,
+                upstream_model_id=upstream_model_id,
                 description=description,
                 source="openai_compatible",
                 base_url=request.base_url.strip(),
                 api_key=api_key,
             )
-            for model_id in selected_ids
-        ]
-    )
+        )
+    models = runtime_config.upsert_models(model_requests)
     return {
         "status": "imported",
         "imported_count": len(models),
+        "provider_id": provider_id,
         "used_saved_api_key": used_saved_key,
         "models": [_public_model(model).model_dump() for model in models],
     }
@@ -2344,7 +2487,20 @@ async def admin_upsert_model(request: ModelCatalogItem) -> ModelCatalogPublicIte
 
 @app.patch("/admin/models/{model_id}", response_model=ModelCatalogPublicItem, dependencies=[Depends(require_super_admin)])
 async def admin_patch_model(model_id: str, request: ModelCatalogItem) -> ModelCatalogPublicItem:
-    return _public_model(runtime_config.upsert_model(request.model_copy(update={"id": model_id})))
+    current = runtime_config.data.model_catalog.get(model_id)
+    if current is None:
+        raise HTTPException(status_code=404, detail=f"找不到模型：{model_id}")
+    return _public_model(
+        runtime_config.upsert_model(
+            request.model_copy(
+                update={
+                    "id": model_id,
+                    "provider_id": current.provider_id,
+                    "upstream_model_id": current.upstream_model_id or current.id,
+                }
+            )
+        )
+    )
 
 
 @app.post("/admin/models/{model_id}/set-default", response_model=ConfigResponse, dependencies=[Depends(require_super_admin)])
@@ -2364,17 +2520,33 @@ async def admin_providers() -> list[dict[str, Any]]:
             model for model in runtime_config.data.model_catalog.values()
             if model.source == "openai_compatible"
         ]
-        configured_count = sum(
-            1 for model in direct_models if model.base_url and secret_store.has(model.credential_id)
-        )
+        provider_groups: dict[str, list[ModelCatalogItem]] = {}
+        for model in direct_models:
+            provider_id = model.provider_id or _provider_catalog_id(model.provider, model.base_url)
+            provider_groups.setdefault(provider_id, []).append(model)
+        providers = []
+        for provider_id, models_for_provider in provider_groups.items():
+            configured_count = sum(
+                1
+                for model in models_for_provider
+                if model.base_url and secret_store.has(model.credential_id)
+            )
+            representative = models_for_provider[0]
+            providers.append(
+                {
+                    "id": provider_id,
+                    "name": representative.provider,
+                    "status": "configured" if configured_count else "needs_configuration",
+                    "base_url": representative.base_url,
+                    "model_count": len(models_for_provider),
+                    "configured_model_count": configured_count,
+                }
+            )
+        providers.sort(key=lambda item: (item["name"].casefold(), item["id"]))
         return [
+            *providers,
             {
-                "name": "openai_compatible",
-                "status": "configured" if configured_count else "needs_configuration",
-                "model_count": len(direct_models),
-                "configured_model_count": configured_count,
-            },
-            {
+                "id": "langfuse",
                 "name": "langfuse",
                 "status": "configured" if langfuse.enabled else "not_configured",
                 "base_url": settings.langfuse_base_url,
@@ -2402,10 +2574,40 @@ async def admin_providers() -> list[dict[str, Any]]:
     ]
 
 
+@app.delete("/admin/providers/{provider_id}", dependencies=[Depends(require_super_admin)])
+async def admin_delete_provider(
+    provider_id: str,
+    replacement_model_id: str | None = None,
+) -> dict[str, Any]:
+    deleted_model_ids, references = runtime_config.delete_provider(
+        provider_id,
+        replacement_model_id=replacement_model_id,
+    )
+    if not deleted_model_ids:
+        raise HTTPException(status_code=404, detail=f"找不到供应商：{provider_id}")
+    return {
+        "status": "deleted",
+        "provider_id": provider_id,
+        "deleted_model_ids": deleted_model_ids,
+        "deleted_model_count": len(deleted_model_ids),
+        "replacement_model_id": replacement_model_id if references else None,
+        "replaced_references": references,
+    }
+
+
 @app.post("/admin/providers/{name}/test", dependencies=[Depends(require_super_admin)])
 async def admin_test_provider(name: str) -> dict[str, Any]:
     if settings.deployment_mode == "standalone":
         model = runtime_config.data.model_catalog.get(name)
+        if model is None:
+            model = next(
+                (
+                    item
+                    for item in runtime_config.data.model_catalog.values()
+                    if item.provider_id == name
+                ),
+                None,
+            )
         if name.lower() == "openai_compatible":
             direct_models = [
                 item for item in runtime_config.data.model_catalog.values()

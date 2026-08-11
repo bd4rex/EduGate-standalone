@@ -118,8 +118,19 @@ def test_upstream_models_can_be_discovered_selected_and_batch_imported() -> None
     assert 'id="model-api-key"' in page
     assert 'id="model-api-url"' in page
     assert 'id="model-api-path"' in page
+    assert 'id="model-provider-selector"' in page
+    assert 'id="add-model-provider"' in page
+    assert 'id="delete-model-provider"' in page
+    assert 'class="select-control"' in page
+    assert "right: 18px;" in page
+    assert "appearance: none;" in page
     assert 'id="reset-model-provider"' in page
     assert 'id="discover-models"' in page
+    assert 'data-provider-add-model=' in page
+    assert "/admin/providers/${encodeURIComponent(providerId)}" in page
+    assert "添加供应商" in page
+    assert "添加模型" in page
+    assert "获取模型" in page
     assert 'role="dialog" aria-modal="true"' in page
     assert 'id="model-discovery-filter" type="search"' in page
     assert 'id="model-discovery-list"' in page
@@ -130,6 +141,10 @@ def test_upstream_models_can_be_discovered_selected_and_batch_imported() -> None
     assert "/admin/models/discover" in page
     assert "/admin/models/batch-import" in page
     assert "display_names" in page
+    assert "provider_id" in page
+    assert "upstream_model_id" in page
+    assert "组合标记" in page
+    assert "guessProvider" not in page
     assert "replacement_model_id" in page
     assert 'id="model-id"' not in page
     assert 'id="model-source"' not in page
@@ -145,9 +160,23 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     )[0]
     system = page.split('<section id="system-view" hidden data-admin-only>', 1)[1]
 
-    shutdown = page.index('id="shutdown-system"')
+    refresh = page.index('id="refresh-system"')
     open_directory = page.index('id="open-app-directory"')
-    assert shutdown < open_directory
+    restart = page.index('id="restart-system"')
+    shutdown = page.index('id="shutdown-system"')
+    assert refresh < open_directory < restart < shutdown
+    assert (
+        '<div class="system-action-group">\n'
+        '                <button class="button soft" id="refresh-system" type="button">刷新</button>\n'
+        '                <button class="button ghost" id="open-app-directory" type="button">打开目录</button>'
+        in page
+    )
+    assert (
+        '<div class="system-action-group critical">\n'
+        '                <button class="button ghost" id="restart-system" type="button">重启服务</button>\n'
+        '                <button class="button danger" id="shutdown-system" type="button">停止服务</button>'
+        in page
+    )
     assert 'request("/admin/system/open-app-dir"' in page
     assert 'id="open-app-directory" type="button">打开目录</button>' in page
     assert 'id="copy-lan-url"' in page

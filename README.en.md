@@ -14,7 +14,7 @@ EduGate Standalone runs on a teacher's 64-bit Windows computer for one teacher a
 
 1. Extract or copy the complete `EduGate-Standalone` folder. Do not copy only the EXE.
 2. Double-click `EduGate-Standalone.exe`. The browser opens the teacher console and signs in locally.
-3. Open **System -> Upstream Model API Management**, enter a source name, API key, API URL, and optional path, then select **Fetch**. Search the modal, edit display names, and batch-import the checked models.
+3. Open **System -> Upstream Model API Management**, select **Add provider** or choose an existing provider, enter its source name, API key, API URL, and optional path, then select **Fetch models**. Existing provider groups also expose **Add models**. Search the modal, edit display names, and batch-import the checked models. Multiple providers are supported; identical upstream model IDs remain separate under their provider identities. Deleting a provider also removes its models and API keys, switching classroom references first when required.
 4. Select **Start class**, then copy the student link from the bottom of **Control** and share it with students.
 5. Select **End class** after the lesson. Student links and sessions are revoked while the teacher console stays online. Use **System -> Stop service** only when exiting EduGate.
 

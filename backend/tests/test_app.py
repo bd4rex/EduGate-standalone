@@ -389,6 +389,7 @@ def test_direct_model_routes_with_decrypted_key(
             id="direct-test",
             name="Direct Test",
             provider="Test",
+            upstream_model_id="provider-native-model",
             source="openai_compatible",
             base_url="https://provider.example/v1/chat/completions",
             api_key="direct-secret",
@@ -408,6 +409,7 @@ def test_direct_model_routes_with_decrypted_key(
     )
     assert response.status_code == 200
     assert response.json()["api_key"] == "direct-secret"
+    assert response.json()["payload"]["model"] == "provider-native-model"
 
 
 def test_provider_test_performs_real_probe(
@@ -481,15 +483,19 @@ def test_provider_models_can_be_discovered_and_batch_imported(
     assert discovered.json()["model_count"] == 2
     assert imported.status_code == 200
     assert imported.json()["imported_count"] == 2
+    assert imported.json()["provider_id"] == discovered.json()["provider_id"]
     assert all(model["api_key_set"] for model in imported.json()["models"])
-    assert next(model for model in imported.json()["models"] if model["id"] == "qwen-max")["name"] == "通义千问 Max"
-    assert secret_store.get("model:qwen-max") == "batch-secret"
+    imported_models = imported.json()["models"]
+    qwen = next(model for model in imported_models if model["upstream_model_id"] == "qwen-max")
+    assert qwen["name"] == "通义千问 Max"
+    assert qwen["id"] != qwen["upstream_model_id"]
+    assert secret_store.get(f"model:{qwen['id']}") == "batch-secret"
 
     renamed = client.patch(
-        "/admin/models/qwen-max",
+        f"/admin/models/{qwen['id']}",
         headers=admin_headers,
         json={
-            "id": "qwen-max",
+            "id": qwen["id"],
             "name": "课堂用千问 Max",
             "provider": "Test Provider",
             "description": "Renamed after import",
@@ -500,7 +506,9 @@ def test_provider_models_can_be_discovered_and_batch_imported(
     )
     assert renamed.status_code == 200
     assert renamed.json()["name"] == "课堂用千问 Max"
-    assert secret_store.get("model:qwen-max") == "batch-secret"
+    assert renamed.json()["provider_id"] == qwen["provider_id"]
+    assert renamed.json()["upstream_model_id"] == "qwen-max"
+    assert secret_store.get(f"model:{qwen['id']}") == "batch-secret"
 
     reused = client.post(
         "/admin/models/discover",
@@ -508,14 +516,208 @@ def test_provider_models_can_be_discovered_and_batch_imported(
         json={
             "provider": "Test Provider",
             "base_url": "https://provider.example/custom/v1",
-            "credential_model_id": "qwen-max",
+            "provider_id": qwen["provider_id"],
+            "credential_model_id": qwen["id"],
         },
     )
     assert reused.status_code == 200
     assert reused.json()["used_saved_api_key"] is True
     assert observed_keys == ["batch-secret", "batch-secret", "batch-secret"]
-    runtime_config.delete_model("qwen-max")
-    runtime_config.delete_model("deepseek-v4-flash-0731")
+    for model in imported_models:
+        runtime_config.delete_model(model["id"])
+
+
+def test_same_upstream_model_from_two_providers_isolated_and_routes_native_id(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    classroom_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    upstream_model_id = "shared/model"
+
+    async def fake_list(*, base_url: str, api_key: str) -> list[dict[str, str]]:
+        assert base_url in {"https://provider-a.example/v1", "https://provider-b.example/v1"}
+        assert api_key in {"provider-a-secret", "provider-b-secret"}
+        return [{"id": upstream_model_id, "owned_by": "shared"}]
+
+    observed: dict[str, Any] = {}
+
+    async def fake_direct(
+        *, base_url: str, api_key: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        observed.update(base_url=base_url, api_key=api_key, payload=payload)
+        return {"choices": [{"message": {"content": "ok"}}], "usage": {}}
+
+    monkeypatch.setattr("app.main.client.list_openai_models", fake_list)
+    monkeypatch.setattr("app.main.client.openai_chat_completion", fake_direct)
+
+    imported: list[dict[str, Any]] = []
+    for provider, base_url, api_key in [
+        ("供应商 A", "https://provider-a.example/v1", "provider-a-secret"),
+        ("供应商 B", "https://provider-b.example/v1", "provider-b-secret"),
+    ]:
+        response = client.post(
+            "/admin/models/batch-import",
+            headers=admin_headers,
+            json={
+                "provider": provider,
+                "base_url": base_url,
+                "api_key": api_key,
+                "model_ids": [upstream_model_id],
+            },
+        )
+        assert response.status_code == 200
+        imported.append(response.json()["models"][0])
+
+    first, second = imported
+    previous_model = runtime_config.get_teacher_policy(settings.admin_username).model
+    try:
+        assert first["id"] != second["id"]
+        assert first["provider_id"] != second["provider_id"]
+        assert first["upstream_model_id"] == second["upstream_model_id"] == upstream_model_id
+        assert "/" not in first["id"] and "/" not in second["id"]
+        providers = client.get("/admin/providers", headers=admin_headers).json()
+        provider_ids = {provider["id"] for provider in providers}
+        assert {first["provider_id"], second["provider_id"]} <= provider_ids
+
+        wrong_provider_reuse = client.post(
+            "/admin/models/discover",
+            headers=admin_headers,
+            json={
+                "provider": "供应商 C",
+                "base_url": "https://provider-a.example/v1",
+            },
+        )
+        assert wrong_provider_reuse.status_code == 400
+
+        runtime_config.update_teacher_policy(
+            settings.admin_username,
+            ScenarioUpdateRequest(model=second["id"]),
+        )
+        chat_response = client.post(
+            "/chat",
+            headers=classroom_headers,
+            json={
+                "teacher_id": settings.admin_username,
+                "messages": [{"role": "user", "content": "route check"}],
+            },
+        )
+        assert chat_response.status_code == 200
+        assert observed["base_url"] == "https://provider-b.example/v1"
+        assert observed["api_key"] == "provider-b-secret"
+        assert observed["payload"]["model"] == upstream_model_id
+
+        deleted = client.delete(f"/model-catalog/{first['id']}", headers=admin_headers)
+        assert deleted.status_code == 200
+        assert second["id"] in runtime_config.data.model_catalog
+        assert secret_store.get(f"model:{second['id']}") == "provider-b-secret"
+    finally:
+        runtime_config.update_teacher_policy(
+            settings.admin_username,
+            ScenarioUpdateRequest(model=previous_model),
+        )
+        for model in imported:
+            if model["id"] in runtime_config.data.model_catalog:
+                runtime_config.delete_model(model["id"])
+
+
+def test_provider_delete_removes_its_models_and_switches_active_reference(
+    client: TestClient,
+    admin_headers: dict[str, str],
+) -> None:
+    provider_a_models = runtime_config.upsert_models(
+        [
+            ModelCatalogItem(
+                id="provider-delete-a-one",
+                name="Provider A One",
+                provider="Provider Delete A",
+                upstream_model_id="shared/model",
+                source="openai_compatible",
+                base_url="https://provider-delete-a.example/v1",
+                api_key="provider-delete-a-secret",
+            ),
+            ModelCatalogItem(
+                id="provider-delete-a-two",
+                name="Provider A Two",
+                provider="Provider Delete A",
+                upstream_model_id="second/model",
+                source="openai_compatible",
+                base_url="https://provider-delete-a.example/v1",
+                api_key="provider-delete-a-secret",
+            ),
+        ]
+    )
+    provider_b = runtime_config.upsert_model(
+        ModelCatalogItem(
+            id="provider-delete-b-one",
+            name="Provider B One",
+            provider="Provider Delete B",
+            upstream_model_id="shared/model",
+            source="openai_compatible",
+            base_url="https://provider-delete-b.example/v1",
+            api_key="provider-delete-b-secret",
+        )
+    )
+    provider_a_id = provider_a_models[0].provider_id
+    previous_model = runtime_config.get_teacher_policy(settings.admin_username).model
+
+    try:
+        runtime_config.update_teacher_policy(
+            settings.admin_username,
+            ScenarioUpdateRequest(model=provider_a_models[0].id),
+        )
+
+        blocked = client.delete(
+            f"/admin/providers/{provider_a_id}",
+            headers=admin_headers,
+        )
+        assert blocked.status_code == 409
+        assert all(model.id in runtime_config.data.model_catalog for model in provider_a_models)
+
+        deleted = client.delete(
+            f"/admin/providers/{provider_a_id}?replacement_model_id={provider_b.id}",
+            headers=admin_headers,
+        )
+        assert deleted.status_code == 200
+        assert deleted.json()["deleted_model_count"] == 2
+        assert set(deleted.json()["deleted_model_ids"]) == {model.id for model in provider_a_models}
+        assert deleted.json()["replacement_model_id"] == provider_b.id
+        assert all(model.id not in runtime_config.data.model_catalog for model in provider_a_models)
+        assert all(secret_store.get(model.credential_id) is None for model in provider_a_models)
+        assert provider_b.id in runtime_config.data.model_catalog
+        assert secret_store.get(provider_b.credential_id) == "provider-delete-b-secret"
+        assert runtime_config.get_teacher_policy(settings.admin_username).model == provider_b.id
+    finally:
+        runtime_config.update_teacher_policy(
+            settings.admin_username,
+            ScenarioUpdateRequest(model=previous_model),
+        )
+        for model in [*provider_a_models, provider_b]:
+            if model.id in runtime_config.data.model_catalog:
+                runtime_config.delete_model(model.id)
+
+
+def test_runtime_config_backfills_legacy_model_provider_identity(tmp_path: Path) -> None:
+    path = tmp_path / "runtime_config.json"
+    data = RuntimeConfigData(
+        model_catalog={
+            "legacy-model": ModelCatalogItem(
+                id="legacy-model",
+                name="Legacy Model",
+                provider="Legacy Provider",
+                base_url="https://legacy.example/v1",
+            )
+        },
+        legacy_runtime_migration_complete=True,
+    )
+    path.write_text(data.model_dump_json(indent=2), encoding="utf-8")
+
+    reloaded = RuntimeConfig(str(path))
+    model = reloaded.data.model_catalog["legacy-model"]
+
+    assert model.id == "legacy-model"
+    assert model.upstream_model_id == "legacy-model"
+    assert model.provider_id and model.provider_id.startswith("provider-")
 
 
 def test_completed_runtime_migration_does_not_restore_legacy_default(tmp_path: Path) -> None:

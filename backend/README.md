@@ -38,7 +38,8 @@ GET  /teacher/classroom-records/{id}  X-Admin-Token
 DELETE /teacher/classroom-records/{id} X-Admin-Token
 POST /admin/models           管理员
 POST /admin/models/discover  管理员，获取上游可用模型
-POST /admin/models/batch-import 管理员，勾选后批量导入模型
+POST /admin/models/batch-import 管理员，按供应商标识勾选后批量导入模型
+DELETE /admin/providers/{id} 管理员，删除供应商、全部模型和密钥，可指定替代模型
 POST /admin/providers/{id}/test 管理员
 GET  /admin/system/status      管理员
 GET  /admin/system/settings    管理员
@@ -98,4 +99,4 @@ CORS_ORIGINS=
 python -m pytest -q --basetemp=.pytest-tmp
 ```
 
-测试覆盖首次初始化、静默设备标识与 IP 记录、独立学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、课堂记录权限与保留策略、便携密钥、上游模型发现与批量导入、备份恢复、上传/PDF 限制、Python 多槽位任务池、实时输出、子进程隔离、无窗口分发契约和流式心跳。
+测试覆盖首次初始化、静默设备标识与 IP 记录、独立学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、课堂记录权限与保留策略、便携密钥、多供应商同名模型隔离、上游模型发现与批量导入、备份恢复、上传/PDF 限制、Python 多槽位任务池、实时输出、子进程隔离、无窗口分发契约和流式心跳。

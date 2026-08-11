@@ -267,9 +267,27 @@
     input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28); }
     .checkbox-row { display: flex; min-height: 44px; align-items: center; gap: 10px; color: var(--muted); cursor: pointer; }
     .checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px; min-height: 22px; margin: 0; accent-color: var(--brand); }
+    .provider-picker { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; margin-bottom: 12px; }
+    .provider-picker label { max-width: none; }
+    .provider-picker select { width: 100%; appearance: none; -webkit-appearance: none; padding-right: 48px; }
+    .provider-picker .button { min-height: 50px; }
+    .select-control { position: relative; }
+    .select-control::after {
+      position: absolute;
+      top: 50%;
+      right: 18px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid var(--muted);
+      border-bottom: 2px solid var(--muted);
+      content: "";
+      pointer-events: none;
+      transform: translateY(-70%) rotate(45deg);
+    }
     .upstream-provider { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
-    .upstream-provider-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+    .upstream-provider-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
     .upstream-provider-heading h3, .imported-model-heading h3 { margin: 0; font-size: 16px; }
+    .provider-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
     .upstream-provider-body { padding: 18px; }
     .provider-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr); gap: 14px; }
     .provider-form-grid .full { grid-column: 1 / -1; }
@@ -277,9 +295,14 @@
     .provider-actions { justify-content: flex-end; margin-top: 16px; }
     .imported-models { margin-top: 16px; }
     .imported-model-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .catalog-provider-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--soft); }
+    .catalog-provider-heading strong { min-width: 0; overflow-wrap: anywhere; }
+    .catalog-provider-heading span { color: var(--muted); font-size: 12px; }
+    .catalog-provider-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
     .catalog-model-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(200px, 0.9fr) auto; gap: 14px; align-items: center; min-height: 70px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
     .catalog-model-row:last-child { border-bottom: 0; }
     .catalog-model-id { min-width: 0; font-weight: 850; overflow-wrap: anywhere; }
+    .catalog-model-key { margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
     .catalog-model-id .row-meta { margin-top: 5px; }
     .catalog-display-name { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 800; }
     .catalog-display-name input { min-height: 44px; }
@@ -573,6 +596,10 @@
       .system-action-group.critical { width: 100%; padding: 10px 0 0; border-top: 1px solid var(--line-strong); border-left: 0; }
       .section-title { align-items: stretch; flex-direction: column; }
       .section-title .button { width: 100%; }
+      .provider-picker { grid-template-columns: 1fr; }
+      .provider-picker .button { width: 100%; }
+      .catalog-provider-heading { align-items: flex-start; flex-direction: column; }
+      .catalog-provider-actions { width: 100%; justify-content: space-between; }
       .footer-note { flex-direction: column; }
       .toast { left: 12px; right: 12px; bottom: 12px; max-width: none; }
     }
@@ -818,11 +845,11 @@
             <div class="actions system-actions">
               <div class="system-action-group">
                 <button class="button soft" id="refresh-system" type="button">刷新</button>
-                <button class="button ghost" id="restart-system" type="button">重启服务</button>
+                <button class="button ghost" id="open-app-directory" type="button">打开目录</button>
               </div>
               <div class="system-action-group critical">
+                <button class="button ghost" id="restart-system" type="button">重启服务</button>
                 <button class="button danger" id="shutdown-system" type="button">停止服务</button>
-                <button class="button ghost" id="open-app-directory" type="button">打开目录</button>
               </div>
             </div>
           </div>
@@ -861,23 +888,34 @@
         <section class="section">
           <details class="collapsible-panel model-api-panel" id="model-api-panel">
             <summary>上游模型 API 管理</summary>
-            <p class="hint" style="margin:4px 0 14px">配置一个模型服务来源，再从它提供的模型中选择需要的项目。</p>
+            <p class="hint" style="margin:4px 0 14px">可配置多个上游供应商；同名模型会按“供应商 + 上游模型 ID”分别管理。</p>
+            <div class="provider-picker">
+              <label>已配置供应商
+                <span class="select-control">
+                  <select id="model-provider-selector" aria-label="选择已配置供应商"></select>
+                </span>
+              </label>
+              <button class="button ghost" id="add-model-provider" type="button">添加供应商</button>
+            </div>
             <div class="upstream-provider">
               <div class="upstream-provider-heading">
                 <h3 id="provider-card-title">上游模型服务</h3>
-                <span class="badge">OpenAI API 兼容</span>
+                <div class="provider-heading-actions">
+                  <span class="badge">OpenAI API 兼容</span>
+                  <button class="button mini danger" id="delete-model-provider" type="button" hidden>删除供应商</button>
+                </div>
               </div>
               <div class="upstream-provider-body">
                 <div class="provider-form-grid">
                   <label class="full">名称<input id="model-provider-name" placeholder="例如 阿里云测试，用于标记模型来源" /></label>
-                  <label class="full">API Key<input id="model-api-key" type="password" autocomplete="off" placeholder="首次获取时填写；已有同地址模型可留空复用" /></label>
+                  <label class="full">API Key<input id="model-api-key" type="password" autocomplete="off" placeholder="首次获取时填写；已配置供应商可留空复用" /></label>
                   <label>API URL<input id="model-api-url" inputmode="url" placeholder="例如 https://api.example.com" /></label>
                   <label>API 路径<input id="model-api-path" placeholder="留空自动使用 /v1" /></label>
                   <p class="api-endpoint-preview" id="model-endpoint-preview">完整接口地址将在这里显示</p>
                 </div>
                 <div class="actions provider-actions">
                   <button class="button ghost" id="reset-model-provider" type="button">重置</button>
-                  <button class="button primary" id="discover-models" type="button">获取</button>
+                  <button class="button primary" id="discover-models" type="button">获取模型</button>
                 </div>
                 <p class="hint">获取会同时检查连接并读取上游模型列表。API Key 只保存在程序目录中，不会回显。</p>
               </div>
@@ -970,6 +1008,7 @@
       selectedDiscoveredModelIds: new Set(),
       discoveredModelNames: {},
       providerFormInitialized: false,
+      activeProviderId: "",
       sources: [],
       files: [],
       systemStatus: null,
@@ -1021,6 +1060,8 @@
       modelApiUrl: document.querySelector("#model-api-url"),
       modelApiPath: document.querySelector("#model-api-path"),
       modelApiKey: document.querySelector("#model-api-key"),
+      modelProviderSelector: document.querySelector("#model-provider-selector"),
+      deleteModelProvider: document.querySelector("#delete-model-provider"),
       providerCardTitle: document.querySelector("#provider-card-title"),
       modelEndpointPreview: document.querySelector("#model-endpoint-preview"),
       catalogList: document.querySelector("#catalog-list"),
@@ -1332,8 +1373,10 @@
         const id = item.id || item.model_name || item.name;
         return {
           id,
-          name: id,
-          provider: guessProvider(id),
+          name: item.display_name || item.name || item.upstream_model_id || id,
+          provider: item.owned_by || item.provider || "未标记供应商",
+          provider_id: item.provider_id || "",
+          upstream_model_id: item.upstream_model_id || id,
           description: "来自上游 /models 的可用模型",
           available: true,
         };
@@ -1350,7 +1393,9 @@
         merged.set(model.id, {
           id: model.id,
           name: model.name || model.id,
-          provider: model.provider || guessProvider(model.id),
+          provider: model.provider || existing?.provider || "未标记供应商",
+          provider_id: model.provider_id || existing?.provider_id || "",
+          upstream_model_id: model.upstream_model_id || existing?.upstream_model_id || model.id,
           description: model.description || "教师维护的模型目录项",
           source: model.source || "openai_compatible",
           base_url: model.base_url || "",
@@ -1361,15 +1406,6 @@
       return Array.from(merged.values());
     }
 
-    function guessProvider(modelName) {
-      const name = String(modelName || "").toLowerCase();
-      if (name.includes("deepseek")) return "DeepSeek / DashScope";
-      if (name.includes("qwen")) return "阿里百炼";
-      if (name.includes("gemini")) return "Google";
-      if (name.includes("gpt")) return "OpenAI";
-      return "OpenAI Compatible";
-    }
-
     function currentScenario() {
       return state.config?.scenarios?.default || null;
     }
@@ -1377,6 +1413,7 @@
     function renderAll() {
       const scenario = currentScenario();
       const model = scenario?.model || "-";
+      const activeModel = state.catalog.find((item) => item.id === model);
       const rememberedSource = rememberedMountedSource();
       const source = existingSource(rememberedSource) ? rememberedSource : (scenario?.knowledge_source_id || "general");
       const aiEnabled = scenario?.ai_enabled !== false;
@@ -1384,7 +1421,9 @@
       el.currentAiState.style.color = aiEnabled ? "" : "#ffd9d5";
       el.aiEnabledSwitch.classList.toggle("active", aiEnabled);
       el.aiEnabledSwitch.setAttribute("aria-pressed", String(aiEnabled));
-      el.currentModel.textContent = model;
+      el.currentModel.textContent = activeModel
+        ? `${activeModel.provider} · ${activeModel.name || activeModel.upstream_model_id}`
+        : model;
       el.currentSource.textContent = source;
 
       if (scenario) {
@@ -1497,6 +1536,7 @@
               <p class="row-title">${escapeHtml(model.name)}</p>
               <div class="row-meta">
                 <span class="badge">${escapeHtml(model.provider)}</span>
+                <span class="badge">上游 ${escapeHtml(model.upstream_model_id || model.id)}</span>
                 <span class="badge">${model.source === "openai_compatible" ? "EduGate 直连" : "兼容旧 LiteLLM"}</span>
                 <span>${escapeHtml(model.description)}</span>
               </div>
@@ -1511,27 +1551,92 @@
       });
     }
 
+    function modelProviderId(model) {
+      return model.provider_id || `${model.provider || "未标记供应商"}|${String(model.base_url || "").replace(/\/+$/, "").toLowerCase()}`;
+    }
+
+    function modelUpstreamId(model) {
+      return model.upstream_model_id || model.id;
+    }
+
+    function configuredProviders() {
+      const providers = new Map();
+      state.catalog
+        .filter((model) => model.source === "openai_compatible")
+        .forEach((model) => {
+          const id = modelProviderId(model);
+          const current = providers.get(id) || {
+            id,
+            name: model.provider || "未标记供应商",
+            baseUrl: model.base_url || "",
+            modelCount: 0,
+          };
+          current.modelCount += 1;
+          providers.set(id, current);
+        });
+      return Array.from(providers.values()).sort((left, right) =>
+        left.name.localeCompare(right.name, "zh-CN") || left.id.localeCompare(right.id)
+      );
+    }
+
+    function renderProviderSelector() {
+      const providers = configuredProviders();
+      el.modelProviderSelector.innerHTML = [
+        `<option value="">选择供应商</option>`,
+        ...providers.map((provider) => (
+          `<option value="${escapeHtml(provider.id)}">${escapeHtml(provider.name)}（${provider.modelCount} 个模型）</option>`
+        )),
+      ].join("");
+      el.modelProviderSelector.value = providers.some((provider) => provider.id === state.activeProviderId)
+        ? state.activeProviderId
+        : "";
+    }
+
     function renderCatalog() {
-      el.catalogCount.textContent = `${state.catalog.length} 个`;
+      const providers = configuredProviders();
+      el.catalogCount.textContent = `${providers.length} 家供应商 · ${state.catalog.length} 个模型`;
+      renderProviderSelector();
       if (!state.catalog.length) {
         el.catalogList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">暂无已导入模型</p><div class="row-meta">填写上方接口信息并点击“获取”，再从弹窗中勾选导入。</div></div></div>`;
         return;
       }
-      el.catalogList.innerHTML = state.catalog.map((model) => `
-        <div class="catalog-model-row">
-          <div class="catalog-model-id">
-            ${escapeHtml(model.id)}
-            <div class="row-meta">
-              <span class="badge">${escapeHtml(model.provider || "未命名来源")}</span>
-              ${model.api_key_set ? `<span class="badge green">已配置</span>` : ""}
+      const groups = new Map();
+      state.catalog.forEach((model) => {
+        const providerId = modelProviderId(model);
+        if (!groups.has(providerId)) groups.set(providerId, []);
+        groups.get(providerId).push(model);
+      });
+      const orderedGroups = Array.from(groups.entries()).sort(([, leftModels], [, rightModels]) =>
+        String(leftModels[0]?.provider || "").localeCompare(String(rightModels[0]?.provider || ""), "zh-CN")
+      );
+      el.catalogList.innerHTML = orderedGroups.map(([providerId, models]) => {
+        const representative = models[0];
+        const baseUrl = representative.base_url || (representative.source === "litellm" ? "LiteLLM" : "未设置 API 地址");
+        return `
+          <div class="catalog-provider-heading" data-provider-group="${escapeHtml(providerId)}">
+            <strong>${escapeHtml(representative.provider || "未命名供应商")}</strong>
+            <div class="catalog-provider-actions">
+              <span>${models.length} 个模型 · ${escapeHtml(baseUrl)}</span>
+              ${representative.source === "openai_compatible" ? `<button class="button mini ghost" type="button" data-provider-add-model="${escapeHtml(providerId)}">添加模型</button>` : ""}
             </div>
           </div>
-          <label class="catalog-display-name">显示名
-            <input data-catalog-name="${escapeHtml(model.id)}" value="${escapeHtml(model.name || model.id)}" maxlength="120" />
-          </label>
-          <button class="button danger" type="button" data-catalog-delete="${escapeHtml(model.id)}">删除</button>
-        </div>
-      `).join("");
+          ${models.map((model) => `
+            <div class="catalog-model-row">
+              <div class="catalog-model-id">
+                ${escapeHtml(modelUpstreamId(model))}
+                <div class="catalog-model-key">组合标记：${escapeHtml(model.provider || "未命名供应商")} · ${escapeHtml(modelUpstreamId(model))}</div>
+                <div class="row-meta">
+                  ${model.api_key_set ? `<span class="badge green">已配置</span>` : ""}
+                </div>
+              </div>
+              <label class="catalog-display-name">显示名
+                <input data-catalog-name="${escapeHtml(model.id)}" value="${escapeHtml(model.name || modelUpstreamId(model))}" maxlength="120" />
+              </label>
+              <button class="button danger" type="button" data-catalog-delete="${escapeHtml(model.id)}">删除</button>
+            </div>
+          `).join("")}
+        `;
+      }).join("");
       el.catalogList.querySelectorAll("[data-catalog-name]").forEach((input) => {
         input.addEventListener("change", () => renameModel(input.dataset.catalogName, input.value));
         input.addEventListener("keydown", (event) => {
@@ -1541,23 +1646,33 @@
       el.catalogList.querySelectorAll("[data-catalog-delete]").forEach((button) => {
         button.addEventListener("click", () => deleteModel(button.dataset.catalogDelete));
       });
+      el.catalogList.querySelectorAll("[data-provider-add-model]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectProvider(button.dataset.providerAddModel);
+          discoverProviderModels();
+        });
+      });
     }
 
     function renderDiscoveredModels() {
       const filter = el.modelDiscoveryFilter.value.trim().toLowerCase();
-      const importedIds = new Set(state.catalog.map((model) => model.id));
+      const importedModel = (upstreamModelId) => state.catalog.find((model) =>
+        model.source === "openai_compatible" &&
+        modelProviderId(model) === state.activeProviderId &&
+        modelUpstreamId(model) === upstreamModelId
+      );
       const visible = state.discoveredModels.filter((model) =>
         !filter || model.id.toLowerCase().includes(filter) || String(model.owned_by || "").toLowerCase().includes(filter)
       );
       const selectedCount = state.selectedDiscoveredModelIds.size;
-      const importedCount = state.discoveredModels.filter((model) => importedIds.has(model.id)).length;
+      const importedCount = state.discoveredModels.filter((model) => importedModel(model.id)).length;
       el.importDiscoveredModels.textContent = `导入已选（${selectedCount}）`;
       el.importDiscoveredModels.disabled = selectedCount === 0;
       el.modelDiscoveryStatus.textContent = `共 ${state.discoveredModels.length} 个模型，当前显示 ${visible.length} 个，已导入 ${importedCount} 个，已选择 ${selectedCount} 个。`;
       el.modelDiscoveryList.innerHTML = visible.length ? visible.map((model) => {
-        const imported = importedIds.has(model.id);
+        const catalogModel = importedModel(model.id);
+        const imported = Boolean(catalogModel);
         const checked = state.selectedDiscoveredModelIds.has(model.id);
-        const catalogModel = state.catalog.find((item) => item.id === model.id);
         const displayName = state.discoveredModelNames[model.id] ?? catalogModel?.name ?? model.id;
         return `
           <div class="model-discovery-row">
@@ -2245,7 +2360,8 @@
 
     function updateProviderPreview() {
       const name = el.modelProviderName.value.trim();
-      el.providerCardTitle.textContent = name || "上游模型服务";
+      el.providerCardTitle.textContent = name || "新供应商";
+      el.deleteModelProvider.hidden = !state.activeProviderId;
       const endpoint = completionEndpoint();
       el.modelEndpointPreview.textContent = endpoint ? `完整对话接口：${endpoint}` : "完整接口地址将在这里显示";
     }
@@ -2269,6 +2385,7 @@
         || state.catalog.find((item) => item.source === "openai_compatible");
       if (model) {
         const parts = splitProviderBaseUrl(model.base_url || "");
+        state.activeProviderId = modelProviderId(model);
         el.modelProviderName.value = model.provider || "";
         el.modelApiUrl.value = parts.apiUrl;
         el.modelApiPath.value = parts.apiPath;
@@ -2279,12 +2396,35 @@
       updateProviderPreview();
     }
 
+    function selectProvider(providerId) {
+      const model = state.catalog.find((item) =>
+        item.source === "openai_compatible" && modelProviderId(item) === providerId
+      );
+      if (!model) {
+        resetProviderForm();
+        return;
+      }
+      const parts = splitProviderBaseUrl(model.base_url || "");
+      state.activeProviderId = providerId;
+      el.modelProviderName.value = model.provider || "";
+      el.modelApiUrl.value = parts.apiUrl;
+      el.modelApiPath.value = parts.apiPath;
+      el.modelApiKey.value = "";
+      state.discoveredModels = [];
+      state.discoveredModelNames = {};
+      state.selectedDiscoveredModelIds = new Set();
+      closeModelDiscovery();
+      updateProviderPreview();
+      renderProviderSelector();
+    }
+
     function closeModelDiscovery() {
       el.modelDiscovery.hidden = true;
       document.body.style.overflow = "";
     }
 
     function resetProviderForm() {
+      state.activeProviderId = "";
       el.modelProviderName.value = "";
       el.modelApiUrl.value = "";
       el.modelApiPath.value = "/v1";
@@ -2294,20 +2434,23 @@
       state.selectedDiscoveredModelIds = new Set();
       closeModelDiscovery();
       updateProviderPreview();
+      renderProviderSelector();
       el.modelProviderName.focus();
     }
 
     function providerConnectionPayload() {
       const baseUrl = providerBaseUrl();
       const apiKey = el.modelApiKey.value.trim();
-      const normalizedBaseUrl = baseUrl.replace(/\/+$/, "").toLowerCase();
       const savedCredentialModel = state.catalog.find((model) =>
         model.source === "openai_compatible" &&
+        state.activeProviderId &&
+        modelProviderId(model) === state.activeProviderId &&
         model.api_key_set &&
-        String(model.base_url || "").replace(/\/+$/, "").toLowerCase() === normalizedBaseUrl
+        String(model.base_url || "").replace(/\/+$/, "").toLowerCase() === baseUrl.replace(/\/+$/, "").toLowerCase()
       );
       return {
         provider: el.modelProviderName.value.trim(),
+        provider_id: state.activeProviderId || null,
         base_url: baseUrl,
         api_key: apiKey || null,
         credential_model_id: apiKey ? null : (savedCredentialModel?.id || null),
@@ -2339,11 +2482,14 @@
           method: "POST",
           body: JSON.stringify(payload),
         });
+        state.activeProviderId = result.provider_id || payload.provider_id || "";
         state.discoveredModels = result.models || [];
         state.discoveredModelNames = Object.fromEntries(
           state.discoveredModels.map((model) => [
             model.id,
-            state.catalog.find((item) => item.id === model.id)?.name || model.id,
+            state.catalog.find((item) =>
+              modelProviderId(item) === state.activeProviderId && modelUpstreamId(item) === model.id
+            )?.name || model.id,
           ])
         );
         state.selectedDiscoveredModelIds = new Set();
@@ -2356,7 +2502,7 @@
         showToast(`获取模型失败：${error.message}`, true);
       } finally {
         button.disabled = false;
-        button.textContent = "获取";
+        button.textContent = "获取模型";
       }
     }
 
@@ -2375,6 +2521,7 @@
           method: "POST",
           body: JSON.stringify(payload),
         });
+        state.activeProviderId = result.provider_id || state.activeProviderId;
         el.modelApiKey.value = "";
         state.selectedDiscoveredModelIds = new Set();
         await loadModels();
@@ -2404,6 +2551,8 @@
             id: model.id,
             name,
             provider: model.provider,
+            provider_id: model.provider_id,
+            upstream_model_id: model.upstream_model_id,
             description: model.description || "",
             source: model.source,
             base_url: model.base_url,
@@ -2418,7 +2567,67 @@
       }
     }
 
+    async function deleteProvider() {
+      const providerId = state.activeProviderId;
+      const providerModels = state.catalog.filter((model) =>
+        model.source === "openai_compatible" && modelProviderId(model) === providerId
+      );
+      if (!providerId || !providerModels.length) {
+        showToast("请先选择要删除的供应商。", true);
+        return;
+      }
+
+      const providerName = providerModels[0].provider || "未命名供应商";
+      const currentModelId = currentScenario()?.model || "";
+      const currentUsesProvider = providerModels.some((model) => model.id === currentModelId);
+      const candidates = state.catalog.filter((model) =>
+        modelProviderId(model) !== providerId &&
+        (model.source !== "openai_compatible" || (model.base_url && model.api_key_set))
+      );
+      const replacement = candidates.find((model) => model.id === currentModelId) || candidates[0] || null;
+      if (currentUsesProvider && !replacement) {
+        showToast("课堂正在使用该供应商的模型。请先添加其他供应商的可用模型，再删除。", true);
+        return;
+      }
+
+      const replacementHint = replacement
+        ? `如有课堂配置正在使用这些模型，将自动切换到 ${replacement.name || replacement.id}。`
+        : "当前没有可替代模型；如果仍有课堂配置引用，系统会阻止删除。";
+      if (!confirm(
+        `确定删除供应商 ${providerName} 吗？\n\n` +
+        `将同时删除其 ${providerModels.length} 个模型和对应 API Key，且无法撤销。\n${replacementHint}`
+      )) return;
+
+      try {
+        const query = replacement ? `?replacement_model_id=${encodeURIComponent(replacement.id)}` : "";
+        const result = await request(
+          `/admin/providers/${encodeURIComponent(providerId)}${query}`,
+          { method: "DELETE" }
+        );
+        state.activeProviderId = "";
+        state.providerFormInitialized = true;
+        await Promise.all([loadConfig(), loadModels()]);
+        const currentModel = state.catalog.find((model) => model.id === currentScenario()?.model);
+        const nextProviderModel = currentModel?.source === "openai_compatible"
+          ? currentModel
+          : state.catalog.find((model) => model.source === "openai_compatible");
+        if (nextProviderModel) {
+          selectProvider(modelProviderId(nextProviderModel));
+        } else {
+          resetProviderForm();
+        }
+        state.providerFormInitialized = true;
+        showToast(`供应商已删除，同时移除 ${result.deleted_model_count || providerModels.length} 个模型。`);
+      } catch (error) {
+        showToast(`删除供应商失败：${error.message}`, true);
+      }
+    }
+
     async function deleteModel(modelId) {
+      const deletingModel = state.catalog.find((model) => model.id === modelId);
+      const deletingLabel = deletingModel
+        ? `${deletingModel.provider} · ${modelUpstreamId(deletingModel)}`
+        : modelId;
       const currentModelId = currentScenario()?.model || "";
       const candidates = state.catalog.filter((model) =>
         model.id !== modelId &&
@@ -2428,7 +2637,7 @@
       const replacementHint = replacement
         ? `如果它仍被课堂配置引用，将自动切换到 ${replacement.name || replacement.id}。`
         : "如果它仍被课堂配置使用，需要先导入并选择另一个可用模型。";
-      if (!confirm(`确定删除模型 ${modelId} 及其 API Key 吗？\n\n${replacementHint}`)) return;
+      if (!confirm(`确定删除模型 ${deletingLabel} 及其 API Key 吗？\n\n${replacementHint}`)) return;
       try {
         const query = replacement ? `?replacement_model_id=${encodeURIComponent(replacement.id)}` : "";
         const result = await request(`/model-catalog/${encodeURIComponent(modelId)}${query}`, { method: "DELETE" });
@@ -2594,6 +2803,9 @@
     el.cancelSourceEdit.addEventListener("click", () => resetSourceEditor({ close: true }));
     document.querySelector("#discover-models").addEventListener("click", discoverProviderModels);
     document.querySelector("#reset-model-provider").addEventListener("click", resetProviderForm);
+    document.querySelector("#add-model-provider").addEventListener("click", resetProviderForm);
+    el.deleteModelProvider.addEventListener("click", deleteProvider);
+    el.modelProviderSelector.addEventListener("change", () => selectProvider(el.modelProviderSelector.value));
     document.querySelector("#close-model-discovery").addEventListener("click", closeModelDiscovery);
     document.querySelector("#cancel-model-import").addEventListener("click", closeModelDiscovery);
     el.modelProviderName.addEventListener("input", updateProviderPreview);
