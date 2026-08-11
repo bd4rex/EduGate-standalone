@@ -155,6 +155,19 @@ class StudentSessionStore:
         with self._lock:
             self._sessions.clear()
 
+    def active_count(self, *, classroom_token: str | None = None) -> int:
+        now = time.time()
+        with self._lock:
+            self._cleanup_locked(now)
+            records = self._sessions.values()
+            if classroom_token is not None:
+                records = (
+                    record
+                    for record in records
+                    if secrets.compare_digest(record.classroom_token, classroom_token)
+                )
+            return len({record.student_id for record in records})
+
     def _cleanup_locked(self, now: float) -> None:
         for token, record in list(self._sessions.items()):
             if record.expires_at <= now:

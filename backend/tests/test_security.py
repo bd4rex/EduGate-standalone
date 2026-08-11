@@ -52,6 +52,8 @@ def test_student_session_is_reused_and_scoped_to_current_classroom(monkeypatch) 
     assert reused_record.computer_name == "LAB-PC-01-UPDATED"
     assert reused_record.client_ip == "192.168.1.22"
     assert store.identity(reused_record).student_id == record.student_id
+    assert store.active_count(classroom_token="classroom-a") == 1
+    assert store.active_count(classroom_token="classroom-b") == 0
     assert store.resolve(token, classroom_token="classroom-a") == reused_record
     assert store.resolve(token, classroom_token="classroom-b") is None
 
@@ -64,6 +66,7 @@ def test_student_session_expires(monkeypatch) -> None:
 
     now = 1_011.0
     assert store.resolve(token, classroom_token="classroom") is None
+    assert store.active_count(classroom_token="classroom") == 0
 
 
 def test_legacy_student_identity_is_private_and_rotates_with_classroom() -> None:

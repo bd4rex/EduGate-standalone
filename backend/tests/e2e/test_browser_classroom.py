@@ -170,7 +170,7 @@ def _login_and_start_class(page: Page, base_url: str) -> str:
     page.locator("#control-view").wait_for(state="visible")
     page.locator("#current-model").filter(has_text="browser-sim-model").wait_for()
     page.locator("#start-class").click()
-    page.locator("#classroom-state").filter(has_text="进行中").wait_for()
+    page.locator("#classroom-state").filter(has_text="已开放").wait_for()
     return page.locator("#classroom-url").input_value()
 
 
@@ -207,9 +207,16 @@ def test_teacher_student_stream_record_and_revocation_in_a_real_browser(live_cla
             teacher.once("dialog", lambda dialog: dialog.accept())
             teacher.locator('[data-tab="control"]').click()
             teacher.locator("#end-class").click()
-            teacher.locator("#classroom-state").filter(has_text="未开始").wait_for()
+            teacher.locator("#classroom-state").filter(has_text="已暂停").wait_for()
+            assert teacher.locator("#classroom-url").input_value() == distributed_url
             student.reload(wait_until="domcontentloaded")
             student.locator("#statusBar").filter(has_text="加入课堂失败").wait_for(timeout=10_000)
+
+            teacher.locator("#start-class").click()
+            teacher.locator("#classroom-state").filter(has_text="已开放").wait_for()
+            assert teacher.locator("#classroom-url").input_value() == distributed_url
+            student.reload(wait_until="domcontentloaded")
+            student.locator("#statusBar").filter(has_text="课堂已连接").wait_for(timeout=10_000)
 
             assert teacher_errors == []
             assert student_errors == []

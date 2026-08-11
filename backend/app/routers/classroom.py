@@ -71,10 +71,16 @@ async def classroom_join(
 @router.get("/admin/classroom", dependencies=[Depends(require_admin)])
 async def admin_classroom_access() -> dict[str, Any]:
     active = classroom_access.active()
+    classroom_token = classroom_access.token()
     return {
         "active": active,
-        "class_token": classroom_access.token(),
+        "class_token": classroom_token,
         "classroom_id": classroom_access.classroom_id(),
+        "student_count": (
+            student_sessions.active_count(classroom_token=classroom_token)
+            if active
+            else 0
+        ),
         "recording_enabled": settings.classroom_recording_enabled,
         "record_retention_days": settings.classroom_record_retention_days,
     }
@@ -90,6 +96,7 @@ async def rotate_classroom_access() -> dict[str, Any]:
         "active": classroom_access.active(),
         "class_token": token,
         "classroom_id": classroom_access.classroom_id(),
+        "student_count": 0,
     }
 
 
@@ -98,7 +105,12 @@ async def start_classroom_access() -> dict[str, Any]:
     business_db.end_classroom_instance(classroom_access.classroom_id())
     token = classroom_access.start()
     student_sessions.revoke_all()
-    return {"active": True, "class_token": token, "classroom_id": classroom_access.classroom_id()}
+    return {
+        "active": True,
+        "class_token": token,
+        "classroom_id": classroom_access.classroom_id(),
+        "student_count": 0,
+    }
 
 
 @router.post("/admin/classroom/end", dependencies=[Depends(require_admin)])
@@ -110,6 +122,7 @@ async def end_classroom_access() -> dict[str, Any]:
         "active": False,
         "class_token": classroom_access.token(),
         "classroom_id": classroom_access.classroom_id(),
+        "student_count": 0,
     }
 
 

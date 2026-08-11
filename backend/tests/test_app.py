@@ -294,10 +294,14 @@ def test_classroom_start_and_end_control_student_access_without_stopping_service
     )
     assert joined.status_code == 200
     student_token = joined.json()["student_token"]
+    active_status = client.get("/admin/classroom", headers=admin_headers)
+    assert active_status.status_code == 200
+    assert active_status.json()["student_count"] == 1
 
     ended = client.post("/admin/classroom/end", headers=admin_headers)
     assert ended.status_code == 200
     assert ended.json()["active"] is False
+    assert ended.json()["student_count"] == 0
     status_response = client.get("/admin/classroom", headers=admin_headers)
     assert status_response.status_code == 200
     assert status_response.json()["class_token"] == class_token

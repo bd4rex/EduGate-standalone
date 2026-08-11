@@ -59,7 +59,11 @@ def admin_headers(client: TestClient) -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True)
-def isolate_global_state() -> Iterator[None]:
+def isolate_global_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    # Starlette's TestClient reports the synthetic host name ``testclient``.
+    # Production Uvicorn requests always provide a numeric peer IP, so map the
+    # synthetic test transport to loopback without weakening the application.
+    monkeypatch.setattr("app.dependencies._client_ip", lambda _: "127.0.0.1")
     config_snapshot = runtime_config.data.model_copy(deep=True)
     with secret_store._lock:
         secret_snapshot = dict(secret_store._data)
