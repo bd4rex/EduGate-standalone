@@ -76,8 +76,8 @@ def test_legacy_student_identity_is_private_and_rotates_with_classroom() -> None
     assert access.legacy_student_id("192.168.1.25") != first
 
 
-def test_classroom_access_can_be_ended_and_started_with_a_fresh_token() -> None:
-    access = ClassroomAccess()
+def test_classroom_access_reuses_persisted_token_across_sessions() -> None:
+    access = ClassroomAccess("persisted-classroom-token")
     old_token = access.token()
 
     assert access.active() is True
@@ -87,5 +87,10 @@ def test_classroom_access_can_be_ended_and_started_with_a_fresh_token() -> None:
 
     new_token = access.start()
     assert access.active() is True
-    assert new_token != old_token
+    assert new_token == old_token
     assert access.matches(new_token) is True
+
+    rotated_token = access.rotate()
+    assert rotated_token != old_token
+    assert access.matches(old_token) is False
+    assert access.matches(rotated_token) is True

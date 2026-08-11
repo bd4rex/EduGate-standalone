@@ -32,6 +32,7 @@ ModelConcurrencyLimiter = core.ModelConcurrencyLimiter
 _sync_portable_admin_password = core._sync_portable_admin_password
 _stream_with_heartbeat = core._stream_with_heartbeat
 _chat_completion = core._chat_completion
+_admin_origin_allowed = core._admin_origin_allowed
 _is_loopback = core._is_loopback
 business_db = core.business_db
 classroom_access = core.classroom_access
@@ -62,10 +63,9 @@ app = FastAPI(
 async def restrict_teacher_surface(request: Request, call_next: Any) -> Response:
     if (
         request.url.path in ADMIN_SURFACE_PATHS
-        and not settings.allow_lan_admin
-        and not _is_loopback(request)
+        and not _admin_origin_allowed(request)
     ):
-        return PlainTextResponse("教师管理端仅允许在运行 EduGate 的电脑上访问。", status_code=403)
+        return PlainTextResponse("教师管理端仅允许本机或 IP 白名单中的设备访问。", status_code=403)
     return await call_next(request)
 
 if settings.cors_origins:

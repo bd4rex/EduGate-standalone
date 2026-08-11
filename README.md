@@ -14,8 +14,8 @@ EduGate 在教师的 64 位 Windows 电脑上运行，面向单教师、单节�
 
 - 只有一个教师管理员账号，不提供多教师账号和策略 API。
 - 学生使用课堂令牌换取各自的学生会话，不接触教师令牌。
-- 默认 `ALLOW_LAN_ADMIN=false`：教师管理页、登录和管理 API 只允许教师本机访问。
-- 学生页面可在同一局域网访问；换链或结束课堂会立即撤销旧学生会话。
+- 默认 `ALLOW_LAN_ADMIN=false`：教师管理页、登录和管理 API 只允许教师本机访问。平板管理需同时启用局域网管理并把设备 IP 加入 `ADMIN_ALLOWED_IPS`。
+- 学生页面可在同一局域网访问；课堂令牌持久保存，开课、下课和程序重启都不改变链接。下课会撤销当前学生会话，主动换链才会淘汰旧链接。
 - 源码要求 Python 3.10+；打包版自带运行环境，不要求教师电脑安装 Python。
 
 ## 快速开始
@@ -41,13 +41,15 @@ desktop\run_standalone.bat
 
 ## 学生如何分发
 
-教师点击“开始课堂”后，控制台生成类似下面的局域网链接：
+教师登录后即可复制固定课堂链接；点击“开始课堂”只是开放该入口：
 
 ```text
 http://教师电脑局域网IP:端口/student.html#class_token=...
 ```
 
-点击“复制链接”，通过班级群、教学平台或投屏发给学生。当前版本尚未内置二维码；需要扫码时应使用学校认可、不会公开收集链接的工具，因为课堂链接本身是临时入场凭证。
+链接由教师电脑局域网 IP 和持久课堂令牌共同定位一台 EduGate。只要没有主动点击“换一个链接”，同一链接可跨课次、跨班级和程序重启复用，适合提前嵌入课件。每次“开始课堂”仍会创建新的课堂记录批次；“结束课堂”会暂停入口并撤销当前学生会话，下次开课时原链接恢复可用。
+
+点击“复制链接”，通过班级群、教学平台或投屏发给学生。当前版本尚未内置二维码；需要扫码时应使用学校认可、不会公开收集链接的工具，因为课堂令牌仍是入场凭证。
 
 学生无需填写姓名或电脑名。浏览器会生成稳定设备标识，服务据此创建设备标签和独立学生会话。详细流程见 [使用手册](docs/使用手册.md) 和 [架构与安全边界](docs/架构与安全边界.md)。
 
@@ -69,8 +71,8 @@ flowchart LR
         public_surface["公共范围<br/>/health、/auth/status、学生静态页"]
     end
 
-    teacher -->|"默认校验本机来源<br/>X-Admin-Token 教师会话"| admin_api
-    student -->|"课堂链接中的 class_token<br/>换取 X-Student-Token"| classroom_api
+    teacher -->|"本机或精确 IP 白名单<br/>X-Admin-Token 教师会话"| admin_api
+    student -->|"教师 IP + 持久 class_token<br/>换取 X-Student-Token"| classroom_api
     platform -->|"Authorization: Bearer PLATFORM_API_KEY"| platform_api
     anonymous -->|"无鉴权；不包含管理能力"| public_surface
 
@@ -82,12 +84,14 @@ flowchart LR
 
 | 角色 | 权限范围 | 鉴权方式 | 默认网络范围 |
 | --- | --- | --- | --- |
-| 教师管理员 | 模型供应商、课堂策略、知识库、课堂启停、课堂记录、备份和系统设置 | 登录或本机自动登录后使用 `X-Admin-Token`；管理 API 同时校验请求来源 | 仅运行 EduGate 的教师电脑；启用 `ALLOW_LAN_ADMIN=true` 后可开放到可信局域网 |
-| 学生 | 加入当前课堂、AI 对话、受控 Python 运行 | 课堂链接中的 `class_token` 调用 `/classroom/join`，换取独立 `X-Student-Token` | 当前课堂所在局域网；换链或结束课堂后立即失效 |
+| 教师管理员 | 模型供应商、课堂策略、知识库、课堂启停、课堂记录、备份和系统设置 | 登录或本机自动登录后使用 `X-Admin-Token`；管理 API 同时校验来源 IP | 默认仅教师电脑；平板管理需设置 `ALLOW_LAN_ADMIN=true` 和精确 `ADMIN_ALLOWED_IPS` 白名单 |
+| 学生 | 加入当前课堂、AI 对话、受控 Python 运行 | 教师 IP 定位服务；持久 `class_token` 换取独立 `X-Student-Token` | 下课时学生会话失效、固定链接暂停；再次开课时原链接恢复；主动换链后旧链接永久失效 |
 | 平台集成 | 仅调用 `/v1/chat/completions` | `Authorization: Bearer PLATFORM_API_KEY` | 取决于服务监听地址；未配置平台密钥时接口关闭 |
 | 未认证访问者 | 健康状态、初始化状态和允许公开的静态资源 | 无 | 教师管理页、API 文档和管理接口仍受来源与会话保护 |
 
-`class_token`、`X-Student-Token`、`X-Admin-Token` 和 `PLATFORM_API_KEY` 都属于 Bearer 凭证，应避免写入公开日志、截图或公开二维码服务。
+IP 白名单是局域网准入控制，不是可替代密码的身份认证：设备 IP 可能因 DHCP 变化，也可能在不可信网络中被冒用。因此白名单设备仍需教师账号和 `X-Admin-Token`，建议给管理平板设置 DHCP 地址保留。
+
+`class_token`、`X-Student-Token`、`X-Admin-Token` 和 `PLATFORM_API_KEY` 都属于 Bearer 凭证，应避免写入公开日志、截图或公开二维码服务。持久课堂令牌保存在 `data/secrets.json`，随完整备份和便携目录迁移。
 
 ## 代码结构
 

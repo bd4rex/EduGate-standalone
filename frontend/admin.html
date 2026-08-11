@@ -661,7 +661,7 @@
           <div class="section-title">
             <div class="classroom-entry-heading">
               <h2>学生课堂入口</h2>
-              <span class="badge" id="classroom-state" aria-live="polite">未开始</span>
+              <span class="badge" id="classroom-state" aria-live="polite">已暂停</span>
             </div>
             <div class="class-controls" id="class-controls" hidden>
               <button class="button primary" id="start-class" type="button">开始课堂</button>
@@ -670,11 +670,11 @@
           </div>
           <div class="list-card" style="padding:18px">
             <div class="classroom-link">
-              <label>课堂链接<input id="classroom-url" readonly placeholder="点击“开始课堂”生成" /></label>
+              <label>固定课堂链接<input id="classroom-url" readonly placeholder="登录后显示，可提前嵌入课件" /></label>
               <button class="button soft" id="copy-classroom-url" type="button">复制链接</button>
               <button class="button ghost" id="rotate-classroom-token" type="button">换一个链接</button>
             </div>
-            <p class="hint" style="margin:10px 0 0">开始课堂后把链接发给学生。结束课堂会立即停用当前链接和学生会话，但教师控制台会继续运行。</p>
+            <p class="hint" style="margin:10px 0 0">链接会跨课次和重启保持不变，可提前嵌入课件。结束课堂只会暂停入口并撤销当前学生会话；下次开始课堂时原链接恢复可用。只有“换一个链接”会永久淘汰旧链接。</p>
           </div>
         </section>
 
@@ -1278,7 +1278,7 @@
     }
 
     function classroomUrl() {
-      if (!state.classroomActive || !state.classroomToken) return "";
+      if (!state.classroomToken) return "";
       const studentBaseUrl = state.systemStatus?.lan_base_url || state.baseUrl;
       const params = new URLSearchParams({
         class_token: state.classroomToken,
@@ -1288,14 +1288,15 @@
 
     function renderClassroomAccess() {
       const connected = Boolean(state.adminToken);
-      const active = connected && state.classroomActive && Boolean(state.classroomToken);
+      const hasLink = connected && Boolean(state.classroomToken);
+      const active = hasLink && state.classroomActive;
       el.classControls.hidden = !connected;
       el.startClass.disabled = !connected || active;
       el.endClass.disabled = !active;
-      el.copyClassroomUrl.disabled = !active;
-      el.rotateClassroomToken.disabled = !active;
-      el.classroomUrl.value = active ? classroomUrl() : "";
-      el.classroomState.textContent = active ? "进行中" : "未开始";
+      el.copyClassroomUrl.disabled = !hasLink;
+      el.rotateClassroomToken.disabled = !hasLink;
+      el.classroomUrl.value = hasLink ? classroomUrl() : "";
+      el.classroomState.textContent = active ? "已开放" : "已暂停";
       el.classroomState.className = `badge${active ? " green" : ""}`;
       el.startClass.setAttribute("aria-pressed", String(active));
       el.endClass.setAttribute("aria-disabled", String(!active));
@@ -1673,6 +1674,7 @@
       CLASSROOM_RATE_LIMIT_PER_MINUTE: "学生每分钟请求上限",
       LOGIN_RATE_LIMIT_PER_5_MINUTES: "5 分钟登录尝试上限",
       ALLOW_LAN_ADMIN: "允许从局域网访问教师管理端",
+      ADMIN_ALLOWED_IPS: "局域网教师设备 IP 白名单（逗号分隔）",
       MODEL_MAX_CONCURRENCY: "模型最大并发",
       REQUEST_TIMEOUT_SECONDS: "普通请求超时（秒）",
       STREAM_READ_TIMEOUT_SECONDS: "流式读取超时（秒）",
@@ -1715,10 +1717,18 @@
         : modelRunning > 0
         ? `工作中 ${modelRunning} / ${modelCapacity}`
         : `空闲 0 / ${modelCapacity}`;
+      const allowedAdminIpCount = Array.isArray(system.lan_admin_allowed_ips)
+        ? system.lan_admin_allowed_ips.length
+        : 0;
+      const adminScope = !system.lan_admin_enabled
+        ? "仅教师本机"
+        : allowedAdminIpCount
+        ? `本机 + ${allowedAdminIpCount} 台白名单设备`
+        : "仅教师本机（白名单未配置）";
       el.systemUptime.textContent = `已运行 ${formatDuration(system.uptime_seconds)}`;
       const metrics = [
         ["学生端局域网地址", system.lan_base_url || "-", "lan-url"],
-        ["教师端访问范围", system.lan_admin_enabled ? "本机与局域网" : "仅教师本机"],
+        ["教师端访问范围", adminScope],
         ["模型工作状态", modelStatus],
         ["Python 执行槽位", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
         ["Python 排队任务", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
@@ -2107,7 +2117,7 @@
         state.classroomActive = Boolean(data.active);
         state.classroomToken = data.class_token || "";
         renderClassroomAccess();
-        showToast("课堂已开始，学生入口现在可以使用。 ");
+        showToast("课堂已开放，固定学生链接现在可以使用。 ");
       } catch (error) {
         showToast(`开始课堂失败：${error.message}`, true);
       } finally {
@@ -2116,14 +2126,14 @@
     }
 
     async function endClassroom() {
-      if (!confirm("结束后，当前学生链接和学生会话会立即失效；教师控制台仍保持开启。确定结束吗？")) return;
+      if (!confirm("结束后，固定链接会暂停使用，当前学生会话立即失效；下次开始课堂时同一链接恢复可用。确定结束吗？")) return;
       el.endClass.disabled = true;
       try {
         const data = await request("/admin/classroom/end", { method: "POST" });
         state.classroomActive = Boolean(data.active);
         state.classroomToken = data.class_token || "";
         renderClassroomAccess();
-        showToast("课堂已结束。教师控制台仍在运行，可随时开始下一节课。 ");
+        showToast("课堂已结束并暂停入口。固定链接已保留，可用于下一节课。 ");
       } catch (error) {
         showToast(`结束课堂失败：${error.message}`, true);
       } finally {
@@ -2132,7 +2142,7 @@
     }
 
     async function rotateClassroomToken() {
-      if (!confirm("换一个课堂链接后，之前发给学生的链接会立即失效。确定继续吗？")) return;
+      if (!confirm("只有确需撤销已发出的链接时才应更换。旧链接和当前学生会话会永久失效，课件中的嵌入地址也必须更新。确定继续吗？")) return;
       try {
         const data = await request("/admin/classroom/rotate", { method: "POST" });
         state.classroomActive = Boolean(data.active);

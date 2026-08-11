@@ -36,13 +36,18 @@ def test_advanced_settings_round_trip(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(settings, "config_path", str(config_path))
 
     result = update_advanced_settings(
-        {"PYTHON_RUNNER_ENABLED": True, "MODEL_MAX_CONCURRENCY": 6}
+        {
+            "PYTHON_RUNNER_ENABLED": True,
+            "MODEL_MAX_CONCURRENCY": 6,
+            "ADMIN_ALLOWED_IPS": "192.168.50.23, 2001:db8::10",
+        }
     )
     assert result["restart_required"] is True
 
     values = {item["key"]: item["value"] for item in read_advanced_settings()["settings"]}
     assert values["PYTHON_RUNNER_ENABLED"] is True
     assert values["MODEL_MAX_CONCURRENCY"] == 6
+    assert values["ADMIN_ALLOWED_IPS"] == "192.168.50.23,2001:db8::10"
 
 
 def test_model_concurrency_default_matches_classroom_benchmark(
@@ -136,3 +141,5 @@ def test_advanced_settings_reject_unknown_and_out_of_range_values(tmp_path: Path
         update_advanced_settings({"UNRECOGNIZED": "value"})
     with pytest.raises(HTTPException, match="MODEL_MAX_CONCURRENCY must be at most 32"):
         update_advanced_settings({"MODEL_MAX_CONCURRENCY": 64})
+    with pytest.raises(HTTPException, match="ADMIN_ALLOWED_IPS must contain exact"):
+        update_advanced_settings({"ADMIN_ALLOWED_IPS": "teacher-tablet.local"})

@@ -12,6 +12,7 @@ from app.core import (
     classroom_access,
     rate_limiter,
     require_admin,
+    secret_store,
     settings,
     student_sessions,
 )
@@ -72,7 +73,7 @@ async def admin_classroom_access() -> dict[str, Any]:
     active = classroom_access.active()
     return {
         "active": active,
-        "class_token": classroom_access.token() if active else "",
+        "class_token": classroom_access.token(),
         "classroom_id": classroom_access.classroom_id(),
         "recording_enabled": settings.classroom_recording_enabled,
         "record_retention_days": settings.classroom_record_retention_days,
@@ -83,8 +84,13 @@ async def admin_classroom_access() -> dict[str, Any]:
 async def rotate_classroom_access() -> dict[str, Any]:
     business_db.end_classroom_instance(classroom_access.classroom_id())
     token = classroom_access.rotate()
+    secret_store.set("system:classroom_token", token)
     student_sessions.revoke_all()
-    return {"active": True, "class_token": token, "classroom_id": classroom_access.classroom_id()}
+    return {
+        "active": classroom_access.active(),
+        "class_token": token,
+        "classroom_id": classroom_access.classroom_id(),
+    }
 
 
 @router.post("/admin/classroom/start", dependencies=[Depends(require_admin)])
@@ -100,7 +106,11 @@ async def end_classroom_access() -> dict[str, Any]:
     business_db.end_classroom_instance(classroom_access.classroom_id())
     classroom_access.end()
     student_sessions.revoke_all()
-    return {"active": False, "class_token": "", "classroom_id": classroom_access.classroom_id()}
+    return {
+        "active": False,
+        "class_token": classroom_access.token(),
+        "classroom_id": classroom_access.classroom_id(),
+    }
 
 
 @router.get("/admin/classroom-records")

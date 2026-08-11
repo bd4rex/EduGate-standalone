@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import shutil
@@ -25,6 +26,7 @@ SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
     "CLASSROOM_RATE_LIMIT_PER_MINUTE": {"type": "int", "default": 30, "min": 1, "max": 1000, "restart": True},
     "LOGIN_RATE_LIMIT_PER_5_MINUTES": {"type": "int", "default": 10, "min": 1, "max": 100, "restart": True},
     "ALLOW_LAN_ADMIN": {"type": "bool", "default": False, "restart": True},
+    "ADMIN_ALLOWED_IPS": {"type": "str", "default": "", "restart": True},
     "MODEL_MAX_CONCURRENCY": {"type": "int", "default": 16, "min": 1, "max": 32, "restart": True},
     "REQUEST_TIMEOUT_SECONDS": {"type": "float", "default": 60, "min": 5, "max": 600, "restart": True},
     "STREAM_READ_TIMEOUT_SECONDS": {"type": "float", "default": 120, "min": 10, "max": 1800, "restart": True},
@@ -88,6 +90,7 @@ def system_status(*, supervised: bool, started_at: float, platform_key_set: bool
         "admin_url": f"http://127.0.0.1:{port}/admin.html",
         "lan_base_url": f"http://{ip}:{port}",
         "lan_admin_enabled": settings.allow_lan_admin,
+        "lan_admin_allowed_ips": list(settings.admin_allowed_ips),
         "disk_free_bytes": disk.free,
         "platform_api_key_set": platform_key_set,
         "python_runner_enabled": settings.python_runner_enabled,
@@ -261,4 +264,16 @@ def _coerce_value(key: str, raw: Any, schema: dict[str, Any]) -> Any:
         raise HTTPException(status_code=400, detail=f"{key} must be at least {schema['min']}")
     if "max" in schema and value > schema["max"]:
         raise HTTPException(status_code=400, detail=f"{key} must be at most {schema['max']}")
+    if key == "ADMIN_ALLOWED_IPS":
+        try:
+            value = ",".join(
+                str(ipaddress.ip_address(item.strip()))
+                for item in value.split(",")
+                if item.strip()
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=400,
+                detail="ADMIN_ALLOWED_IPS must contain exact IPv4 or IPv6 addresses separated by commas",
+            ) from error
     return value

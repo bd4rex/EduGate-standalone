@@ -84,7 +84,10 @@ secret_store = SecretStore(settings.secret_store_path, mode=settings.secret_stor
 runtime_config = RuntimeConfig(settings.runtime_config_path, secret_store=secret_store)
 langfuse = LangfuseClient()
 sessions = SessionStore(settings.session_ttl_seconds)
-classroom_access = ClassroomAccess()
+_persisted_classroom_token = secret_store.get("system:classroom_token")
+classroom_access = ClassroomAccess(_persisted_classroom_token)
+if not _persisted_classroom_token:
+    secret_store.set("system:classroom_token", classroom_access.token())
 student_sessions = StudentSessionStore(settings.student_session_ttl_seconds)
 rate_limiter = SlidingWindowRateLimiter()
 

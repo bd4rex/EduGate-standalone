@@ -31,11 +31,27 @@ def _is_loopback(request: Request) -> bool:
         return False
 
 
+def _admin_origin_allowed(request: Request) -> bool:
+    if _is_loopback(request):
+        return True
+    if not state.settings.allow_lan_admin:
+        return False
+    try:
+        client_ip = ipaddress.ip_address(_client_ip(request))
+        allowed_ips = {
+            ipaddress.ip_address(value)
+            for value in state.settings.admin_allowed_ips
+        }
+    except ValueError:
+        return False
+    return client_ip in allowed_ips
+
+
 def require_admin_origin(request: Request) -> None:
-    if not state.settings.allow_lan_admin and not _is_loopback(request):
+    if not _admin_origin_allowed(request):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Teacher administration is limited to this computer",
+            detail="Teacher administration is limited to this computer or an allowed device IP",
         )
 
 

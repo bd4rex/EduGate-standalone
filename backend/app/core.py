@@ -35,6 +35,7 @@ from app.state import (
 from app.dependencies import (
     _client_ip,
     _computer_name,
+    _admin_origin_allowed,
     _is_loopback,
     _sync_portable_admin_password,
     require_admin,

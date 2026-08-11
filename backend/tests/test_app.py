@@ -47,6 +47,8 @@ def client() -> Iterator[TestClient]:
 @pytest.fixture(autouse=True)
 def isolate_runtime_config(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(settings, "allow_lan_admin", True)
+    monkeypatch.setattr(settings, "admin_allowed_ips", ("127.0.0.1",))
+    monkeypatch.setattr("app.dependencies._client_ip", lambda _: "127.0.0.1")
     snapshot = runtime_config.data.model_copy(deep=True)
     with rate_limiter._lock:
         rate_limiter._events.clear()
@@ -134,12 +136,28 @@ def test_lan_teacher_page_is_disabled_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "allow_lan_admin", False)
-    monkeypatch.setattr("app.main._is_loopback", lambda _: False)
+    monkeypatch.setattr("app.main._admin_origin_allowed", lambda _: False)
 
     response = client.get("/admin.html")
 
     assert response.status_code == 403
     assert "仅允许" in response.text
+
+
+def test_lan_teacher_requires_exact_ip_allowlist(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "allow_lan_admin", True)
+    monkeypatch.setattr(settings, "admin_allowed_ips", ("192.168.50.23",))
+    monkeypatch.setattr("app.dependencies._is_loopback", lambda _: False)
+    monkeypatch.setattr("app.dependencies._client_ip", lambda _: "192.168.50.24")
+
+    assert client.get("/config", headers=admin_headers).status_code == 403
+
+    monkeypatch.setattr("app.dependencies._client_ip", lambda _: "192.168.50.23")
+    assert client.get("/config", headers=admin_headers).status_code == 200
 
 
 def test_portable_local_session_opens_teacher_console_without_password(
@@ -251,6 +269,7 @@ def test_rotating_classroom_token_invalidates_old_link(
     response = client.post("/admin/classroom/rotate", headers=admin_headers)
     assert response.status_code == 200
     assert response.json()["class_token"] != old_token
+    assert secret_store.get("system:classroom_token") == response.json()["class_token"]
     rejected = client.post(
         "/chat",
         headers={"X-Class-Token": old_token},
@@ -281,7 +300,7 @@ def test_classroom_start_and_end_control_student_access_without_stopping_service
     assert ended.json()["active"] is False
     status_response = client.get("/admin/classroom", headers=admin_headers)
     assert status_response.status_code == 200
-    assert status_response.json()["class_token"] == ""
+    assert status_response.json()["class_token"] == class_token
 
     old_link = client.post("/classroom/join", headers={"X-Class-Token": class_token})
     assert old_link.status_code == 403
@@ -295,7 +314,11 @@ def test_classroom_start_and_end_control_student_access_without_stopping_service
 
     restarted = client.post("/admin/classroom/start", headers=admin_headers)
     assert restarted.status_code == 200
-    assert restarted.json()["class_token"] != class_token
+    assert restarted.json()["class_token"] == class_token
+    assert client.post(
+        "/classroom/join",
+        headers={"X-Class-Token": class_token},
+    ).status_code == 200
     assert client.get("/health").status_code == 200
 
 

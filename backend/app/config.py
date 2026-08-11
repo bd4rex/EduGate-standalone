@@ -84,6 +84,11 @@ class Settings:
     classroom_rate_limit: int = int(os.getenv("CLASSROOM_RATE_LIMIT_PER_MINUTE", "30"))
     login_rate_limit: int = int(os.getenv("LOGIN_RATE_LIMIT_PER_5_MINUTES", "10"))
     allow_lan_admin: bool = _as_bool("ALLOW_LAN_ADMIN", False)
+    admin_allowed_ips: tuple[str, ...] = tuple(
+        value.strip()
+        for value in os.getenv("ADMIN_ALLOWED_IPS", "").split(",")
+        if value.strip()
+    )
     model_max_concurrency: int = int(os.getenv("MODEL_MAX_CONCURRENCY", "16"))
     langfuse_base_url: str | None = os.getenv("LANGFUSE_BASE_URL") or None
     langfuse_public_key: str | None = os.getenv("LANGFUSE_PUBLIC_KEY") or None

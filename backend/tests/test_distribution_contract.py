@@ -338,6 +338,8 @@ def test_current_project_docs_are_indexed_without_dated_report_copies() -> None:
         assert name in index
         assert (ROOT / "docs" / name).is_file()
     assert "ALLOW_LAN_ADMIN=false" in security
+    assert "ADMIN_ALLOWED_IPS" in security
+    assert "持久" in security
     assert "Python 3.10" in development
     assert not any("2026-" in path.name for path in (ROOT / "docs").iterdir())
 

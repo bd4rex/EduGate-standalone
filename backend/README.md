@@ -50,7 +50,9 @@ GET/PUT/POST /admin/system...       X-Admin-Token
 POST /v1/chat/completions           Bearer PLATFORM_API_KEY；未配置时关闭
 ```
 
-默认 `ALLOW_LAN_ADMIN=false`，即使令牌有效，局域网来源也不能调用管理 API。详细边界见 [架构与安全边界](../docs/架构与安全边界.md)。
+默认 `ALLOW_LAN_ADMIN=false`，即使令牌有效，局域网来源也不能调用管理 API。远程管理必须同时设置 `ALLOW_LAN_ADMIN=true`、将设备精确 IP 写入逗号分隔的 `ADMIN_ALLOWED_IPS`，并完成教师登录。IP 白名单只做网络准入，不替代 `X-Admin-Token`。
+
+课堂令牌首次启动时生成并保存在密钥存储的 `system:classroom_token` 中。`/admin/classroom/start` 只创建新课次并复用令牌；`/end` 暂停入口并撤销学生会话；只有 `/rotate` 会生成并持久化新令牌。详细边界见 [架构与安全边界](../docs/架构与安全边界.md)。
 
 ## 测试
 
