@@ -45,7 +45,8 @@ def client() -> Iterator[TestClient]:
 
 
 @pytest.fixture(autouse=True)
-def isolate_runtime_config() -> Iterator[None]:
+def isolate_runtime_config(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setattr(settings, "allow_lan_admin", True)
     snapshot = runtime_config.data.model_copy(deep=True)
     with rate_limiter._lock:
         rate_limiter._events.clear()
@@ -91,7 +92,7 @@ def test_lan_cors_preflight_is_not_required(client: TestClient) -> None:
 
 
 def test_remote_first_setup_is_rejected(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("app.main._is_loopback", lambda _: False)
+    monkeypatch.setattr("app.routers.auth._is_loopback", lambda _: False)
     monkeypatch.setattr(business_db, "is_admin_initialized", lambda _: False)
     response = client.post(
         "/auth/setup",
@@ -112,13 +113,42 @@ def test_login_uses_database_password_and_returns_expiring_session(client: TestC
     assert data["teacher"]["role"] == "admin"
 
 
+def test_lan_teacher_login_and_admin_api_are_disabled_by_default(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "allow_lan_admin", False)
+    monkeypatch.setattr("app.dependencies._is_loopback", lambda _: False)
+
+    login_response = client.post(
+        "/auth/login",
+        json={"username": settings.admin_username, "password": ADMIN_PASSWORD},
+    )
+    assert login_response.status_code == 403
+    assert client.get("/config", headers=admin_headers).status_code == 403
+
+
+def test_lan_teacher_page_is_disabled_by_default(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "allow_lan_admin", False)
+    monkeypatch.setattr("app.main._is_loopback", lambda _: False)
+
+    response = client.get("/admin.html")
+
+    assert response.status_code == 403
+    assert "仅允许" in response.text
+
+
 def test_portable_local_session_opens_teacher_console_without_password(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "portable_mode", True)
     monkeypatch.setattr(settings, "portable_auto_login", True)
-    monkeypatch.setattr("app.main._is_loopback", lambda _: True)
+    monkeypatch.setattr("app.routers.auth._is_loopback", lambda _: True)
 
     response = client.post("/auth/local-session")
 
@@ -133,7 +163,7 @@ def test_portable_local_session_is_rejected_for_student_devices(
 ) -> None:
     monkeypatch.setattr(settings, "portable_mode", True)
     monkeypatch.setattr(settings, "portable_auto_login", True)
-    monkeypatch.setattr("app.main._is_loopback", lambda _: False)
+    monkeypatch.setattr("app.routers.auth._is_loopback", lambda _: False)
 
     response = client.post("/auth/local-session")
 
@@ -294,8 +324,8 @@ def test_chat_uses_server_side_teacher_policy(
         return {"payload": payload}
 
     monkeypatch.setattr("app.main.client.chat_completion", fake_chat_completion)
-    runtime_config.update_teacher_policy(
-        settings.admin_username,
+    runtime_config.update_scenario(
+        "default",
         ScenarioUpdateRequest(
             model="deepseek-chat",
             system_prompt="teacher controlled prompt",
@@ -306,7 +336,6 @@ def test_chat_uses_server_side_teacher_policy(
         "/chat",
         headers=classroom_headers,
         json={
-            "teacher_id": settings.admin_username,
             "messages": [{"role": "user", "content": "explain fractions"}],
         },
     )
@@ -323,15 +352,14 @@ def test_ai_switch_blocks_classroom_requests(
     client: TestClient,
     classroom_headers: dict[str, str],
 ) -> None:
-    runtime_config.update_teacher_policy(
-        settings.admin_username,
+    runtime_config.update_scenario(
+        "default",
         ScenarioUpdateRequest(ai_enabled=False),
     )
     response = client.post(
         "/chat",
         headers=classroom_headers,
         json={
-            "teacher_id": settings.admin_username,
             "messages": [{"role": "user", "content": "hello"}],
         },
     )
@@ -395,15 +423,14 @@ def test_direct_model_routes_with_decrypted_key(
             api_key="direct-secret",
         )
     )
-    runtime_config.update_teacher_policy(
-        settings.admin_username,
+    runtime_config.update_scenario(
+        "default",
         ScenarioUpdateRequest(model="direct-test"),
     )
     response = client.post(
         "/chat",
         headers=classroom_headers,
         json={
-            "teacher_id": settings.admin_username,
             "messages": [{"role": "user", "content": "hello"}],
         },
     )
@@ -570,7 +597,7 @@ def test_same_upstream_model_from_two_providers_isolated_and_routes_native_id(
         imported.append(response.json()["models"][0])
 
     first, second = imported
-    previous_model = runtime_config.get_teacher_policy(settings.admin_username).model
+    previous_model = runtime_config.get_scenario("default").model
     try:
         assert first["id"] != second["id"]
         assert first["provider_id"] != second["provider_id"]
@@ -590,16 +617,15 @@ def test_same_upstream_model_from_two_providers_isolated_and_routes_native_id(
         )
         assert wrong_provider_reuse.status_code == 400
 
-        runtime_config.update_teacher_policy(
-            settings.admin_username,
+        runtime_config.update_scenario(
+            "default",
             ScenarioUpdateRequest(model=second["id"]),
         )
         chat_response = client.post(
             "/chat",
             headers=classroom_headers,
             json={
-                "teacher_id": settings.admin_username,
-                "messages": [{"role": "user", "content": "route check"}],
+                    "messages": [{"role": "user", "content": "route check"}],
             },
         )
         assert chat_response.status_code == 200
@@ -607,13 +633,13 @@ def test_same_upstream_model_from_two_providers_isolated_and_routes_native_id(
         assert observed["api_key"] == "provider-b-secret"
         assert observed["payload"]["model"] == upstream_model_id
 
-        deleted = client.delete(f"/model-catalog/{first['id']}", headers=admin_headers)
+        deleted = client.delete(f"/admin/models/{first['id']}", headers=admin_headers)
         assert deleted.status_code == 200
         assert second["id"] in runtime_config.data.model_catalog
         assert secret_store.get(f"model:{second['id']}") == "provider-b-secret"
     finally:
-        runtime_config.update_teacher_policy(
-            settings.admin_username,
+        runtime_config.update_scenario(
+            "default",
             ScenarioUpdateRequest(model=previous_model),
         )
         for model in imported:
@@ -659,11 +685,11 @@ def test_provider_delete_removes_its_models_and_switches_active_reference(
         )
     )
     provider_a_id = provider_a_models[0].provider_id
-    previous_model = runtime_config.get_teacher_policy(settings.admin_username).model
+    previous_model = runtime_config.get_scenario("default").model
 
     try:
-        runtime_config.update_teacher_policy(
-            settings.admin_username,
+        runtime_config.update_scenario(
+            "default",
             ScenarioUpdateRequest(model=provider_a_models[0].id),
         )
 
@@ -686,10 +712,10 @@ def test_provider_delete_removes_its_models_and_switches_active_reference(
         assert all(secret_store.get(model.credential_id) is None for model in provider_a_models)
         assert provider_b.id in runtime_config.data.model_catalog
         assert secret_store.get(provider_b.credential_id) == "provider-delete-b-secret"
-        assert runtime_config.get_teacher_policy(settings.admin_username).model == provider_b.id
+        assert runtime_config.get_scenario("default").model == provider_b.id
     finally:
-        runtime_config.update_teacher_policy(
-            settings.admin_username,
+        runtime_config.update_scenario(
+            "default",
             ScenarioUpdateRequest(model=previous_model),
         )
         for model in [*provider_a_models, provider_b]:
@@ -734,29 +760,14 @@ def test_completed_runtime_migration_does_not_restore_legacy_default(tmp_path: P
     assert settings.default_model not in reloaded.data.model_catalog
 
 
-def test_regular_teacher_cannot_manage_models_but_can_control_own_policy(
+def test_removed_multi_teacher_and_legacy_catalog_apis_return_not_found(
     client: TestClient,
+    admin_headers: dict[str, str],
 ) -> None:
-    business_db.upsert_teacher(
-        username="teacher-one",
-        password="teacher-password",
-        display_name="Teacher One",
-        role="teacher",
-    )
-    headers = {"X-Admin-Token": sessions.issue("teacher-one")}
-    blocked = client.post(
-        "/admin/models",
-        headers=headers,
-        json={"id": "blocked", "name": "Blocked", "provider": "Test"},
-    )
-    allowed = client.post(
-        "/config/ai",
-        headers=headers,
-        json={"enabled": False},
-    )
-    assert blocked.status_code == 403
-    assert allowed.status_code == 200
-    assert allowed.json()["scenarios"]["default"]["ai_enabled"] is False
+    assert client.get("/admin/teachers", headers=admin_headers).status_code == 404
+    assert client.post("/admin/teachers", headers=admin_headers, json={}).status_code in {404, 405}
+    assert client.get("/model-catalog", headers=admin_headers).status_code == 404
+    assert client.get("/teacher/classroom-records", headers=admin_headers).status_code == 404
 
 
 def test_python_runner_is_disabled_by_default(
@@ -804,7 +815,7 @@ def test_python_runner_unavailable_is_reported_as_503(
         raise PythonRunnerUnavailable("separate interpreter required")
 
     monkeypatch.setattr(settings, "python_runner_enabled", True)
-    monkeypatch.setattr("app.main.run_python_code", unavailable)
+    monkeypatch.setattr("app.routers.python.run_python_code", unavailable)
     response = client.post(
         "/run_python",
         headers=classroom_headers,
@@ -828,7 +839,7 @@ def test_python_runner_stream_reports_queue_output_and_result(
         return PythonRunResult("2\n", "", 0, False, 5)
 
     monkeypatch.setattr(settings, "python_runner_enabled", True)
-    monkeypatch.setattr("app.main.run_python_code", fake_runner)
+    monkeypatch.setattr("app.routers.python.run_python_code", fake_runner)
     joined = client.post(
         "/classroom/join",
         headers={"X-Class-Token": classroom_access.token()},
@@ -836,7 +847,7 @@ def test_python_runner_stream_reports_queue_output_and_result(
     response = client.post(
         "/run_python/stream",
         headers={"X-Student-Token": joined["student_token"]},
-        json={"code": "print(1 + 1)", "teacher_id": settings.admin_username},
+        json={"code": "print(1 + 1)"},
     )
 
     assert response.status_code == 200
@@ -848,10 +859,10 @@ def test_python_runner_stream_reports_queue_output_and_result(
     matching_turns = []
     deadline = time.monotonic() + 1
     while time.monotonic() < deadline and not matching_turns:
-        records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
+        records = client.get("/admin/classroom-records", headers=admin_headers).json()["records"]
         for record in records:
             detail = client.get(
-                f"/teacher/classroom-records/{record['id']}",
+                f"/admin/classroom-records/{record['id']}",
                 headers=admin_headers,
             ).json()
             matching_turns.extend(
@@ -864,20 +875,13 @@ def test_python_runner_stream_reports_queue_output_and_result(
     assert matching_turns[0]["output_content"] == "2\n"
 
 
-def test_teacher_can_view_only_owned_identified_classroom_records(
+def test_admin_can_view_identified_classroom_records(
     client: TestClient,
     admin_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    teacher_username = "record-teacher"
-    business_db.upsert_teacher(
-        username=teacher_username,
-        password="record-teacher-password",
-        display_name="Record Teacher",
-        role="teacher",
-    )
-    runtime_config.update_teacher_policy(
-        teacher_username,
+    runtime_config.update_scenario(
+        "default",
         ScenarioUpdateRequest(model="record-model", system_prompt="record policy"),
     )
 
@@ -885,7 +889,7 @@ def test_teacher_can_view_only_owned_identified_classroom_records(
         return {"choices": [{"message": {"content": "记录里的回答"}}]}
 
     monkeypatch.setattr("app.main.client.chat_completion", fake_chat_completion)
-    monkeypatch.setattr("app.main._client_ip", lambda _: "192.168.10.27")
+    monkeypatch.setattr("app.routers.classroom._client_ip", lambda _: "192.168.10.27")
     join_response = client.post(
         "/classroom/join",
         headers={"X-Class-Token": classroom_access.token()},
@@ -904,48 +908,43 @@ def test_teacher_can_view_only_owned_identified_classroom_records(
     response = client.post(
         "/chat",
         headers={"X-Student-Token": joined["student_token"]},
-        json={
-            "teacher_id": teacher_username,
-            "messages": [{"role": "user", "content": "记录里的问题"}],
-        },
+        json={"messages": [{"role": "user", "content": "记录里的问题"}]},
     )
     assert response.status_code == 200
 
-    teacher_headers = {"X-Admin-Token": sessions.issue(teacher_username)}
-    own_records = client.get("/teacher/classroom-records", headers=teacher_headers).json()["records"]
+    own_records = client.get("/admin/classroom-records", headers=admin_headers).json()["records"]
     assert own_records
-    assert {record["teacher_username"] for record in own_records} == {teacher_username}
-    detail = client.get(
-        f"/teacher/classroom-records/{own_records[0]['id']}",
-        headers=teacher_headers,
-    ).json()
-    assert detail["turns"][-1]["input_content"] == "记录里的问题"
-    assert detail["turns"][-1]["output_content"] == "记录里的回答"
-    assert detail["turns"][-1]["student_session_id"] == joined["student_session_id"]
-    assert detail["turns"][-1]["computer_name"] == "电脑-LAB027"
-    assert detail["turns"][-1]["client_ip"] == "192.168.10.27"
+    assert {record["teacher_username"] for record in own_records} == {settings.admin_username}
+    matching_record = None
+    matching_turns = []
+    for record in own_records:
+        detail = client.get(
+            f"/admin/classroom-records/{record['id']}",
+            headers=admin_headers,
+        ).json()
+        matching_turns = [
+            turn
+            for turn in detail["turns"]
+            if turn["kind"] == "chat" and turn["student_session_id"] == joined["student_session_id"]
+        ]
+        if matching_turns:
+            matching_record = record
+            break
+    assert len(matching_turns) == 1
+    assert matching_record is not None
+    turn = matching_turns[0]
+    assert turn["input_content"] == "记录里的问题"
+    assert turn["output_content"] == "记录里的回答"
+    assert turn["computer_name"] == "电脑-LAB027"
+    assert turn["client_ip"] == "192.168.10.27"
 
-    admin_records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
-    assert any(record["teacher_username"] == teacher_username for record in admin_records)
-    other_teacher = business_db.upsert_teacher(
-        username="record-other",
-        password="record-other-password",
-        display_name="Other",
-        role="teacher",
-    )
-    assert other_teacher
-    other_headers = {"X-Admin-Token": sessions.issue("record-other")}
-    assert client.get(
-        f"/teacher/classroom-records/{own_records[0]['id']}",
-        headers=other_headers,
-    ).status_code == 404
     assert client.delete(
-        f"/teacher/classroom-records/{own_records[0]['id']}",
-        headers=teacher_headers,
+        f"/admin/classroom-records/{matching_record['id']}",
+        headers=admin_headers,
     ).status_code == 200
     assert client.get(
-        f"/teacher/classroom-records/{own_records[0]['id']}",
-        headers=teacher_headers,
+        f"/admin/classroom-records/{matching_record['id']}",
+        headers=admin_headers,
     ).status_code == 404
 
 
@@ -953,14 +952,6 @@ def test_classroom_content_recording_can_be_disabled(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    teacher_username = "recording-disabled"
-    business_db.upsert_teacher(
-        username=teacher_username,
-        password="recording-disabled-password",
-        display_name="Disabled Recording",
-        role="teacher",
-    )
-
     async def fake_chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
         return {"choices": [{"message": {"content": "不应保存"}}]}
 
@@ -969,14 +960,14 @@ def test_classroom_content_recording_can_be_disabled(
     response = client.post(
         "/chat",
         headers={"X-Class-Token": classroom_access.token()},
-        json={
-            "teacher_id": teacher_username,
-            "messages": [{"role": "user", "content": "不要保存"}],
-        },
+        json={"messages": [{"role": "user", "content": "不要保存"}]},
     )
     assert response.status_code == 200
-    teacher_headers = {"X-Admin-Token": sessions.issue(teacher_username)}
-    assert client.get("/teacher/classroom-records", headers=teacher_headers).json()["records"] == []
+    records = client.get(
+        "/admin/classroom-records",
+        headers={"X-Admin-Token": sessions.issue(settings.admin_username)},
+    ).json()["records"]
+    assert all(record.get("latest_input_preview") != "不要保存" for record in records)
 
 
 def test_streamed_chat_is_saved_as_one_classroom_turn(
@@ -993,7 +984,7 @@ def test_streamed_chat_is_saved_as_one_classroom_turn(
         yield b"data: [DO"
         yield b"NE]\n\n"
 
-    monkeypatch.setattr("app.main._stream_chat_completion", fake_stream)
+    monkeypatch.setattr("app.chat_service._stream_chat_completion", fake_stream)
     joined = client.post(
         "/classroom/join",
         headers={"X-Class-Token": classroom_access.token()},
@@ -1002,16 +993,15 @@ def test_streamed_chat_is_saved_as_one_classroom_turn(
         "/chat/stream",
         headers={"X-Student-Token": joined["student_token"]},
         json={
-            "teacher_id": settings.admin_username,
             "messages": [{"role": "user", "content": "流式问题"}],
         },
     )
     assert response.status_code == 200
-    records = client.get("/teacher/classroom-records", headers=admin_headers).json()["records"]
+    records = client.get("/admin/classroom-records", headers=admin_headers).json()["records"]
     matching_turns = []
     for record in records:
         detail = client.get(
-            f"/teacher/classroom-records/{record['id']}",
+            f"/admin/classroom-records/{record['id']}",
             headers=admin_headers,
         ).json()
         matching_turns.extend(
@@ -1042,17 +1032,18 @@ def test_stream_heartbeat_is_emitted(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_runtime_config_is_valid_json_after_updates() -> None:
-    runtime_config.update_teacher_policy(
-        settings.admin_username,
+    runtime_config.update_scenario(
+        "default",
         ScenarioUpdateRequest(system_prompt="atomic write test"),
     )
     data = json.loads(Path(settings.runtime_config_path).read_text(encoding="utf-8"))
-    assert data["teacher_policies"][settings.admin_username]["system_prompt"] == "atomic write test"
+    assert data["scenarios"]["default"]["system_prompt"] == "atomic write test"
 
 
 def test_model_concurrency_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
     import asyncio
-    import app.main as main_module
+    import app.chat_service as chat_service
+    import app.state as state_module
 
     active = 0
     peak = 0
@@ -1065,13 +1056,13 @@ def test_model_concurrency_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
         active -= 1
         return payload
 
-    monkeypatch.setattr(main_module.client, "chat_completion", fake_chat_completion)
+    monkeypatch.setattr(state_module.client, "chat_completion", fake_chat_completion)
 
     async def exercise() -> None:
-        limiter = main_module.ModelConcurrencyLimiter(2)
-        monkeypatch.setattr(main_module, "model_semaphore", limiter)
+        limiter = state_module.ModelConcurrencyLimiter(2)
+        monkeypatch.setattr(state_module, "model_semaphore", limiter)
         tasks = [
-            asyncio.create_task(main_module._chat_completion({"model": "concurrency-test"}))
+            asyncio.create_task(chat_service._chat_completion({"model": "concurrency-test"}))
             for _ in range(64)
         ]
         await asyncio.sleep(0.005)
@@ -1116,32 +1107,29 @@ def test_referenced_model_can_be_replaced_while_knowledge_source_stays_protected
         json={"id": source_id, "name": "Referenced Source"},
     )
     assert source_response.status_code == 200
-    runtime_config.update_teacher_policy(
-        settings.admin_username,
+    runtime_config.update_scenario(
+        "default",
         ScenarioUpdateRequest(model=model_id, knowledge_source_id=source_id),
     )
     runtime_config.update_scenario("default", ScenarioUpdateRequest(model=model_id))
 
-    model_response = client.delete(f"/model-catalog/{model_id}", headers=admin_headers)
+    model_response = client.delete(f"/admin/models/{model_id}", headers=admin_headers)
     replaced_response = client.delete(
-        f"/model-catalog/{model_id}?replacement_model_id={replacement_id}",
+        f"/admin/models/{model_id}?replacement_model_id={replacement_id}",
         headers=admin_headers,
     )
     source_response = client.delete(f"/knowledge/sources/{source_id}", headers=admin_headers)
 
     assert model_response.status_code == 409
     assert replaced_response.status_code == 200
-    assert set(replaced_response.json()["replaced_references"]) == {
-        "default",
-        f"teacher:{settings.admin_username}",
-    }
+    assert set(replaced_response.json()["replaced_references"]) == {"default"}
     assert runtime_config.data.scenarios["default"].model == replacement_id
-    assert runtime_config.get_teacher_policy(settings.admin_username).model == replacement_id
+    assert runtime_config.get_scenario("default").model == replacement_id
     assert model_id not in runtime_config.data.model_catalog
     assert secret_store.get(f"model:{model_id}") is None
     assert source_response.status_code == 409
-    runtime_config.update_teacher_policy(
-        settings.admin_username,
+    runtime_config.update_scenario(
+        "default",
         ScenarioUpdateRequest(model=settings.default_model, knowledge_source_id=None),
     )
     runtime_config.update_scenario("default", ScenarioUpdateRequest(model=settings.default_model))
@@ -1183,7 +1171,7 @@ def test_admin_can_open_fixed_application_directory(
         opened.append(True)
         return {"status": "opened", "path": "C:\\EduGate"}
 
-    monkeypatch.setattr("app.main.open_app_directory", fake_open_app_directory)
+    monkeypatch.setattr("app.routers.system.open_app_directory", fake_open_app_directory)
     response = client.post("/admin/system/open-app-dir", headers=admin_headers)
 
     assert response.status_code == 200
@@ -1207,7 +1195,7 @@ def test_admin_can_open_fixed_knowledge_source_directory(
         opened.append(path)
         return {"status": "opened", "path": str(path)}
 
-    monkeypatch.setattr("app.main.open_local_directory", fake_open_local_directory)
+    monkeypatch.setattr("app.routers.knowledge.open_local_directory", fake_open_local_directory)
     response = client.post("/knowledge/sources/general/open-folder", headers=admin_headers)
 
     assert response.status_code == 200

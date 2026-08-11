@@ -29,18 +29,18 @@ if not errorlevel 1 (
     set "PYTHON=python"
   ) else (
     echo [ERROR] Python was not found.
-    echo Install Python 3.9 or newer and select "Add python.exe to PATH".
+    echo Install Python 3.10 or newer and select "Add python.exe to PATH".
     echo Installer: https://www.python.org/downloads/windows/
     pause
     exit /b 1
   )
 )
 
-echo [1/6] Checking Python 3.9 or newer...
+echo [1/6] Checking Python 3.10 or newer...
 %PYTHON% --version
-%PYTHON% -c "import sys; raise SystemExit(0 if sys.version_info ^>= (3, 9) else 1)"
+%PYTHON% -c "import sys; raise SystemExit(0 if sys.version_info ^>= (3, 10) else 1)"
 if %errorlevel% neq 0 (
-  echo [ERROR] EduGate requires Python 3.9 or newer.
+  echo [ERROR] EduGate requires Python 3.10 or newer.
   pause
   exit /b 1
 )

@@ -1,8 +1,10 @@
-# EduGate Standalone Backend
+# EduGate 后端
 
-FastAPI 后端负责教师身份、课堂访问、策略执行、知识库检索、上游模型代理和同源静态页面。
+FastAPI 后端负责单教师认证、课堂令牌、学生会话、模型代理、知识库、Python 执行和同源静态页面。
 
-## 本地开发
+## 开发启动
+
+要求 64 位 Python 3.10+：
 
 ```powershell
 python -m pip install -r backend\requirements-dev.txt
@@ -10,93 +12,48 @@ $env:EDUGATE_DATA_DIR="$PWD\.local-data"
 python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-打开 `http://127.0.0.1:8000/admin.html`，首次创建管理员密码。正式教师安装请使用 `desktop\install_backend_deps.bat`，它会通过清华源建立独立虚拟环境。
+打开 `http://127.0.0.1:8000/admin.html`。开发命令只监听本机；课堂分发请使用 Windows 启动器。
+
+## 模块边界
+
+- `app/main.py`：应用装配、中间件、OpenAPI、静态页面。
+- `app/state.py`：共享服务和生命周期。
+- `app/dependencies.py`：教师、学生和平台权限。
+- `app/chat_service.py`：对话、模型、知识检索和流式处理。
+- `app/runtime_config.py`：模型目录和唯一 `default` 场景。
+- `app/routers/`：按业务域拆分的 API。
+- `app/core.py`：旧导入路径兼容门面。
 
 ## 主要接口
 
 ```text
 GET  /health
 GET  /auth/status
-POST /auth/setup             仅回环地址、仅首次
-POST /auth/login
-POST /auth/logout
-POST /auth/password
+POST /auth/setup                    仅教师本机、仅首次
+POST /auth/login                    默认仅教师本机
+POST /auth/logout                   X-Admin-Token
+POST /auth/password                 X-Admin-Token
 
-POST /classroom/join         X-Class-Token，静默提交浏览器设备标识并换取独立学生会话
-POST /chat                   X-Student-Token；兼容 X-Class-Token
-POST /chat/stream            X-Student-Token；兼容 X-Class-Token
-POST /run_python             X-Student-Token；默认关闭
-POST /run_python/stream      X-Student-Token；排队状态与输出 SSE
-POST /v1/chat/completions    Bearer PLATFORM_API_KEY，未配置时关闭
+POST /classroom/join                X-Class-Token → X-Student-Token
+POST /chat                          X-Student-Token
+POST /chat/stream                   X-Student-Token
+POST /run_python                    X-Student-Token
+POST /run_python/stream             X-Student-Token
 
-GET  /config                 X-Admin-Token
-PUT  /config/scenarios/{id}  X-Admin-Token
-GET  /admin/classroom        X-Admin-Token
-POST /admin/classroom/rotate X-Admin-Token
-GET  /teacher/classroom-records       X-Admin-Token，教师仅可看自己的记录
-GET  /teacher/classroom-records/{id}  X-Admin-Token
-DELETE /teacher/classroom-records/{id} X-Admin-Token
-POST /admin/models           管理员
-POST /admin/models/discover  管理员，获取上游可用模型
-POST /admin/models/batch-import 管理员，按供应商标识勾选后批量导入模型
-DELETE /admin/providers/{id} 管理员，删除供应商、全部模型和密钥，可指定替代模型
-POST /admin/providers/{id}/test 管理员
-GET  /admin/system/status      管理员
-GET  /admin/system/settings    管理员
-PUT  /admin/system/settings    管理员，保存后需重启
-GET  /admin/system/backup      管理员
-POST /admin/system/restore     管理员，验证后重启恢复
-POST /admin/system/action      管理员，restart/shutdown
+GET/PUT /config...                  X-Admin-Token
+GET/POST /admin/classroom...        X-Admin-Token
+GET/DELETE /admin/classroom-records... X-Admin-Token
+GET/POST/PATCH/DELETE /admin/models... X-Admin-Token
+GET/DELETE /admin/providers...      X-Admin-Token
+GET/PUT/POST /admin/system...       X-Admin-Token
+
+POST /v1/chat/completions           Bearer PLATFORM_API_KEY；未配置时关闭
 ```
 
-## 运行配置
-
-相对路径都解析到 `EDUGATE_DATA_DIR`。Windows 默认为 `%LOCALAPPDATA%\EduGate`。
-
-```env
-EDUGATE_MODE=standalone
-EDUGATE_BACKEND_PORT=8000
-EDUGATE_DATA_DIR=
-ADMIN_USERNAME=admin
-SESSION_TTL_SECONDS=28800
-STUDENT_SESSION_TTL_SECONDS=28800
-STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES=256
-CLASSROOM_RATE_LIMIT_PER_MINUTE=30
-LOGIN_RATE_LIMIT_PER_5_MINUTES=10
-MODEL_MAX_CONCURRENCY=16
-PLATFORM_API_KEY=
-
-REQUEST_TIMEOUT_SECONDS=60
-STREAM_READ_TIMEOUT_SECONDS=120
-STREAM_HEARTBEAT_SECONDS=15
-
-MAX_UPLOAD_BYTES=26214400
-MAX_PDF_PAGES=200
-LOG_MESSAGE_PREVIEW=false
-LOG_MAX_RECORDS=5000
-
-PYTHON_RUNNER_ENABLED=false
-PYTHON_RUNNER_TIMEOUT_SECONDS=3
-PYTHON_RUNNER_MEMORY_MB=128
-PYTHON_RUNNER_EXECUTABLE=
-PYTHON_RUNNER_MAX_CONCURRENCY=4
-PYTHON_RUNNER_MAX_QUEUE=64
-PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS=30
-CLASSROOM_RECORDING_ENABLED=true
-CLASSROOM_RECORD_RETENTION_DAYS=30
-CLASSROOM_RECORD_MAX_RECORDS=20000
-CLASSROOM_RECORD_MAX_CONTENT_CHARS=12000
-CORS_ORIGINS=
-```
-
-模型公司 API Key 推荐从教师控制台录入。它由 Windows DPAPI 加密到 `secrets.json`，不会进入 `runtime_config.json` 或 API 响应。`UPSTREAM_API_KEY` 只保留作旧部署迁移兼容，不建议用于新安装。
+默认 `ALLOW_LAN_ADMIN=false`，即使令牌有效，局域网来源也不能调用管理 API。详细边界见 [架构与安全边界](../docs/架构与安全边界.md)。
 
 ## 测试
-
-从仓库根目录运行：
 
 ```powershell
 python -m pytest -q --basetemp=.pytest-tmp
 ```
-
-测试覆盖首次初始化、静默设备标识与 IP 记录、独立学生会话、代理环境限流、64 请求并发边界、课堂令牌轮换、课堂记录权限与保留策略、便携密钥、多供应商同名模型隔离、上游模型发现与批量导入、备份恢复、上传/PDF 限制、Python 多槽位任务池、实时输出、子进程隔离、无窗口分发契约和流式心跳。

@@ -116,7 +116,6 @@
       border-bottom: 1px solid var(--line);
       background: var(--soft);
     }
-    .tabs.teacher-tabs { grid-template-columns: repeat(3, 1fr); }
 
     .tab {
       min-height: 60px;
@@ -189,7 +188,8 @@
     .tab:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.45); }
     .tab.active:focus-visible { box-shadow: inset 0 -5px 0 rgba(29, 78, 216, 0.32); }
 
-    .control-grid { display: grid; grid-template-columns: 1fr 350px; gap: 22px; align-items: start; }
+    .control-grid { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 22px; align-items: start; }
+    .control-grid > * { min-width: 0; }
     .control-grid > div > .section:last-child { margin-bottom: 0; }
 
     .session-card {
@@ -647,18 +647,39 @@
       </section>
 
       <section id="control-view" hidden>
+        <section class="session-card">
+          <h2>当前课堂配置</h2>
+          <p>学生端正在使用的 AI、模型和知识库。</p>
+          <div class="metrics">
+            <div class="metric"><span>AI 服务</span><strong id="current-ai-state">-</strong></div>
+            <div class="metric"><span>模型</span><strong id="current-model">-</strong></div>
+            <div class="metric"><span>知识库</span><strong id="current-source">general</strong></div>
+          </div>
+        </section>
+
+        <section class="section classroom-entry" id="classroom-entry">
+          <div class="section-title">
+            <div class="classroom-entry-heading">
+              <h2>学生课堂入口</h2>
+              <span class="badge" id="classroom-state" aria-live="polite">未开始</span>
+            </div>
+            <div class="class-controls" id="class-controls" hidden>
+              <button class="button primary" id="start-class" type="button">开始课堂</button>
+              <button class="button danger" id="end-class" type="button">结束课堂</button>
+            </div>
+          </div>
+          <div class="list-card" style="padding:18px">
+            <div class="classroom-link">
+              <label>课堂链接<input id="classroom-url" readonly placeholder="点击“开始课堂”生成" /></label>
+              <button class="button soft" id="copy-classroom-url" type="button">复制链接</button>
+              <button class="button ghost" id="rotate-classroom-token" type="button">换一个链接</button>
+            </div>
+            <p class="hint" style="margin:10px 0 0">开始课堂后把链接发给学生。结束课堂会立即停用当前链接和学生会话，但教师控制台会继续运行。</p>
+          </div>
+        </section>
+
         <div class="control-grid">
           <div>
-            <section class="session-card">
-              <h2>当前课堂配置</h2>
-              <p>学生端正在使用的 AI、模型和知识库。</p>
-              <div class="metrics">
-                <div class="metric"><span>AI 服务</span><strong id="current-ai-state">-</strong></div>
-                <div class="metric"><span>模型</span><strong id="current-model">-</strong></div>
-                <div class="metric"><span>知识库</span><strong id="current-source">general</strong></div>
-              </div>
-            </section>
-
             <section class="section">
               <div class="section-title">
                 <h2>AI 服务开关</h2>
@@ -718,26 +739,6 @@
           </aside>
         </div>
 
-        <section class="section classroom-entry" id="classroom-entry">
-          <div class="section-title">
-            <div class="classroom-entry-heading">
-              <h2>学生课堂入口</h2>
-              <span class="badge" id="classroom-state" aria-live="polite">未开始</span>
-            </div>
-            <div class="class-controls" id="class-controls" hidden>
-              <button class="button primary" id="start-class" type="button">开始课堂</button>
-              <button class="button danger" id="end-class" type="button">结束课堂</button>
-            </div>
-          </div>
-          <div class="list-card" style="padding:18px">
-            <div class="classroom-link">
-              <label>课堂链接<input id="classroom-url" readonly placeholder="点击“开始课堂”生成" /></label>
-              <button class="button soft" id="copy-classroom-url" type="button">复制链接</button>
-              <button class="button ghost" id="rotate-classroom-token" type="button">换一个链接</button>
-            </div>
-            <p class="hint" style="margin:10px 0 0">开始课堂后把链接发给学生。结束课堂会立即停用当前链接和学生会话，但教师控制台会继续运行。</p>
-          </div>
-        </section>
       </section>
 
       <section id="records-view" hidden>
@@ -974,7 +975,7 @@
 
       <div class="footer-note">
         <span>● 教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
-        <span>v1.5 · 便携课堂版</span>
+        <span>v2.0 · 单教师课堂版</span>
       </div>
     </main>
   </div>
@@ -1117,10 +1118,6 @@
       return headers;
     }
 
-    function isAdmin() {
-      return state.currentTeacher?.role === "admin";
-    }
-
     function updateFilePicker(input, output) {
       if (!input || !output) return;
       const selectedName = input.files?.[0]?.name || "未选择文件";
@@ -1129,10 +1126,8 @@
     }
 
     function applyRoleUI() {
-      const admin = isAdmin();
-      el.tabNav.classList.toggle("teacher-tabs", !admin);
       document.querySelectorAll("[data-admin-only]").forEach((node) => {
-        node.hidden = !admin;
+        node.hidden = false;
       });
       const hint = document.querySelector(".footer-note span");
       if (hint) {
@@ -1140,11 +1135,9 @@
           ? "● 本机已自动进入教师控制台；复制整个程序文件夹即可保留当前课堂配置。"
           : !state.adminToken
           ? "● 请先完成首次初始化或进入教师控制台。"
-          : admin
-          ? "● 可管理模型供应商、课堂策略、知识库和本机运行设置。"
-          : "● 普通老师只能复制自己的 API，并管理以自己用户名开头的知识库。";
+          : "● 可管理模型供应商、课堂策略、知识库和本机运行设置。";
       }
-      if (el.systemView) el.systemView.hidden = !admin || state.activeTab !== "system";
+      if (el.systemView) el.systemView.hidden = !state.adminToken || state.activeTab !== "system";
       if (el.recordsView) el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
     }
 
@@ -1188,8 +1181,7 @@
     }
 
     function updateLoginState() {
-      const role = state.currentTeacher?.role === "admin" ? "管理员" : "普通老师";
-      el.loginState.textContent = state.adminToken ? `已登录：${state.username}（${role}）` : "未登录";
+      el.loginState.textContent = state.adminToken ? `已登录：${state.username}（教师管理员）` : "未登录";
       el.logoutButton.disabled = !state.adminToken;
       el.tabs.forEach((tab) => {
         tab.disabled = !state.adminToken;
@@ -1198,7 +1190,7 @@
       el.controlView.hidden = !state.adminToken || state.activeTab !== "control";
       el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
       el.settingsView.hidden = !state.adminToken || state.activeTab !== "settings";
-      el.systemView.hidden = !state.adminToken || !isAdmin() || state.activeTab !== "system";
+      el.systemView.hidden = !state.adminToken || state.activeTab !== "system";
       applyRoleUI();
     }
 
@@ -1287,11 +1279,11 @@
 
     function classroomUrl() {
       if (!state.classroomActive || !state.classroomToken) return "";
+      const studentBaseUrl = state.systemStatus?.lan_base_url || state.baseUrl;
       const params = new URLSearchParams({
-        teacher_id: state.currentTeacher?.username || state.username,
         class_token: state.classroomToken,
       });
-      return `${state.baseUrl.replace(/\/+$/, "")}/student.html#${params}`;
+      return `${studentBaseUrl.replace(/\/+$/, "")}/student.html#${params}`;
     }
 
     function renderClassroomAccess() {
@@ -1339,10 +1331,6 @@
       }
     }
 
-    function teacherSourcePrefix() {
-      return `${(state.currentTeacher?.username || state.username || "").trim().toLowerCase()}-`;
-    }
-
     function mountedSourceStorageKey() {
       const username = (state.currentTeacher?.username || state.username || "default").trim().toLowerCase();
       return `edugate-mounted-source:${username}`;
@@ -1362,48 +1350,7 @@
     }
 
     function normalizeTeacherSourceId(sourceId) {
-      if (isAdmin()) return sourceId;
-      const prefix = teacherSourcePrefix();
-      return sourceId.startsWith(prefix) ? sourceId : `${prefix}${sourceId}`;
-    }
-
-    function normalizeModels(raw) {
-      const list = Array.isArray(raw?.data) ? raw.data : [];
-      return list.map((item) => {
-        const id = item.id || item.model_name || item.name;
-        return {
-          id,
-          name: item.display_name || item.name || item.upstream_model_id || id,
-          provider: item.owned_by || item.provider || "未标记供应商",
-          provider_id: item.provider_id || "",
-          upstream_model_id: item.upstream_model_id || id,
-          description: "来自上游 /models 的可用模型",
-          available: true,
-        };
-      }).filter((item) => item.id);
-    }
-
-    function mergeModels(litellmModels, catalogModels) {
-      const merged = new Map();
-      litellmModels.forEach((model) => merged.set(model.id, model));
-      catalogModels.forEach((model) => {
-        const existing = merged.get(model.id);
-        const directAvailable = model.source === "openai_compatible" && model.base_url && model.api_key_set;
-        const catalogAvailable = !isAdmin() && model.source !== "openai_compatible";
-        merged.set(model.id, {
-          id: model.id,
-          name: model.name || model.id,
-          provider: model.provider || existing?.provider || "未标记供应商",
-          provider_id: model.provider_id || existing?.provider_id || "",
-          upstream_model_id: model.upstream_model_id || existing?.upstream_model_id || model.id,
-          description: model.description || "教师维护的模型目录项",
-          source: model.source || "openai_compatible",
-          base_url: model.base_url || "",
-          api_key_set: Boolean(model.api_key_set),
-          available: catalogAvailable || directAvailable || Boolean(existing?.available),
-        });
-      });
-      return Array.from(merged.values());
+      return sourceId;
     }
 
     function currentScenario() {
@@ -1471,14 +1418,12 @@
       const options = state.sources.map((source) => (
         `<option value="${escapeHtml(source.id)}">${escapeHtml(source.name)} (${escapeHtml(source.id)}) · ${source.file_count} 文件</option>`
       )).join("");
-      const writableSources = isAdmin()
-        ? state.sources
-        : state.sources.filter((source) => source.id.startsWith(teacherSourcePrefix()));
+      const writableSources = state.sources;
       const uploadOptions = writableSources.map((source) => (
         `<option value="${escapeHtml(source.id)}">${escapeHtml(source.name)} (${escapeHtml(source.id)}) · ${source.file_count} 文件</option>`
       )).join("");
       el.sourceSelect.innerHTML = options || `<option value="general">general</option>`;
-      el.uploadSource.innerHTML = uploadOptions || `<option value="">请先创建 ${escapeHtml(teacherSourcePrefix())} 开头的知识库</option>`;
+      el.uploadSource.innerHTML = uploadOptions || `<option value="">请先创建知识库</option>`;
       el.sourceSelect.value = activeSource;
       if (writableSources.some((source) => source.id === activeSource)) {
         el.uploadSource.value = activeSource;
@@ -1727,6 +1672,7 @@
       STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES: "同一来源 5 分钟加入课堂上限",
       CLASSROOM_RATE_LIMIT_PER_MINUTE: "学生每分钟请求上限",
       LOGIN_RATE_LIMIT_PER_5_MINUTES: "5 分钟登录尝试上限",
+      ALLOW_LAN_ADMIN: "允许从局域网访问教师管理端",
       MODEL_MAX_CONCURRENCY: "模型最大并发",
       REQUEST_TIMEOUT_SECONDS: "普通请求超时（秒）",
       STREAM_READ_TIMEOUT_SECONDS: "流式读取超时（秒）",
@@ -1771,7 +1717,8 @@
         : `空闲 0 / ${modelCapacity}`;
       el.systemUptime.textContent = `已运行 ${formatDuration(system.uptime_seconds)}`;
       const metrics = [
-        ["局域网地址", system.lan_base_url || "-", "lan-url"],
+        ["学生端局域网地址", system.lan_base_url || "-", "lan-url"],
+        ["教师端访问范围", system.lan_admin_enabled ? "本机与局域网" : "仅教师本机"],
         ["模型工作状态", modelStatus],
         ["Python 执行槽位", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
         ["Python 排队任务", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
@@ -1841,7 +1788,7 @@
         return result;
       }, { students: 0, turns: 0, python: 0 });
       el.recordingNote.textContent = state.classroomRecordConfig.recording_enabled
-        ? `课堂记录包含学生填写的电脑名和请求 IP，仅保存在这台教师电脑中，默认保留 ${state.classroomRecordConfig.retention_days} 天。`
+        ? `课堂记录包含自动生成的设备标签和请求 IP，仅保存在这台教师电脑中，默认保留 ${state.classroomRecordConfig.retention_days} 天。`
         : "课堂内容记录当前已关闭。管理员可在“系统 -> 高级设置”中启用。";
       const summary = [
         ["课堂数", records.length],
@@ -2031,7 +1978,7 @@
         ["课堂记录", loadClassroomRecords],
         ["课堂链接", loadClassroom],
       ];
-      if (isAdmin()) steps.push(["系统状态", loadSystem]);
+      steps.push(["系统状态", loadSystem]);
       const failures = [];
       for (const [label, loader] of steps) {
         try {
@@ -2058,16 +2005,11 @@
     }
 
     async function loadModels() {
-      const catalog = await request("/model-catalog");
+      const catalog = await request("/admin/models");
       state.catalog = catalog || [];
-      if (isAdmin()) {
-        const modelsRaw = await request("/models");
-        state.models = mergeModels(normalizeModels(modelsRaw), state.catalog);
-        initializeProviderForm();
-        renderCatalog();
-      } else {
-        state.models = mergeModels([], state.catalog);
-      }
+      state.models = state.catalog;
+      initializeProviderForm();
+      renderCatalog();
       renderAll();
     }
 
@@ -2095,6 +2037,7 @@
       state.launcherLogs = launcherLogs.lines || [];
       state.advancedSettings = advanced.settings || [];
       renderSystem();
+      renderClassroomAccess();
     }
 
     async function refreshSystemStatus() {
@@ -2111,7 +2054,7 @@
     }
 
     async function loadClassroomRecords(preferredId = "") {
-      const data = await request("/teacher/classroom-records?limit=100");
+      const data = await request("/admin/classroom-records?limit=100");
       state.classroomRecordConfig = {
         recording_enabled: Boolean(data.recording_enabled),
         retention_days: Number(data.retention_days || 30),
@@ -2131,7 +2074,7 @@
     }
 
     async function loadClassroomRecord(recordId) {
-      state.selectedClassroomRecord = await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}?limit=2000`);
+      state.selectedClassroomRecord = await request(`/admin/classroom-records/${encodeURIComponent(recordId)}?limit=2000`);
       renderClassroomRecords();
       renderClassroomRecordDetail();
     }
@@ -2141,7 +2084,7 @@
       if (!recordId) return;
       if (!confirm("确定永久删除这节课堂的全部本地记录吗？此操作无法撤销。")) return;
       try {
-        await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}`, { method: "DELETE" });
+        await request(`/admin/classroom-records/${encodeURIComponent(recordId)}`, { method: "DELETE" });
         state.selectedClassroomRecord = null;
         await loadClassroomRecords();
         showToast("课堂记录已删除。");
@@ -2640,7 +2583,7 @@
       if (!confirm(`确定删除模型 ${deletingLabel} 及其 API Key 吗？\n\n${replacementHint}`)) return;
       try {
         const query = replacement ? `?replacement_model_id=${encodeURIComponent(replacement.id)}` : "";
-        const result = await request(`/model-catalog/${encodeURIComponent(modelId)}${query}`, { method: "DELETE" });
+        const result = await request(`/admin/models/${encodeURIComponent(modelId)}${query}`, { method: "DELETE" });
         await Promise.all([loadConfig(), loadModels()]);
         showToast(result.replacement_model_id
           ? `模型已删除，课堂配置已切换到 ${result.replacement_model_id}。`
@@ -2853,7 +2796,7 @@
         el.controlView.hidden = name !== "control";
         el.recordsView.hidden = name !== "records";
         el.settingsView.hidden = name !== "settings";
-        el.systemView.hidden = name !== "system" || !isAdmin();
+        el.systemView.hidden = name !== "system";
         if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
         window.scrollTo({ top: 0 });
       });

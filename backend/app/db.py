@@ -389,7 +389,17 @@ class BusinessDB:
         return _json_ready(row)
 
     def change_teacher_password(self, username: str, password: str) -> dict[str, Any] | None:
-        return self.update_teacher_password(username, password)
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE edugate_teachers
+                SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE username = ?
+                """,
+                (hash_password(password), username),
+            )
+            row = self._teacher_row(conn, username)
+        return _json_ready(row) if row else None
 
     @staticmethod
     def _set_setting(conn: sqlite3.Connection, key: str, value: str) -> None:
@@ -471,16 +481,6 @@ class BusinessDB:
         public_row.pop("password_hash", None)
         return _json_ready(public_row)
 
-    def list_teachers(self) -> list[dict[str, Any]]:
-        with self._connect() as conn:
-            rows = conn.execute(
-                """
-                SELECT id, username, display_name, role, is_active, created_at, updated_at, last_login_at
-                FROM edugate_teachers
-                ORDER BY id
-                """
-            ).fetchall()
-        return [_json_ready(row) for row in rows]
 
     def get_teacher(self, username: str) -> dict[str, Any] | None:
         with self._connect() as conn:
@@ -494,94 +494,9 @@ class BusinessDB:
             ).fetchone()
         return _json_ready(row) if row else None
 
-    def upsert_teacher(
-        self,
-        *,
-        username: str,
-        password: str | None,
-        display_name: str = "",
-        role: str = "teacher",
-        is_active: bool = True,
-    ) -> dict[str, Any]:
-        with self._connect() as conn:
-            existing = conn.execute(
-                "SELECT id FROM edugate_teachers WHERE username = ?",
-                (username,),
-            ).fetchone()
-            if existing:
-                if password:
-                    conn.execute(
-                        """
-                        UPDATE edugate_teachers
-                        SET password_hash = ?,
-                            display_name = ?,
-                            role = ?,
-                            is_active = ?,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE username = ?
-                        """,
-                        (hash_password(password), display_name, role, int(is_active), username),
-                    )
-                else:
-                    conn.execute(
-                        """
-                        UPDATE edugate_teachers
-                        SET display_name = ?,
-                            role = ?,
-                            is_active = ?,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE username = ?
-                        """,
-                        (display_name, role, int(is_active), username),
-                    )
-            else:
-                if not password:
-                    raise ValueError("password is required for new teacher")
-                conn.execute(
-                    """
-                    INSERT INTO edugate_teachers (username, password_hash, display_name, role, is_active)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (username, hash_password(password), display_name, role, int(is_active)),
-                )
-            row = self._teacher_row(conn, username)
-        return _json_ready(row)
 
-    def update_teacher_password(self, username: str, password: str) -> dict[str, Any] | None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                UPDATE edugate_teachers
-                SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE username = ?
-                """,
-                (hash_password(password), username),
-            )
-            row = self._teacher_row(conn, username)
-        return _json_ready(row) if row else None
 
-    def set_teacher_active(self, username: str, is_active: bool) -> dict[str, Any] | None:
-        with self._connect() as conn:
-            conn.execute(
-                """
-                UPDATE edugate_teachers
-                SET is_active = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE username = ?
-                """,
-                (int(is_active), username),
-            )
-            row = self._teacher_row(conn, username)
-        return _json_ready(row) if row else None
 
-    def delete_teacher(self, username: str) -> dict[str, Any] | None:
-        with self._connect() as conn:
-            row = self._teacher_row(conn, username)
-            if not row:
-                return None
-            conn.execute("DELETE FROM classroom_runs WHERE teacher_username = ?", (username,))
-            conn.execute("DELETE FROM edugate_teaching_sessions WHERE teacher_username = ?", (username,))
-            conn.execute("DELETE FROM edugate_teachers WHERE username = ?", (username,))
-        return _json_ready(row)
 
     def list_teaching_sessions(self) -> list[dict[str, Any]]:
         with self._connect() as conn:

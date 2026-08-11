@@ -59,13 +59,14 @@ def test_portable_teacher_console_omits_multi_teacher_management_and_uses_promin
 def test_teacher_console_classroom_controls_and_ipad_touch_layout_are_distributed() -> None:
     page = _read("frontend/admin.html")
 
-    assert page.index('<div class="control-grid">') < page.index('id="classroom-entry"')
+    assert page.index('id="classroom-entry"') < page.index('<div class="control-grid">')
     assert page.index('id="classroom-entry"') < page.index('id="class-controls"')
     assert 'id="class-controls"' not in page.split("</header>", 1)[0]
     assert 'id="start-class"' in page
     assert 'id="end-class"' in page
     assert 'request("/admin/classroom/start"' in page
     assert 'request("/admin/classroom/end"' in page
+    assert "state.systemStatus?.lan_base_url || state.baseUrl" in page
     assert 'el.endClass.addEventListener("click", () => requestSystemAction("shutdown"))' not in page
     assert "touch-action: manipulation" in page
     assert "@media (hover: none), (pointer: coarse)" in page
@@ -102,6 +103,10 @@ def test_student_page_persists_history_and_joins_silently() -> None:
     assert 'id="computerNameModal"' not in page
     assert 'id="computerNameInput"' not in page
     assert "电脑名或座位号" not in page
+    assert "TEACHER_ID" not in page
+    assert "teacher_id" not in page
+    assert 'href="#ai-assistant"' in page
+    assert 'id="ai-assistant"' in page
 
 
 def test_system_view_remains_admin_only() -> None:
@@ -309,7 +314,7 @@ def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
 
     assert expected_assets <= {path.name for path in brand_dir.iterdir()}
     assert (ROOT / "desktop" / "assets" / "edugate.ico").stat().st_size > 0
-    for page_name in ("admin.html", "student.html", "teaching-embed-demo.html"):
+    for page_name in ("admin.html", "student.html"):
         page = _read(f"frontend/{page_name}")
         assert 'rel="icon" href="assets/brand/edugate-icon.svg"' in page
         assert 'src="assets/brand/edugate-icon.svg"' in page
@@ -318,30 +323,23 @@ def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
     )
 
 
-def test_chinese_and_english_project_docs_link_to_each_other() -> None:
+def test_current_project_docs_are_indexed_without_dated_report_copies() -> None:
     chinese = _read("README.md")
     english = _read("README.en.md")
-    chinese_matrix = _read("docs/回归测试矩阵.md")
-    english_matrix = _read("docs/Regression-Test-Matrix.md")
-    chinese_design = _read("docs/并发执行与课堂记录设计.md")
-    english_design = _read("docs/Execution-and-Classroom-Records-Design.md")
-    chinese_benchmark = _read("docs/模型并发基准报告-2026-08-10.md")
-    english_benchmark = _read("docs/Model-Concurrency-Benchmark-2026-08-10.md")
-    chinese_double_load = _read("docs/双倍压力测试报告-2026-08-10.md")
-    english_double_load = _read("docs/Double-Load-Test-Report-2026-08-10.md")
+    index = _read("docs/README.md")
+    security = _read("docs/架构与安全边界.md")
+    development = _read("docs/开发与测试.md")
 
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in chinese
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in english
     assert 'href="README.en.md"' in chinese
     assert 'href="README.md"' in english
-    assert "[English](Regression-Test-Matrix.md)" in chinese_matrix
-    assert "[中文](回归测试矩阵.md)" in english_matrix
-    assert "[English](Execution-and-Classroom-Records-Design.md)" in chinese_design
-    assert "[中文](并发执行与课堂记录设计.md)" in english_design
-    assert "[English](Model-Concurrency-Benchmark-2026-08-10.md)" in chinese_benchmark
-    assert "[中文](模型并发基准报告-2026-08-10.md)" in english_benchmark
-    assert "[English](Double-Load-Test-Report-2026-08-10.md)" in chinese_double_load
-    assert "[中文](双倍压力测试报告-2026-08-10.md)" in english_double_load
+    for name in ("使用手册.md", "安装与故障排查.md", "架构与安全边界.md", "开发与测试.md"):
+        assert name in index
+        assert (ROOT / "docs" / name).is_file()
+    assert "ALLOW_LAN_ADMIN=false" in security
+    assert "Python 3.10" in development
+    assert not any("2026-" in path.name for path in (ROOT / "docs").iterdir())
 
 
 def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
@@ -350,7 +348,7 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
 
     assert 'data-tab="records"' in page
     assert 'id="records-view"' in page
-    assert "/teacher/classroom-records" in page
+    assert "/admin/classroom-records" in page
     assert "PYTHON_RUNNER_MAX_CONCURRENCY" in page
     assert "模型工作状态" in page
     assert "model_pool" in page

@@ -1,0 +1,67 @@
+"""Compatibility facade for shared application services.
+
+New code should import from app.state, app.dependencies, or app.chat_service directly.
+"""
+
+from app.state import (
+    ModelConcurrencyLimiter,
+    business_db,
+    classroom_access,
+    client,
+    create_backup,
+    knowledge_store,
+    langfuse,
+    launcher_log_tail,
+    lifespan,
+    model_semaphore,
+    open_app_directory,
+    open_local_directory,
+    python_pool,
+    python_record_tasks,
+    rate_limiter,
+    read_advanced_settings,
+    remove_backup_file,
+    run_python_code,
+    runtime_config,
+    save_restore_archive,
+    secret_store,
+    sessions,
+    settings,
+    student_sessions,
+    system_control,
+    system_status,
+    update_advanced_settings,
+)
+from app.dependencies import (
+    _client_ip,
+    _computer_name,
+    _is_loopback,
+    _sync_portable_admin_password,
+    require_admin,
+    require_admin_origin,
+    require_classroom_access,
+    require_platform_key,
+)
+from app.chat_service import (
+    _build_chat_payload,
+    _chat_completion,
+    _chat_response_content,
+    _discover_provider_models,
+    _latest_user_content,
+    _message_preview,
+    _public_model,
+    _public_model_catalog,
+    _record_classroom_turn,
+    _resolve_chat_context,
+    _stream_chat_completion,
+    _stream_with_completion_log,
+    _stream_with_errors,
+    _stream_with_heartbeat,
+    _strict_knowledge_miss_response,
+    _strict_knowledge_miss_sse,
+    _strict_miss_decision,
+    _to_http_exception,
+    _trace_chat_result,
+    _validate_model_selection,
+)
+from app.db import now_ms
