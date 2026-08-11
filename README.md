@@ -147,7 +147,7 @@ EduGate-standalone/
 ## 开发验证
 
 ```powershell
-python -m pytest -q --basetemp=.pytest-tmp
+python -m pytest -q -p no:cacheprovider -m "not e2e" --basetemp=.pytest-tmp --cov=backend/app --cov-branch --cov-report=term --cov-fail-under=85
 python -m compileall -q backend\app
 ```
 
@@ -159,6 +159,7 @@ Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-St
 - [安装与故障排查](docs/安装与故障排查.md)
 - [架构与安全边界](docs/架构与安全边界.md)
 - [开发与测试](docs/开发与测试.md)
+- [测试覆盖与仿真审计](docs/测试覆盖与仿真审计.md)
 - [文档索引](docs/README.md)
 
 英文概览见 [README.en.md](README.en.md)。
