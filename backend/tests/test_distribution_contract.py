@@ -59,13 +59,22 @@ def test_portable_teacher_console_omits_multi_teacher_management_and_uses_promin
 def test_teacher_console_classroom_controls_and_ipad_touch_layout_are_distributed() -> None:
     page = _read("frontend/admin.html")
 
-    assert page.index('<div class="control-grid">') < page.index('id="classroom-entry"')
-    assert page.index('id="classroom-entry"') < page.index('id="class-controls"')
+    assert '<div class="control-workspace">' in page
+    assert page.index('id="class-controls"') < page.index('id="classroom-entry"')
+    assert page.index('id="classroom-entry"') < page.index('class="dashboard-card classroom-ai-settings"')
+    assert page.index('class="control-main-stack"') < page.index('class="side-panel strategy-panel"')
     assert 'id="class-controls"' not in page.split("</header>", 1)[0]
     assert 'id="start-class"' in page
     assert 'id="end-class"' in page
+    assert 'id="classroom-qr"' in page
+    assert 'assets/vendor/qrcode-generator.js' in page
+    assert (ROOT / "frontend/assets/vendor/qrcode-generator.js").is_file()
+    assert (ROOT / "frontend/assets/vendor/THIRD_PARTY_NOTICES.md").is_file()
+    for icon in ("adjustments-horizontal", "clipboard-text", "archive", "settings", "brain", "book-2"):
+        assert (ROOT / f"frontend/assets/icons/tabler/{icon}.svg").is_file()
     assert 'request("/admin/classroom/start"' in page
     assert 'request("/admin/classroom/end"' in page
+    assert "state.systemStatus?.lan_base_url || state.baseUrl" in page
     assert 'el.endClass.addEventListener("click", () => requestSystemAction("shutdown"))' not in page
     assert "touch-action: manipulation" in page
     assert "@media (hover: none), (pointer: coarse)" in page
@@ -102,6 +111,10 @@ def test_student_page_persists_history_and_joins_silently() -> None:
     assert 'id="computerNameModal"' not in page
     assert 'id="computerNameInput"' not in page
     assert "电脑名或座位号" not in page
+    assert "TEACHER_ID" not in page
+    assert "teacher_id" not in page
+    assert 'href="#ai-assistant"' in page
+    assert 'id="ai-assistant"' in page
 
 
 def test_system_view_remains_admin_only() -> None:
@@ -192,19 +205,16 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     assert 'id="model-api-panel"' in system
     assert system.index('id="dashboard-metrics"') < system.index('id="model-api-panel"')
     assert system.index('id="model-api-panel"') < system.index('id="system-log-panel"')
-    assert 'id="model-api-panel" open' not in page
+    assert 'id="model-api-panel" open' in page
     assert "模型与供应商管理" not in page
     assert "下游 API 密钥" in page
     system_log = page.index('id="system-log-panel"')
     model_api = page.index('id="model-api-panel"')
     advanced = page.index('id="advanced-settings-panel"')
     assert model_api < system_log < advanced
-    assert '<details class="collapsible-panel system-log-panel" id="system-log-panel">' in page
-    assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">' in page
-    assert 'id="system-log-panel" open' not in page
-    assert 'id="advanced-settings-panel" open' not in page
-    assert '<details class="collapsible-panel" id="backup-panel">' in page
-    assert 'id="backup-panel" open' not in page
+    assert '<details class="collapsible-panel system-log-panel" id="system-log-panel" open>' in page
+    assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel" open>' in page
+    assert '<details class="collapsible-panel" id="backup-panel" open>' in page
     backup = page.split('id="backup-panel"', 1)[1].split("</details>", 1)[0]
     backup_actions = backup.split('<div class="actions" style="justify-content:flex-start">', 1)[1].split(
         "</div>", 1
@@ -228,14 +238,16 @@ def test_resource_view_exposes_complete_folder_management() -> None:
     assert 'data-source-delete=' in page
     assert '/open-folder`' in page
     assert '/scan`' in page
-    assert "默认知识库，不可删除" in page
+    assert '<span class="badge">默认知识库</span><span class="badge">不可删除</span>' in page
+    assert 'class="knowledge-source-frame"' in resources
+    assert 'class="resource-icon-tile"' in page
 
 
 def test_teacher_tabs_and_primary_status_copy_are_chinese_first() -> None:
     page = _read("frontend/admin.html")
 
     for label in ("控制", "记录", "资源", "系统"):
-        assert f">{label}</button>" in page
+        assert f"<span>{label}</span></button>" in page
     assert "(Control)" not in page
     assert "(Records)" not in page
     assert "(Resources)" not in page
@@ -243,20 +255,20 @@ def test_teacher_tabs_and_primary_status_copy_are_chinese_first() -> None:
     assert "Current Teacher Policy" not in page
     assert 'setStatus("运行中", true)' in page
     assert "window.scrollTo({ top: 0 });" in page
-    assert '.tabs { position: sticky; top: 0; z-index: 5; }' in page
+    assert '.tabs { position: sticky; top: 0; z-index: 20; }' in page
     assert 'role="status" aria-live="polite"' in page
 
 
 def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> None:
     page = _read("frontend/admin.html")
 
-    assert "--brand: #2563eb" in page
+    assert "--brand: #2468ed" in page
     assert "--accent: #0aa9bd" in page
-    assert ".session-card" in page and "border-left: 4px solid var(--accent)" in page
     assert "linear-gradient(135deg, #654ff0, #4f3de0)" not in page
-    assert "关闭后，学生将暂时无法获得 AI 回答。" in page
+    assert "开启后，学生可向 AI 提问并获得回答。" in page
     assert "点击开关会调用 <code>/config/model</code>" not in page
     assert "@media (max-width: 900px)" in page
+    assert "@media (max-width: 760px)" in page
     assert ".system-grid, .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in page
     assert 'class="system-action-group critical"' in page
     assert 'h2 { margin-bottom: 0; font-size: 20px; font-weight: 900; line-height: 1.35;' in page
@@ -267,15 +279,20 @@ def test_teacher_console_uses_compact_brand_tokens_and_touch_safe_controls() -> 
     assert '.checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px;' in page
     assert 'input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px;' in page
     assert '.upload-card { width: 100%; padding: 16px; }' in page
-    assert 'id="refresh-source-admin" type="button">刷新知识库</button>' in page
-    assert '.control-grid > div > .section:last-child { margin-bottom: 0; }' in page
-    assert '.classroom-entry { margin-top: 26px; margin-bottom: 0;' in page
+    assert 'id="refresh-source-admin" type="button"><span class="ui-icon icon-refresh"' in page
+    assert '<span>刷新知识库</span></button>' in page
+    assert 'class="dashboard-card classroom-overview-card"' in page
+    assert 'class="dashboard-card classroom-entry"' in page
+    assert 'class="dashboard-card classroom-ai-settings"' in page
+    assert 'class="side-panel strategy-panel"' in page
+    assert 'class="length-segments"' in page
+    assert 'name="knowledge-mode"' in page
     assert '["请求数", dashboard.total_requests ?? 0]' in page
     assert '["Tokens", dashboard.total_tokens ?? 0]' in page
     assert '["总请求", dashboard.total_requests ?? 0]' not in page
     assert '["总 Tokens", dashboard.total_tokens ?? 0]' not in page
-    assert 'class="brand-title-row"' in page
-    assert page.index('EduGate 教师端控制台</h1>') < page.index('id="system-status"') < page.index('教师控制 · 本地 AI 教学网关')
+    assert 'class="brand-title-row"' not in page
+    assert page.index('EduGate 教师端控制台</h1>') < page.index('教师控制 · 本地 AI 教学网关') < page.index('id="system-status"')
     assert '.system-metric-value { display: flex; min-height: 34px; align-items: center;' in page
     assert '.system-metric-value { min-height: 44px; }' in page
     assert page.count('<div class="system-metric-value">') == 1
@@ -294,7 +311,8 @@ def test_teacher_console_replaces_native_visible_file_inputs_and_compacts_source
     assert "updateFilePicker(el.knowledgeFile, el.knowledgeFileName)" in page
     assert "updateFilePicker(el.restoreBackupFile, el.restoreBackupFileName)" in page
     assert '<details class="action-menu">' in page
-    assert "<summary>更多操作</summary>" in page
+    assert '<summary><span class="ui-icon icon-dots"' in page
+    assert '<span>更多操作</span></summary>' in page
 
 
 def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
@@ -309,7 +327,7 @@ def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
 
     assert expected_assets <= {path.name for path in brand_dir.iterdir()}
     assert (ROOT / "desktop" / "assets" / "edugate.ico").stat().st_size > 0
-    for page_name in ("admin.html", "student.html", "teaching-embed-demo.html"):
+    for page_name in ("admin.html", "student.html"):
         page = _read(f"frontend/{page_name}")
         assert 'rel="icon" href="assets/brand/edugate-icon.svg"' in page
         assert 'src="assets/brand/edugate-icon.svg"' in page
@@ -318,30 +336,25 @@ def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
     )
 
 
-def test_chinese_and_english_project_docs_link_to_each_other() -> None:
+def test_current_project_docs_are_indexed_without_dated_report_copies() -> None:
     chinese = _read("README.md")
     english = _read("README.en.md")
-    chinese_matrix = _read("docs/回归测试矩阵.md")
-    english_matrix = _read("docs/Regression-Test-Matrix.md")
-    chinese_design = _read("docs/并发执行与课堂记录设计.md")
-    english_design = _read("docs/Execution-and-Classroom-Records-Design.md")
-    chinese_benchmark = _read("docs/模型并发基准报告-2026-08-10.md")
-    english_benchmark = _read("docs/Model-Concurrency-Benchmark-2026-08-10.md")
-    chinese_double_load = _read("docs/双倍压力测试报告-2026-08-10.md")
-    english_double_load = _read("docs/Double-Load-Test-Report-2026-08-10.md")
+    index = _read("docs/README.md")
+    security = _read("docs/架构与安全边界.md")
+    development = _read("docs/开发与测试.md")
 
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in chinese
     assert "frontend/assets/brand/edugate-logo-horizontal.svg" in english
     assert 'href="README.en.md"' in chinese
     assert 'href="README.md"' in english
-    assert "[English](Regression-Test-Matrix.md)" in chinese_matrix
-    assert "[中文](回归测试矩阵.md)" in english_matrix
-    assert "[English](Execution-and-Classroom-Records-Design.md)" in chinese_design
-    assert "[中文](并发执行与课堂记录设计.md)" in english_design
-    assert "[English](Model-Concurrency-Benchmark-2026-08-10.md)" in chinese_benchmark
-    assert "[中文](模型并发基准报告-2026-08-10.md)" in english_benchmark
-    assert "[English](Double-Load-Test-Report-2026-08-10.md)" in chinese_double_load
-    assert "[中文](双倍压力测试报告-2026-08-10.md)" in english_double_load
+    for name in ("使用手册.md", "安装与故障排查.md", "架构与安全边界.md", "开发与测试.md"):
+        assert name in index
+        assert (ROOT / "docs" / name).is_file()
+    assert "ALLOW_LAN_ADMIN=false" in security
+    assert "ADMIN_ALLOWED_IPS" in security
+    assert "持久" in security
+    assert "Python 3.10" in development
+    assert not any("2026-" in path.name for path in (ROOT / "docs").iterdir())
 
 
 def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
@@ -350,9 +363,21 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
 
     assert 'data-tab="records"' in page
     assert 'id="records-view"' in page
-    assert "/teacher/classroom-records" in page
+    assert "/admin/classroom-records" in page
     assert "PYTHON_RUNNER_MAX_CONCURRENCY" in page
-    assert "模型工作状态" in page
+    assert "模型执行状态（线程｜队列）" in page
+    assert "Python 工作状态（线程｜队列）" in page
+    assert '["模型执行线程", `${modelRunning} / ${modelCapacity}`]' in page
+    assert '["模型等待队列", `${modelWaiting}`]' in page
+    assert '["Python 执行线程", `${pool.running ?? 0} / ${pool.workers ?? 0}`]' in page
+    assert '["Python 等待队列", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`]' in page
+    assert 'class="system-metric-value runtime-metric-value"' in page
+    assert 'const adminAccessIps = system.lan_admin_enabled && allowedAdminIpCount' in page
+    assert ': "127.0.0.1"' in page
+    assert '["教师端访问范围", adminAccessIps, "admin-ip"]' in page
+    assert '教师端访问范围 ·' not in page
+    assert 'id="copy-admin-ip"' in page
+    assert 'copyText(adminAccessIps, "教师端允许访问 IP")' in page
     assert "model_pool" in page
     assert "CLASSROOM_RECORDING_ENABLED" in page
     assert "PYTHON_RUNNER_MAX_CONCURRENCY=4" in example

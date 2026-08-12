@@ -52,6 +52,8 @@ def test_student_session_is_reused_and_scoped_to_current_classroom(monkeypatch) 
     assert reused_record.computer_name == "LAB-PC-01-UPDATED"
     assert reused_record.client_ip == "192.168.1.22"
     assert store.identity(reused_record).student_id == record.student_id
+    assert store.active_count(classroom_token="classroom-a") == 1
+    assert store.active_count(classroom_token="classroom-b") == 0
     assert store.resolve(token, classroom_token="classroom-a") == reused_record
     assert store.resolve(token, classroom_token="classroom-b") is None
 
@@ -64,6 +66,7 @@ def test_student_session_expires(monkeypatch) -> None:
 
     now = 1_011.0
     assert store.resolve(token, classroom_token="classroom") is None
+    assert store.active_count(classroom_token="classroom") == 0
 
 
 def test_legacy_student_identity_is_private_and_rotates_with_classroom() -> None:
@@ -76,8 +79,8 @@ def test_legacy_student_identity_is_private_and_rotates_with_classroom() -> None
     assert access.legacy_student_id("192.168.1.25") != first
 
 
-def test_classroom_access_can_be_ended_and_started_with_a_fresh_token() -> None:
-    access = ClassroomAccess()
+def test_classroom_access_reuses_persisted_token_across_sessions() -> None:
+    access = ClassroomAccess("persisted-classroom-token")
     old_token = access.token()
 
     assert access.active() is True
@@ -87,5 +90,10 @@ def test_classroom_access_can_be_ended_and_started_with_a_fresh_token() -> None:
 
     new_token = access.start()
     assert access.active() is True
-    assert new_token != old_token
+    assert new_token == old_token
     assert access.matches(new_token) is True
+
+    rotated_token = access.rotate()
+    assert rotated_token != old_token
+    assert access.matches(old_token) is False
+    assert access.matches(rotated_token) is True

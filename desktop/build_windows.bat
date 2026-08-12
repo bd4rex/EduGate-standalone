@@ -13,6 +13,12 @@ if %errorlevel% neq 0 (
   exit /b 1
 )
 
+py -3 -c "import sys; raise SystemExit(0 if sys.version_info ^>= (3, 10) else 1)"
+if %errorlevel% neq 0 (
+  echo [ERROR] EduGate builds require Python 3.10 or newer.
+  exit /b 1
+)
+
 if not exist "%BUILD_PYTHON%" py -3 -m venv "%BUILD_VENV%"
 if exist "%BUILD_PYTHON%" "%BUILD_PYTHON%" -c "import sys" >nul 2>nul
 if errorlevel 1 goto :repair_venv

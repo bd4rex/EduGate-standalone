@@ -8,79 +8,158 @@
   <strong>中文</strong> · <a href="README.en.md">English</a>
 </p>
 
-EduGate 单机课堂版运行在教师的 64 位 Windows 电脑上，面向单教师、单节课或小型课堂。它向上连接 OpenAI-compatible 模型公司 API，向下提供受课堂令牌保护的学生页面和 EduGate API。教师端只有 Web 控制台，没有需要同时操作的 Windows 窗口。
+EduGate 在教师的 64 位 Windows 电脑上运行，面向单教师、单节课或小型课堂。教师用 Web 控制台配置模型、知识库和课堂策略；学生通过局域网课堂链接加入。管理数据、课堂记录和知识库保存在教师电脑中。
 
-## 老师直接使用
+## 现在的边界
 
-1. 解压或复制完整的 `EduGate-Standalone` 文件夹，不要只复制 EXE。
-2. 双击 `EduGate-Standalone.exe`，浏览器会自动打开教师控制台并在本机自动进入。
-3. 在“系统 -> 上游模型 API 管理”点击“添加供应商”或选择已有供应商，填写来源名称、API Key、API URL 和可选路径，再点击“获取模型”；也可从供应商分组直接点击“添加模型”。在弹窗中检索、勾选并批量导入。可以配置多家供应商，同名模型按“供应商 + 上游模型 ID”独立保存；删除供应商会同时清理其模型和 API Key，并在需要时先切换课堂模型。
-4. 到“控制”页最下方的学生课堂入口点击“开始课堂”，再复制课堂链接发给学生。
-5. 下课在学生课堂入口点击“结束课堂”。学生链接立即失效，教师控制台继续运行；需要退出程序时再使用“系统 -> 停止服务”。
+- 只有一个教师管理员账号，不提供多教师账号和策略 API。
+- 学生使用课堂令牌换取各自的学生会话，不接触教师令牌。
+- 默认 `ALLOW_LAN_ADMIN=false`：教师管理页、登录和管理 API 只允许教师本机访问。平板管理需同时启用局域网管理并把设备 IP 加入 `ADMIN_ALLOWED_IPS`。
+- 学生页面可在同一局域网访问；课堂令牌持久保存，开课、下课和程序重启都不改变链接。下课会撤销当前学生会话，主动换链才会淘汰旧链接。
+- 源码要求 Python 3.10+；打包版自带运行环境，不要求教师电脑安装 Python。
 
-打包版已经包含运行 EduGate 和学生 Python 代码所需的独立 Python 环境，教师电脑不需要预装 Python，也不需要联网安装依赖。如果 `8000` 端口被占用，启动器会自动尝试后续端口并打开正确页面。
+## 快速开始
 
-以后整包复制到另一台电脑或 U 盘即可沿用模型、知识库、课堂策略和记录。请保留以下结构：
+### 打包版
 
-```text
-EduGate-Standalone\
-  EduGate-Standalone.exe
-  README.txt
-  config\
-    edugate.env             # 启动设置及初始密码
-  data\
-    edugate.sqlite3         # 本机管理状态与课堂记录
-    knowledge.sqlite3
-    knowledge_files\
-    runtime_config.json
-    secrets.json            # 可复制的本地模型密钥
-    launcher.log
-  runtime\python\           # 学生代码独立解释器
-  _internal\                # EduGate 程序资源
-```
+1. 解压完整 `EduGate-Standalone` 文件夹，不要只复制 EXE。
+2. 双击 `EduGate-Standalone.exe`，本机浏览器会打开教师控制台。
+3. 在“系统”中添加模型供应商并导入模型。
+4. 在“控制”中配置课堂，点击“开始课堂”。
+5. 复制课堂链接发给学生；下课点击“结束课堂”。
 
-首次运行时会自动创建 `config` 和 `data`。便携模式的初始管理员账号为 `admin`，初始密码 `edugate` 写在 `config\edugate.env`；本机浏览器默认自动进入，因此正常上课无需输入密码。学生电脑访问局域网课堂地址时不能使用本机自动登录接口。
+便携版初始账号为 `admin`、密码为 `edugate`。本机默认自动进入，首次使用后仍建议修改密码。程序数据位于同目录的 `config` 和 `data`；迁移前先在“系统”页停止服务，再复制完整文件夹。
 
-为了让复制文件夹后 API Key 继续可用，便携版的 `data\secrets.json` 不再绑定某个 Windows 用户。它不会在页面回显，但拥有该文件夹的人可以读取其中的本地凭据；请按课堂文件夹管理即可。
+### 源码版
 
-## 上课流程
-
-1. 打开教师控制台，确认 AI 服务、模型和知识库状态。
-2. 到控制页最下方的“学生课堂入口”点击“开始课堂”，再复制完整链接发给学生。
-3. 学生打开课堂链接后会静默接入，无需填写姓名、电脑名或座位号。浏览器在本地保存一个稳定设备标识，教师端据此生成设备标签并记录请求 IP；每台浏览器仍有独立会话，因此即使全班经过同一个代理 IP，也分别限流。
-4. 学生页面在当前浏览器保存最近 50 条消息，刷新可继续对话；发送模型时只携带最近 10 条，避免上下文无限增长。
-5. 点击“换一个链接”可立即让旧链接和旧学生会话失效。
-6. 在学生课堂入口点击“结束课堂”只会撤销学生链接和会话，不会关闭教师端。要复制或移动文件夹，请在“系统”页点击“停止服务”，等待服务退出并完成 SQLite checkpoint。
-
-“记录”页按课堂展示自动生成的设备标签、IP、AI 对话和 Python 运行结果；整个记录过程静默进行，不要求学生参与。这些内容仅保存在教师电脑中，默认保留 30 天。“系统”页提供运行状态、可复制的局域网地址、打开程序目录、日志、备份恢复、默认折叠的高级设置、重启和停止服务。
-
-“资源”页把知识库列表放在最上方。每个知识库都可以编辑、打开教师电脑上的对应文件夹并执行“扫描同步”；把支持的资料直接放进该文件夹后，扫描会增量添加新文件、更新变更文件，并移除已经从文件夹删除的索引。默认的 `general` 知识库不可删除，其他未被课堂配置使用的知识库可以连同文件和索引一起删除。低频的新建/编辑表单默认折叠。
-
-Python 执行器默认启用 4 个独立执行槽位和最多 64 个排队任务，`/run_python/stream` 实时返回排队、运行、输出和完成事件。任务池是受控队列，不是缓存；每个任务使用新的受限 Python 子进程，不共享学生变量或执行状态。可在高级设置中调整到最多 8 路并发。
-
-## 从源码运行
-
-源码使用者需先安装 Python 3.9 或更高版本，然后双击：
+安装 64 位 Python 3.10 或更高版本，然后运行：
 
 ```text
 desktop\install_backend_deps.bat
 desktop\run_standalone.bat
 ```
 
-安装脚本固定使用清华 PyPI 镜像，并把虚拟环境放在项目内的 `runtime\venv`。配置和数据仍写在项目根目录的 `config`、`data` 中，复制整个项目文件夹即可继续使用。
+## 学生如何分发
+
+教师登录后即可复制固定课堂链接；点击“开始课堂”只是开放该入口：
+
+```text
+http://教师电脑局域网IP:端口/student.html#class_token=...
+```
+
+链接由教师电脑局域网 IP 和持久课堂令牌共同定位一台 EduGate。只要没有主动点击“换一个链接”，同一链接可跨课次、跨班级和程序重启复用，适合提前嵌入课件。每次“开始课堂”仍会创建新的课堂记录批次；“结束课堂”会暂停入口并撤销当前学生会话，下次开课时原链接恢复可用。
+
+点击“复制链接”，通过班级群、教学平台或投屏发给学生。当前版本尚未内置二维码；需要扫码时应使用学校认可、不会公开收集链接的工具，因为课堂令牌仍是入场凭证。
+
+学生无需填写姓名或电脑名。浏览器会生成稳定设备标识，服务据此创建设备标签和独立学生会话。详细流程见 [使用手册](docs/使用手册.md) 和 [架构与安全边界](docs/架构与安全边界.md)。
+
+## 角色、权限与鉴权
+
+```mermaid
+flowchart LR
+    subgraph roles["访问角色"]
+        teacher["教师管理员<br/>唯一管理账号"]
+        student["学生浏览器<br/>每台浏览器独立会话"]
+        platform["平台集成<br/>可选 OpenAI-compatible 客户端"]
+        anonymous["未认证访问者<br/>仅公共状态与静态页面"]
+    end
+
+    subgraph gateway["EduGate 权限边界"]
+        admin_api["教师管理范围<br/>模型与供应商、课堂策略、知识库<br/>课堂启停与记录、备份和系统设置"]
+        classroom_api["学生课堂范围<br/>加入课堂、AI 对话、Python 运行"]
+        platform_api["平台接口范围<br/>/v1/chat/completions"]
+        public_surface["公共范围<br/>/health、/auth/status、学生静态页"]
+    end
+
+    teacher -->|"本机或精确 IP 白名单<br/>X-Admin-Token 教师会话"| admin_api
+    student -->|"教师 IP + 持久 class_token<br/>换取 X-Student-Token"| classroom_api
+    platform -->|"Authorization: Bearer PLATFORM_API_KEY"| platform_api
+    anonymous -->|"无鉴权；不包含管理能力"| public_surface
+
+    admin_api --> local_data["教师电脑本地数据<br/>SQLite、知识库、运行配置、密钥"]
+    classroom_api --> default_policy["唯一 default 课堂策略"]
+    platform_api --> default_policy
+    default_policy --> upstream["模型供应商 API"]
+```
+
+| 角色 | 权限范围 | 鉴权方式 | 默认网络范围 |
+| --- | --- | --- | --- |
+| 教师管理员 | 模型供应商、课堂策略、知识库、课堂启停、课堂记录、备份和系统设置 | 登录或本机自动登录后使用 `X-Admin-Token`；管理 API 同时校验来源 IP | 默认仅教师电脑；平板管理需设置 `ALLOW_LAN_ADMIN=true` 和精确 `ADMIN_ALLOWED_IPS` 白名单 |
+| 学生 | 加入当前课堂、AI 对话、受控 Python 运行 | 教师 IP 定位服务；持久 `class_token` 换取独立 `X-Student-Token` | 下课时学生会话失效、固定链接暂停；再次开课时原链接恢复；主动换链后旧链接永久失效 |
+| 平台集成 | 仅调用 `/v1/chat/completions` | `Authorization: Bearer PLATFORM_API_KEY` | 取决于服务监听地址；未配置平台密钥时接口关闭 |
+| 未认证访问者 | 健康状态、初始化状态和允许公开的静态资源 | 无 | 教师管理页、API 文档和管理接口仍受来源与会话保护 |
+
+IP 白名单是局域网准入控制，不是可替代密码的身份认证：设备 IP 可能因 DHCP 变化，也可能在不可信网络中被冒用。因此白名单设备仍需教师账号和 `X-Admin-Token`，建议给管理平板设置 DHCP 地址保留。
+
+`class_token`、`X-Student-Token`、`X-Admin-Token` 和 `PLATFORM_API_KEY` 都属于 Bearer 凭证，应避免写入公开日志、截图或公开二维码服务。持久课堂令牌保存在 `data/secrets.json`，随完整备份和便携目录迁移。
+
+## 代码结构
+
+```text
+EduGate-standalone/
+├─ backend/
+│  ├─ app/
+│  │  ├─ main.py                # FastAPI 装配、中间件、路由注册和静态页面挂载
+│  │  ├─ config.py              # 环境变量和 Python 运行配置
+│  │  ├─ state.py               # 应用生命周期及共享服务实例
+│  │  ├─ dependencies.py        # 教师、学生和平台接口鉴权依赖
+│  │  ├─ schemas.py             # Pydantic 请求、响应和持久化模型
+│  │  ├─ runtime_config.py      # 模型目录与唯一 default 课堂策略
+│  │  ├─ chat_service.py        # 模型路由、知识检索、普通及流式对话
+│  │  ├─ api_docs.py            # OpenAPI 标签和接口说明
+│  │  ├─ core.py                # 旧导入路径兼容门面；不承载新业务
+│  │  ├─ routers/
+│  │  │  ├─ auth.py             # 教师初始化、登录、退出和改密
+│  │  │  ├─ classroom.py        # 课堂启停、学生加入和课堂记录
+│  │  │  ├─ chat.py             # 学生对话及平台兼容接口
+│  │  │  ├─ config.py           # 当前课堂模型和策略配置
+│  │  │  ├─ knowledge.py        # 知识库来源、文件和索引管理
+│  │  │  ├─ models.py           # 模型供应商、发现、导入和删除
+│  │  │  ├─ python.py           # 受控 Python 普通及流式执行
+│  │  │  └─ system.py           # 状态、日志、备份、恢复和服务控制
+│  │  ├─ db.py                  # SQLite 管理状态、请求日志和课堂记录
+│  │  ├─ knowledge.py           # 本地资料解析、切片和检索
+│  │  ├─ python_runner.py       # 有界队列与隔离 Python 子进程
+│  │  ├─ litellm_client.py      # OpenAI-compatible 上游 HTTP 客户端
+│  │  ├─ security.py            # 会话、课堂令牌和限流基础设施
+│  │  └─ system_ops.py          # 备份、恢复、目录与高级设置
+│  ├─ tests/                    # 后端、权限、分发和回归测试
+│  ├─ requirements.txt          # 运行依赖
+│  └─ requirements-dev.txt      # 开发与测试依赖
+├─ frontend/
+│  ├─ admin.html                # 教师控制台
+│  ├─ student.html              # 学生课堂页
+│  └─ assets/brand/             # EduGate 图标和横向标识
+├─ desktop/
+│  ├─ edugate_standalone.py     # Windows 后台监督启动器
+│  ├─ run_standalone.bat        # 源码日常启动
+│  ├─ install_backend_deps.bat  # Python 3.10+ 依赖环境安装
+│  └─ build_windows.bat         # Windows 便携目录打包
+├─ docs/                        # 使用、安装、安全和开发文档
+├─ samples/                     # 示例资料
+└─ .github/workflows/           # Python 3.10 / 3.12 回归测试
+```
+
+`app/core.py` 只保留旧导入路径兼容；新增功能应放入对应服务或路由模块。
+
+打包版首次运行后会在 EXE 旁创建 `config/` 和 `data/`。它们包含密码设置、数据库、知识库、模型密钥和课堂记录，不属于源码目录，也不应提交到 GitHub。
 
 ## 开发验证
 
 ```powershell
-python -m pytest -q --basetemp=.pytest-tmp
+python -m pytest -q -p no:cacheprovider -m "not e2e" --basetemp=.pytest-tmp --cov=backend/app --cov-branch --cov-report=term --cov-fail-under=85
+python -m compileall -q backend\app
 ```
 
-Windows 打包：
+Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-Standalone`。
 
-```text
-desktop\build_windows.bat
-```
+## 文档
 
-输出位于 `dist\EduGate-Standalone`。打包脚本使用清华 PyPI 镜像，并把独立 Python 运行时加入输出目录。
+- [使用手册](docs/使用手册.md)
+- [安装与故障排查](docs/安装与故障排查.md)
+- [架构与安全边界](docs/架构与安全边界.md)
+- [开发与测试](docs/开发与测试.md)
+- [测试覆盖与仿真审计](docs/测试覆盖与仿真审计.md)
+- [文档索引](docs/README.md)
 
-详细说明见 [安装与故障排查](docs/安装与故障排查.txt)、[使用手册](docs/使用手册.txt)、[并发执行与课堂记录设计](docs/并发执行与课堂记录设计.md)、[模型并发基准报告](docs/模型并发基准报告-2026-08-10.md)、[双倍压力测试报告](docs/双倍压力测试报告-2026-08-10.md)、[验收清单](docs/单机版验收清单.txt) 和 [回归测试矩阵](docs/回归测试矩阵.md)。英文读者可从 [English README](README.en.md) 开始。
+英文概览见 [README.en.md](README.en.md)。

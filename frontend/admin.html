@@ -116,7 +116,6 @@
       border-bottom: 1px solid var(--line);
       background: var(--soft);
     }
-    .tabs.teacher-tabs { grid-template-columns: repeat(3, 1fr); }
 
     .tab {
       min-height: 60px;
@@ -189,7 +188,8 @@
     .tab:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.45); }
     .tab.active:focus-visible { box-shadow: inset 0 -5px 0 rgba(29, 78, 216, 0.32); }
 
-    .control-grid { display: grid; grid-template-columns: 1fr 350px; gap: 22px; align-items: start; }
+    .control-grid { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 22px; align-items: start; }
+    .control-grid > * { min-width: 0; }
     .control-grid > div > .section:last-child { margin-bottom: 0; }
 
     .session-card {
@@ -261,9 +261,18 @@
     .form-grid { display: grid; gap: 14px; }
     .range-row { display: grid; grid-template-columns: 1fr 70px; gap: 10px; align-items: center; }
     input[type="range"] { min-height: 44px; padding: 0; appearance: none; -webkit-appearance: none; background: transparent; accent-color: var(--brand); }
-    input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--line-strong); }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(
+        to right,
+        var(--brand) 0 var(--range-progress, 20%),
+        var(--line-strong) var(--range-progress, 20%) 100%
+      );
+    }
     input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -9px; border: 3px solid #fff; border-radius: 50%; appearance: none; background: var(--brand); box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28); }
     input[type="range"]::-moz-range-track { height: 6px; border: 0; border-radius: 3px; background: var(--line-strong); }
+    input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--brand); }
     input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 3px solid #fff; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28); }
     .checkbox-row { display: flex; min-height: 44px; align-items: center; gap: 10px; color: var(--muted); cursor: pointer; }
     .checkbox-row input[type="checkbox"] { flex: 0 0 22px; width: 22px; height: 22px; min-height: 22px; margin: 0; accent-color: var(--brand); }
@@ -420,6 +429,10 @@
     .system-metric > strong { margin-top: 4px; }
     .system-metric-value { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
     .system-metric-value strong { padding-top: 0; }
+    .runtime-metric-value { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+    .runtime-stat { display: flex; min-width: 0; align-items: center; }
+    .runtime-stat + .runtime-stat { padding-left: 12px; border-left: 1px solid var(--line-strong); }
+    .runtime-stat strong { white-space: nowrap; }
     #record-summary .system-metric { padding: 12px 14px; }
     #record-summary .system-metric strong { margin-top: 5px; }
     .system-actions { gap: 12px; }
@@ -607,6 +620,675 @@
     @media (max-width: 480px) {
       .system-grid, .setting-list { grid-template-columns: 1fr; }
     }
+
+    /* v2.1 teacher workspace visual system */
+    :root {
+      --bg: #f7f9fc;
+      --soft: #f8fafd;
+      --ink: #101a33;
+      --muted: #68758b;
+      --line: #dde5ef;
+      --line-strong: #cbd6e4;
+      --brand: #2468ed;
+      --brand-dark: #1758d7;
+      --brand-soft: #eef4ff;
+      --green: #0d9568;
+      --green-soft: #eaf8f2;
+      --shadow: 0 5px 18px rgba(37, 51, 78, 0.07);
+    }
+
+    .ui-icon {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      background: currentColor;
+      -webkit-mask: var(--icon-url) center / contain no-repeat;
+      mask: var(--icon-url) center / contain no-repeat;
+    }
+    .icon-control { --icon-url: url("assets/icons/tabler/adjustments-horizontal.svg"); }
+    .icon-records { --icon-url: url("assets/icons/tabler/clipboard-text.svg"); }
+    .icon-resources { --icon-url: url("assets/icons/tabler/archive.svg"); }
+    .icon-system { --icon-url: url("assets/icons/tabler/settings.svg"); }
+    .icon-brain { --icon-url: url("assets/icons/tabler/brain.svg"); }
+    .icon-cube { --icon-url: url("assets/icons/tabler/cube.svg"); }
+    .icon-book { --icon-url: url("assets/icons/tabler/book-2.svg"); }
+    .icon-users { --icon-url: url("assets/icons/tabler/users.svg"); }
+    .icon-play { --icon-url: url("assets/icons/tabler/player-play.svg"); }
+    .icon-stop { --icon-url: url("assets/icons/tabler/player-stop.svg"); }
+    .icon-copy { --icon-url: url("assets/icons/tabler/copy.svg"); }
+    .icon-eye { --icon-url: url("assets/icons/tabler/eye.svg"); }
+    .icon-refresh { --icon-url: url("assets/icons/tabler/refresh.svg"); }
+    .icon-info { --icon-url: url("assets/icons/tabler/info-circle.svg"); }
+    .icon-sparkles { --icon-url: url("assets/icons/tabler/sparkles.svg"); }
+    .icon-chevron { --icon-url: url("assets/icons/tabler/chevron-down.svg"); }
+    .icon-save { --icon-url: url("assets/icons/tabler/device-floppy.svg"); }
+    .icon-circle-check { --icon-url: url("assets/icons/tabler/circle-check.svg"); }
+    .icon-database { --icon-url: url("assets/icons/tabler/database.svg"); }
+    .icon-upload { --icon-url: url("assets/icons/tabler/upload.svg"); }
+    .icon-school { --icon-url: url("assets/icons/tabler/school.svg"); }
+    .icon-desktop { --icon-url: url("assets/icons/tabler/device-desktop.svg"); }
+    .icon-message { --icon-url: url("assets/icons/tabler/message.svg"); }
+    .icon-code { --icon-url: url("assets/icons/tabler/code.svg"); }
+    .icon-file-description { --icon-url: url("assets/icons/tabler/file-description.svg"); }
+    .icon-folder-open { --icon-url: url("assets/icons/tabler/folder-open.svg"); }
+    .icon-dots { --icon-url: url("assets/icons/tabler/dots-vertical.svg"); }
+    .icon-cloud-upload { --icon-url: url("assets/icons/tabler/cloud-upload.svg"); }
+
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      min-height: 1px !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    body { background: var(--bg); }
+    .shell {
+      width: 100%;
+      max-width: 1680px;
+      min-height: 100vh;
+      margin: 0 auto;
+      overflow: visible;
+      border-width: 0 1px;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .topbar {
+      min-height: 104px;
+      padding: 18px 28px;
+      flex-wrap: nowrap;
+      gap: 24px;
+      background: #fff;
+    }
+    .brand-lockup { gap: 18px; }
+    .brand-mark { width: 64px; height: 64px; flex-basis: 64px; }
+    .brand-copy h1 { margin: 0; font-size: 28px; line-height: 1.25; }
+    .brand-copy > p { margin: 5px 0 0; font-size: 16px; }
+    .status-pill {
+      min-height: 46px;
+      padding: 0 19px;
+      gap: 9px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-size: 16px;
+    }
+    .status-pill .ui-icon { width: 19px; height: 19px; flex-basis: 19px; }
+
+    .tabs {
+      display: flex;
+      min-height: 64px;
+      padding: 0 24px;
+      gap: 10px;
+      background: #fff;
+    }
+    .tab {
+      display: inline-flex;
+      min-width: 150px;
+      min-height: 64px;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 22px;
+      border-bottom-width: 3px;
+      font-size: 16px;
+    }
+    .tab .ui-icon { width: 21px; height: 21px; flex-basis: 21px; }
+    .tab.active { background: #fff; }
+
+    .content { padding: 22px 28px 28px; background: var(--bg); }
+    h2 { font-size: 20px; }
+    input, select, textarea { border-color: var(--line); border-radius: 8px; }
+    input, select { min-height: 46px; }
+    textarea { min-height: 148px; }
+    .button {
+      display: inline-flex;
+      min-height: 46px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0 18px;
+    }
+    .button.primary { background: var(--brand); box-shadow: 0 4px 10px rgba(36, 104, 237, 0.18); }
+    .button.soft { border-color: var(--line); background: #fff; color: #24314a; }
+    .button.ghost { border-color: var(--line); background: #fff; color: #536079; }
+    .button.danger { border-color: #f0c3bf; }
+    .button:hover:not(:disabled) { transform: translateY(-1px); }
+    .button:disabled { border-color: var(--line); background: #f7f8fa; color: #a4adbb; box-shadow: none; opacity: 1; }
+
+    .control-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.64fr) minmax(390px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .control-main-stack { display: grid; min-width: 0; gap: 16px; }
+    .dashboard-card,
+    #records-view > .section,
+    .record-layout > .section,
+    #settings-view .settings-grid > .section,
+    #settings-view > .section,
+    #system-view > .section {
+      min-width: 0;
+      margin: 0;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+    #records-view,
+    #settings-view,
+    #system-view { display: grid; gap: 18px; }
+    #records-view[hidden],
+    #settings-view[hidden],
+    #system-view[hidden] { display: none !important; }
+    .record-layout { gap: 18px; }
+    .card-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .card-heading-row h2 { margin: 0; }
+
+    .classroom-overview-card { min-height: 216px; padding-bottom: 20px; }
+    .classroom-overview-card .badge { min-height: 28px; padding: 0 12px; border-radius: 999px; font-size: 13px; }
+    .classroom-summary-strip {
+      display: grid;
+      grid-template-columns: 0.9fr 1.45fr 1.12fr 0.9fr;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+    }
+    .summary-item {
+      display: flex;
+      min-width: 0;
+      min-height: 60px;
+      align-items: center;
+      gap: 11px;
+      padding: 0 17px;
+      color: #29354d;
+      font-size: 14px;
+    }
+    .summary-item + .summary-item { border-left: 1px solid var(--line); }
+    .summary-item .ui-icon { color: var(--brand); }
+    .summary-item span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .summary-item strong { font-weight: 800; }
+    #current-ai-state { color: var(--green); }
+    .class-controls { justify-content: flex-end; margin-top: 20px; }
+    .class-controls .button { min-width: 160px; }
+
+    .classroom-entry { scroll-margin-top: 78px; }
+    .dashboard-card.classroom-entry { padding: 16px 20px; }
+    .classroom-entry .card-heading-row { margin-bottom: 10px; }
+    .classroom-entry-layout { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 24px; }
+    .qr-card {
+      display: flex;
+      min-height: 152px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      text-align: center;
+    }
+    .qr-card img { width: 112px; height: 112px; object-fit: contain; image-rendering: pixelated; }
+    .qr-card strong { margin-top: 7px; font-size: 14px; }
+    .qr-placeholder { display: grid; width: 112px; height: 112px; place-items: center; padding: 10px; border-radius: 6px; background: var(--soft); color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .classroom-link-panel {
+      display: flex;
+      min-width: 0;
+      min-height: 152px;
+      flex-direction: column;
+      justify-content: center;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .field-caption { display: block; color: var(--muted); font-size: 13px; font-weight: 800; }
+    .classroom-url-display { display: block; margin-top: 6px; overflow: hidden; color: var(--brand-dark); font-size: 20px; text-overflow: ellipsis; white-space: nowrap; }
+    .classroom-url-display.expanded { font-size: 14px; overflow-wrap: anywhere; white-space: normal; }
+    .classroom-link-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .classroom-link-actions .button { min-height: 42px; padding: 0 14px; font-size: 13px; }
+    .classroom-link-actions .ui-icon { width: 18px; height: 18px; flex-basis: 18px; }
+    .classroom-link-hint { display: flex; align-items: flex-start; gap: 7px; margin: 10px 0 0; }
+    .classroom-link-hint .ui-icon { width: 17px; height: 17px; flex-basis: 17px; margin-top: 2px; }
+
+    .classroom-ai-settings { padding-bottom: 12px; }
+    .compact-setting-list { overflow: hidden; border: 1px solid var(--line); border-radius: 10px; }
+    .compact-setting-row { min-height: 54px; border-bottom: 1px solid var(--line); }
+    .compact-setting-row:last-child { border-bottom: 0; }
+    .compact-setting-row:not(details) { display: flex; align-items: center; gap: 14px; padding: 8px 16px; }
+    .compact-setting-row > .ui-icon { width: 27px; height: 27px; flex-basis: 27px; color: #253149; }
+    .compact-setting-row .row-title { font-size: 14px; }
+    .compact-setting-row .row-meta { margin-top: 2px; font-size: 12px; }
+    .compact-setting-body { min-width: 0; flex: 1 1 auto; }
+    .compact-setting-body select { min-height: 36px; padding: 0; border: 0; background: transparent; font-weight: 800; box-shadow: none; }
+    .text-action {
+      display: inline-flex;
+      min-height: 38px;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 6px;
+      padding: 0 4px;
+      border: 0;
+      background: transparent;
+      color: var(--brand);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .text-action .ui-icon { width: 17px; height: 17px; flex-basis: 17px; }
+    .model-compact-select { min-height: 28px; padding: 0 30px 0 0; border: 0; background-color: transparent; font-size: 15px; font-weight: 800; box-shadow: none; }
+    .model-compact-meta,
+    .model-compact-empty { margin-top: 1px; color: var(--muted); font-size: 12px; }
+    .advanced-policy-link summary { display: flex; min-height: 54px; align-items: center; justify-content: space-between; padding: 8px 16px; cursor: pointer; list-style: none; }
+    .advanced-policy-link summary::-webkit-details-marker { display: none; }
+    .advanced-policy-link summary strong,
+    .advanced-policy-link summary small { display: block; }
+    .advanced-policy-link summary strong { font-size: 14px; }
+    .advanced-policy-link summary small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .advanced-policy-link[open] .icon-chevron { transform: rotate(180deg); }
+    .advanced-policy-link > p { margin: 0; padding: 0 16px 14px; color: var(--muted); font-size: 13px; }
+
+    .switch { width: 54px; height: 30px; }
+    .switch::after { top: 4px; left: 4px; width: 22px; height: 22px; }
+    .switch.active::after { transform: translateX(24px); }
+
+    .side-panel.strategy-panel {
+      position: sticky;
+      top: 16px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      min-height: 832px;
+    }
+    .strategy-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .strategy-heading h2 { margin: 0; font-size: 21px; }
+    .strategy-heading .ui-icon { width: 24px; height: 24px; flex-basis: 24px; color: var(--brand); }
+    .strategy-form { gap: 28px; }
+    .strategy-form > label { position: relative; color: var(--ink); font-size: 15px; }
+    .strategy-form textarea { min-height: 166px; margin-top: 3px; padding: 14px; color: var(--ink); font-weight: 500; }
+    .character-count { position: absolute; right: 12px; bottom: 10px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .strategy-field { display: grid; gap: 11px; }
+    .strategy-label,
+    .knowledge-mode-field legend { color: var(--ink); font-size: 15px; font-weight: 800; }
+    .temperature-control {
+      display: grid;
+      grid-template-columns: auto minmax(110px, 244px) auto 72px;
+      justify-content: space-between;
+      gap: 0;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .temperature-control input[type="range"] {
+      min-width: 0;
+      border: 0;
+      border-radius: 999px;
+      box-shadow: none;
+    }
+    .temperature-control #temperature-value { min-height: 44px; padding: 0 8px; text-align: center; font-weight: 800; }
+    .length-segments { display: grid; grid-template-columns: repeat(3, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
+    .length-segments button { min-height: 46px; border: 0; border-right: 1px solid var(--line); background: #fff; color: #667289; cursor: pointer; font-weight: 800; }
+    .length-segments button:last-child { border-right: 0; }
+    .length-segments button.active { background: var(--brand); color: #fff; }
+    .knowledge-mode-field { display: grid; gap: 16px; margin: 10px 0 0; padding: 0; border: 0; }
+    .knowledge-mode-field legend { margin-bottom: 16px; }
+    .radio-row { display: flex; align-items: center; gap: 10px; color: #354159; font-size: 14px; cursor: pointer; }
+    .radio-row input { width: 21px; height: 21px; min-height: 21px; margin: 0; accent-color: var(--brand); }
+    .strategy-save { width: 100%; min-height: 54px; margin-top: 20px; font-size: 16px; }
+    .strategy-save .ui-icon { width: 19px; height: 19px; flex-basis: 19px; }
+
+    #records-view .section-title,
+    #settings-view .section-title,
+    #system-view .section-title { margin-bottom: 16px; }
+    #records-view .list-card,
+    #settings-view .list-card,
+    #system-view .list-card,
+    .record-session-list { border-radius: 10px; }
+    .collapsible-panel { border-radius: 10px; }
+    .system-grid { gap: 12px; }
+    .system-metric { border-radius: 9px; background: var(--soft); }
+    .footer-note { margin-top: 22px; padding: 0 4px; }
+
+    @media (max-width: 1100px) {
+      .shell { width: 100%; max-width: none; margin: 0; border-radius: 0; }
+      .topbar { padding: 16px 22px; }
+      .brand-mark { width: 60px; height: 60px; flex-basis: 60px; }
+      .tabs { position: sticky; top: 0; z-index: 20; }
+      .content { padding: 20px; }
+      .control-workspace { grid-template-columns: 1fr; }
+      .side-panel.strategy-panel { position: static; }
+    }
+
+    @media (max-width: 760px) {
+      .topbar { min-height: 88px; }
+      .brand-copy h1 { font-size: 22px; }
+      .brand-copy > p { font-size: 14px; }
+      .status-pill { min-height: 40px; padding: 0 13px; font-size: 14px; }
+      .tabs { display: grid; grid-template-columns: repeat(4, 1fr); padding: 0; gap: 0; }
+      .tab { min-width: 0; padding: 0 8px; }
+      .content { padding: 14px; }
+      .dashboard-card,
+      #records-view > .section,
+      .record-layout > .section,
+      #settings-view .settings-grid > .section,
+      #settings-view > .section,
+      #system-view > .section { padding: 16px; }
+      .classroom-summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary-item:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .summary-item:nth-child(4) { border-top: 1px solid var(--line); }
+      .class-controls .button { min-width: 0; flex: 1 1 0; }
+      .classroom-entry-layout { grid-template-columns: 1fr; }
+      .qr-card { min-height: auto; }
+      .classroom-link-actions .button { flex: 1 1 140px; }
+    }
+
+    @media (max-width: 560px) {
+      .topbar { align-items: center; flex-direction: row; }
+      .brand-mark { width: 48px; height: 48px; flex-basis: 48px; }
+      .brand-copy h1 { font-size: 18px; }
+      .brand-copy > p { font-size: 12px; }
+      .status-pill span:last-child { display: none; }
+      .status-pill { min-width: 40px; padding: 0 10px; }
+      .tab { min-height: 58px; flex-direction: column; gap: 3px; font-size: 12px; }
+      .tab .ui-icon { width: 19px; height: 19px; flex-basis: 19px; }
+      .summary-item { min-height: 68px; align-items: flex-start; flex-direction: column; justify-content: center; gap: 4px; }
+      .compact-setting-row:not(details) { align-items: flex-start; flex-wrap: wrap; }
+      .compact-setting-row .text-action { margin-left: 40px; }
+      .temperature-control { grid-template-columns: auto minmax(80px, 1fr) auto; }
+      .temperature-control #temperature-value { grid-column: 1 / -1; }
+    }
+
+    /* Reference-matched secondary workspaces */
+    .section-icon-title { display: flex; align-items: center; gap: 12px; }
+    .section-icon-title .ui-icon { width: 25px; height: 25px; flex-basis: 25px; color: var(--brand); }
+
+    .records-overview-card { min-height: 313px; padding: 26px !important; }
+    .records-overview-card .section-title { margin-bottom: 18px !important; }
+    .records-overview-card .section-title .button { min-width: 134px; }
+    #recording-note.recording-note {
+      display: flex;
+      min-height: 56px;
+      align-items: center;
+      gap: 13px;
+      padding: 13px 17px;
+      border-color: #cbdcff;
+      border-radius: 8px;
+      background: #f7faff;
+      color: #435370;
+    }
+    #recording-note .ui-icon { width: 24px; height: 24px; flex-basis: 24px; color: var(--brand); }
+    #record-summary { margin-top: 24px !important; }
+    #record-summary .record-summary-card {
+      min-height: 98px;
+      flex-direction: row;
+      align-items: center;
+      gap: 18px;
+      padding: 16px 18px;
+      background: #fff;
+    }
+    .record-summary-icon {
+      display: grid !important;
+      width: 58px;
+      height: 58px;
+      min-height: 58px !important;
+      flex: 0 0 58px;
+      place-items: center;
+      border-radius: 50%;
+      background: #eaf2ff;
+      color: var(--brand);
+    }
+    .record-summary-card.green .record-summary-icon { background: #e9f9f0; color: #14a768; }
+    .record-summary-card.violet .record-summary-icon { background: #eeeeff; color: #5d5ee8; }
+    .record-summary-card.orange .record-summary-icon { background: #fff1e5; color: #ed7823; }
+    .record-summary-icon .ui-icon { width: 29px; height: 29px; flex-basis: 29px; }
+    .record-summary-copy { min-height: 0 !important; }
+    #record-summary .record-summary-copy > span { min-height: 0; font-size: 14px; }
+    #record-summary .record-summary-copy strong { margin-top: 4px; font-size: 25px; line-height: 1.1; }
+    .record-layout { grid-template-columns: minmax(360px, .52fr) minmax(0, 1fr); }
+    .records-list-card,
+    .records-detail-card { min-height: 344px; padding: 24px 26px !important; }
+    .record-session-list { min-height: 238px; max-height: 680px; }
+    .record-empty-state {
+      display: grid;
+      min-height: 238px;
+      place-items: center;
+      align-content: center;
+      gap: 10px;
+      padding: 24px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 9px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .record-empty-state .ui-icon { width: 48px; height: 48px; color: #c8cfda; }
+    .record-empty-state p { margin: 0; }
+    .record-empty-state .row-title { color: var(--ink); font-size: 18px; }
+    .record-toolbar { gap: 18px; margin-bottom: 24px; }
+    .record-toolbar select { min-height: 54px; }
+    .record-detail-empty {
+      display: flex;
+      min-height: 98px;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      color: #8b96a8;
+      font-size: 16px;
+    }
+    .record-detail-empty .ui-icon { width: 30px; height: 30px; color: #c7ced9; }
+
+    #settings-view { gap: 18px; }
+    #settings-view { padding-top: 10px; }
+    #records-view { padding-top: 20px; }
+    .resource-knowledge-section,
+    .resource-upload-section,
+    .resource-files-section { padding: 22px 26px 26px !important; }
+    .knowledge-source-frame { overflow: hidden; border: 1px solid var(--line); border-radius: 10px; }
+    .knowledge-source-frame > .list-card { border: 0 !important; border-radius: 0 !important; }
+    .resource-source-row { min-height: 132px; padding: 20px 22px; }
+    .resource-source-row .row-main { flex: 1 1 auto; }
+    .resource-source-row .row-title { font-size: 18px; }
+    .resource-icon-tile {
+      display: grid;
+      width: 64px;
+      height: 64px;
+      flex: 0 0 64px;
+      place-items: center;
+      border-radius: 16px;
+      background: #f2f6fc;
+      color: var(--brand);
+    }
+    .resource-icon-tile .ui-icon { width: 32px; height: 32px; flex-basis: 32px; }
+    .resource-icon-tile.neutral { color: #7a879b; }
+    .resource-description { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+    .resource-source-row .row-actions { gap: 14px; }
+    .resource-source-row .row-actions > .button { min-width: 150px; }
+    .resource-source-row .action-menu { min-width: 152px; }
+    .resource-source-row .action-menu > summary { gap: 9px; border: 1px solid var(--line); background: var(--soft); }
+    .resource-source-row .action-menu .ui-icon { width: 18px; height: 18px; }
+    .knowledge-source-frame > .compact-panel { border-top: 1px solid var(--line); border-radius: 0; }
+    .knowledge-source-frame > .compact-panel > summary { min-height: 58px; padding: 12px 24px; font-size: 16px; }
+    .source-editor-body { padding: 0 24px 20px; }
+    .resource-upload-section .section-title { margin-bottom: 16px !important; }
+    .resource-upload-section { min-height: 241px; }
+    .resource-upload-section .upload-card { padding: 0; border: 0; }
+    .resource-upload-section .upload-layout {
+      grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.35fr) auto;
+      column-gap: 30px;
+      row-gap: 14px;
+    }
+    .resource-upload-section .file-picker { min-height: 54px; }
+    .resource-upload-section select { min-height: 54px; }
+    .resource-upload-section #upload-file { min-width: 166px; min-height: 54px; }
+    .resource-upload-section .hint { margin-top: 0; }
+    .resource-files-section { min-height: 214px; }
+    .resource-files-section .list-card { min-height: 92px; }
+    .resource-file-empty,
+    .resource-file-row { display: flex; min-height: 92px; align-items: center; gap: 22px; padding: 16px 22px; }
+    .resource-file-empty .resource-icon-tile,
+    .resource-file-row .resource-icon-tile { width: 54px; height: 54px; flex-basis: 54px; border-radius: 14px; }
+    .resource-file-empty .resource-icon-tile .ui-icon,
+    .resource-file-row .resource-icon-tile .ui-icon { width: 27px; height: 27px; }
+
+    .system-request-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .system-request-block > .section-title { margin-bottom: 10px !important; }
+    .system-request-block #request-log-list { margin-top: 12px; }
+    .system-request-block #request-log-list .row { min-height: 48px; }
+
+    @media (max-width: 1100px) and (min-width: 761px) {
+      .topbar { min-height: 68px; padding: 9px 20px; }
+      .brand-lockup { gap: 12px; }
+      .brand-mark { width: 44px; height: 44px; flex-basis: 44px; }
+      .brand-copy h1 { font-size: 20px; }
+      .brand-copy > p { margin-top: 2px; font-size: 12px; }
+      .status-pill { min-height: 36px; padding: 0 14px; font-size: 13px; }
+      .tabs { min-height: 44px; padding: 0 22px; }
+      .tab { min-width: 112px; min-height: 44px; padding: 0 16px; gap: 8px; font-size: 13px; }
+      .tab .ui-icon { width: 17px; height: 17px; flex-basis: 17px; }
+      .content { padding: 9px 20px 16px; }
+      #system-view { gap: 5px; }
+      #system-view > .section { padding: 9px 13px; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 51, 78, .04); }
+      #system-view .section-title { margin-bottom: 8px; }
+      #system-view h2 { font-size: 15px; }
+      #system-view .button { min-height: 30px; padding: 0 13px; border-radius: 6px; font-size: 12px; }
+      #system-view .button.mini { min-height: 26px; padding: 0 9px; font-size: 10px; }
+      #system-view .system-actions { gap: 8px; }
+      #system-view .system-action-group { gap: 8px; }
+      #system-view .system-action-group.critical { padding-left: 8px; }
+      #system-view .system-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+      #system-view .system-metric { min-height: 54px; padding: 7px 10px; border-radius: 7px; }
+      #system-view .system-metric span { min-height: 13px; font-size: 10px; line-height: 13px; }
+      #system-view .system-metric strong { font-size: 14px; line-height: 18px; }
+      #system-view .system-metric-value { min-height: 24px; margin-top: 1px; }
+      #system-view .system-metric-value .button { min-height: 25px; }
+      #system-view .runtime-stat + .runtime-stat { padding-left: 8px; }
+      #system-view .system-request-block { margin-top: 8px; padding-top: 8px; }
+      #system-view .system-request-block > .section-title { margin-bottom: 6px !important; }
+      #system-view .system-request-block #request-log-list { margin-top: 8px; }
+      #system-view .system-request-block #request-log-list .row { min-height: 34px; padding: 7px 10px; }
+      #system-view .collapsible-panel > summary { min-height: 28px; padding: 2px 0; font-size: 15px; }
+      #system-view .collapsible-panel[open] > summary { margin-bottom: 3px; }
+      #system-view .list-card { border-radius: 7px; }
+      #system-view .list-card[style] { padding: 10px !important; }
+      #system-view .stack { gap: 8px; }
+      #system-view .hint { font-size: 10px; line-height: 1.45; }
+      #system-view .field-label,
+      #system-view label { gap: 3px; font-size: 10px; }
+      #system-view input,
+      #system-view select { min-height: 28px; padding: 0 9px; border-radius: 5px; font-size: 11px; }
+      #system-view .file-picker { min-height: 30px; border-radius: 5px; }
+      #system-view .file-picker-button { min-height: 28px; padding: 0 10px; font-size: 11px; }
+      #system-view .provider-picker { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 7px; }
+      #system-view .upstream-provider-heading { min-height: 34px; padding: 6px 11px; }
+      #system-view .upstream-provider-heading h3,
+      #system-view .imported-model-heading h3 { font-size: 12px; }
+      #system-view .upstream-provider-body { padding: 9px 11px; }
+      #system-view .provider-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
+      #system-view .provider-form-grid .full { grid-column: auto; }
+      #system-view .api-endpoint-preview { grid-column: 1 / -1; margin: -2px 0 0; font-size: 9px; }
+      #system-view .provider-actions { margin-top: 7px; }
+      #system-view .provider-actions + .hint { margin: 6px 0 0; }
+      #system-view .imported-models { margin-top: 8px; }
+      #system-view .imported-model-heading { margin-bottom: 5px; }
+      #system-view .catalog-provider-heading { min-height: 28px; padding: 4px 9px; }
+      #system-view .catalog-model-row { min-height: 42px; grid-template-columns: minmax(150px, 1fr) minmax(220px, .9fr) auto; gap: 8px; padding: 5px 9px; }
+      #system-view .catalog-display-name input { min-height: 27px; }
+      #system-view .catalog-model-id { font-size: 11px; }
+      #system-view .catalog-model-key,
+      #system-view .row-meta { font-size: 9px; }
+      #system-view .badge { min-height: 17px; padding: 0 6px; border-radius: 5px; font-size: 9px; }
+      #system-view .log-view { max-height: 180px; padding: 8px 10px; font-size: 8px; line-height: 1.35; }
+      #system-view .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 18px; }
+      #system-view .setting-list label { grid-template-columns: minmax(95px, .7fr) minmax(0, 1.6fr); align-items: center; }
+      #system-view .setting-list .checkbox-row { display: flex; min-height: 28px; }
+      #system-view .setting-list input[type="checkbox"] { width: 15px; height: 15px; min-height: 15px; }
+      #system-view #advanced-setting-list + .stack { margin-top: 8px !important; }
+      #system-view .advanced-settings-panel .actions { gap: 8px; }
+      #system-view .footer-note { font-size: 10px; }
+
+      #system-view .system-overview-section { padding-top: 7px; padding-bottom: 7px; }
+      #system-view .system-overview-section .system-metric { min-height: 46px; padding-top: 5px; padding-bottom: 5px; }
+      #system-view #system-metrics .system-metric strong { font-size: 12px; }
+      #system-view #system-metrics .system-metric-value .button { min-height: 22px; padding: 0 6px; font-size: 9px; }
+      #system-view .system-overview-section .system-request-block #request-log-list .row { min-height: 28px; padding-top: 4px; padding-bottom: 4px; }
+      #system-view > .section:has(#backup-panel) { padding-top: 5px; padding-bottom: 6px; }
+      #system-view #backup-panel > summary { min-height: 24px; }
+      #system-view #backup-panel > .list-card { padding: 4px 6px !important; }
+      #system-view #backup-panel .stack { gap: 2px; }
+      #system-view #backup-panel .button { min-height: 24px; }
+      #system-view #backup-panel .file-picker { min-height: 24px; }
+      #system-view #backup-panel .file-picker-button { min-height: 22px; }
+      #system-view #backup-panel .hint { margin: 1px 0 0; line-height: 1.15; }
+
+      #system-view > .section:has(#model-api-panel) { padding-top: 5px; padding-bottom: 7px; }
+      #system-view #model-api-panel > summary { min-height: 24px; }
+      #system-view #model-api-panel > .hint { margin: 0 0 6px !important; line-height: 1.25; }
+      #system-view #model-api-panel .provider-picker { margin-bottom: 3px; }
+      #system-view #model-api-panel .upstream-provider-heading { min-height: 25px; padding: 3px 8px; }
+      #system-view #model-api-panel .upstream-provider-body { padding: 4px 8px; }
+      #system-view #model-api-panel .provider-form-grid { gap: 1px 9px; }
+      #system-view #model-api-panel input,
+      #system-view #model-api-panel select { min-height: 20px; height: 20px; padding-top: 0; padding-bottom: 0; }
+      #system-view #model-api-panel .api-endpoint-preview { line-height: 1.2; }
+      #system-view #model-api-panel .provider-actions { margin-top: 1px; }
+      #system-view #model-api-panel .provider-actions .button { min-height: 22px; }
+      #system-view #model-api-panel .provider-actions + .hint { margin: 1px 0 0; line-height: 1.1; }
+      #system-view #model-api-panel .imported-models { margin-top: 3px; }
+      #system-view #model-api-panel .imported-model-heading { margin-bottom: 2px; }
+      #system-view #model-api-panel .catalog-provider-heading { min-height: 21px; padding: 2px 7px; }
+      #system-view #model-api-panel .catalog-model-row { min-height: 30px; padding: 2px 7px; line-height: 1.15; }
+      #system-view #model-api-panel .catalog-display-name input { min-height: 20px; height: 20px; }
+
+      #system-view #system-log-panel > summary { min-height: 24px; }
+
+      #system-view > .section:has(#advanced-settings-panel) { padding-top: 5px; padding-bottom: 7px; }
+      #system-view #advanced-settings-panel > summary { min-height: 24px; }
+      #system-view #advanced-settings-panel > .list-card { padding: 7px 10px !important; }
+      #system-view #advanced-settings-panel .setting-list { gap: 1px 18px; }
+      #system-view #advanced-settings-panel .setting-list label { min-height: 21px; gap: 5px; line-height: 1.1; }
+      #system-view #advanced-settings-panel .setting-list input:not([type="checkbox"]) { min-height: 21px; height: 21px; padding: 0 7px; }
+      #system-view #advanced-settings-panel .setting-list .checkbox-row { min-height: 21px; }
+      #system-view #advanced-settings-panel #advanced-setting-list + .stack { gap: 5px; margin-top: 5px !important; }
+      #system-view #advanced-settings-panel #platform-api-key { min-height: 23px; }
+      #system-view #advanced-settings-panel .actions .button { min-height: 27px; }
+      #system-view #advanced-settings-panel .hint { margin: 0; }
+    }
+
+    @media (max-width: 900px) and (min-width: 761px) {
+      .record-layout { grid-template-columns: minmax(280px, .62fr) minmax(0, 1fr); }
+    }
+
+    @media (max-width: 760px) {
+      #record-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .record-layout { grid-template-columns: 1fr; }
+      .records-list-card,
+      .records-detail-card { min-height: 0; }
+      .resource-source-row { align-items: stretch; flex-direction: column; }
+      .resource-source-row .row-actions { width: 100%; }
+      .resource-source-row .row-actions > .button,
+      .resource-source-row .row-actions > .action-menu { width: 100%; }
+      .resource-upload-section .upload-layout { grid-template-columns: 1fr; }
+      .resource-upload-section .hint { grid-column: auto; }
+      .resource-upload-section #upload-file { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      #record-summary { grid-template-columns: 1fr; }
+      #record-summary .record-summary-card { min-height: 82px; }
+      .records-overview-card,
+      .resource-knowledge-section,
+      .resource-upload-section,
+      .resource-files-section { padding: 15px !important; }
+    }
   </style>
 </head>
 <body>
@@ -615,20 +1297,21 @@
       <div class="brand-lockup">
         <img class="brand-mark" src="assets/brand/edugate-icon.svg" alt="" />
         <div class="brand-copy">
-          <div class="brand-title-row">
-            <h1>EduGate 教师端控制台</h1>
-            <div class="status-pill" id="system-status"><span class="dot"></span><span>未连接</span></div>
-          </div>
+          <h1>EduGate 教师端控制台</h1>
           <p class="subtle">教师控制 · 本地 AI 教学网关</p>
         </div>
+      </div>
+      <div class="status-pill" id="system-status">
+        <span class="ui-icon icon-circle-check" aria-hidden="true"></span>
+        <span>未连接</span>
       </div>
     </header>
 
     <nav class="tabs" id="main-tabs" role="tablist" aria-label="教师端页面">
-      <button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="control-view">控制</button>
-      <button class="tab" data-tab="records" role="tab" aria-selected="false" aria-controls="records-view">记录</button>
-      <button class="tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="settings-view">资源</button>
-      <button class="tab" data-tab="system" role="tab" aria-selected="false" aria-controls="system-view" data-admin-only>系统</button>
+      <button class="tab active" data-tab="control" role="tab" aria-selected="true" aria-controls="control-view"><span class="ui-icon icon-control" aria-hidden="true"></span><span>控制</span></button>
+      <button class="tab" data-tab="records" role="tab" aria-selected="false" aria-controls="records-view"><span class="ui-icon icon-records" aria-hidden="true"></span><span>记录</span></button>
+      <button class="tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="settings-view"><span class="ui-icon icon-resources" aria-hidden="true"></span><span>资源</span></button>
+      <button class="tab" data-tab="system" role="tab" aria-selected="false" aria-controls="system-view" data-admin-only><span class="ui-icon icon-system" aria-hidden="true"></span><span>系统</span></button>
     </nav>
 
     <main class="content">
@@ -647,119 +1330,154 @@
       </section>
 
       <section id="control-view" hidden>
-        <div class="control-grid">
-          <div>
-            <section class="session-card">
-              <h2>当前课堂配置</h2>
-              <p>学生端正在使用的 AI、模型和知识库。</p>
-              <div class="metrics">
-                <div class="metric"><span>AI 服务</span><strong id="current-ai-state">-</strong></div>
-                <div class="metric"><span>模型</span><strong id="current-model">-</strong></div>
-                <div class="metric"><span>知识库</span><strong id="current-source">general</strong></div>
+        <div class="control-workspace">
+          <div class="control-main-stack">
+            <section class="dashboard-card classroom-overview-card">
+              <div class="card-heading-row">
+                <div class="classroom-entry-heading">
+                  <h2>当前课堂</h2>
+                  <span class="badge" id="classroom-state" aria-live="polite">已暂停</span>
+                </div>
+              </div>
+              <div class="classroom-summary-strip">
+                <div class="summary-item"><span class="ui-icon icon-brain" aria-hidden="true"></span><span>AI：<strong id="current-ai-state">-</strong></span></div>
+                <div class="summary-item"><span class="ui-icon icon-cube" aria-hidden="true"></span><span>模型：<strong id="current-model">-</strong></span></div>
+                <div class="summary-item"><span class="ui-icon icon-book" aria-hidden="true"></span><span>知识库：<strong id="current-source">general</strong></span></div>
+                <div class="summary-item"><span class="ui-icon icon-users" aria-hidden="true"></span><span>在线学生：<strong id="current-student-count">0</strong> 人</span></div>
+              </div>
+              <div class="class-controls" id="class-controls" hidden>
+                <button class="button primary" id="start-class" type="button"><span class="ui-icon icon-play" aria-hidden="true"></span><span>开始课堂</span></button>
+                <button class="button ghost" id="end-class" type="button"><span class="ui-icon icon-stop" aria-hidden="true"></span><span>结束课堂</span></button>
               </div>
             </section>
 
-            <section class="section">
-              <div class="section-title">
-                <h2>AI 服务开关</h2>
+            <section class="dashboard-card classroom-entry" id="classroom-entry">
+              <div class="card-heading-row"><h2>学生课堂入口</h2></div>
+              <div class="classroom-entry-layout">
+                <div class="qr-card">
+                  <img id="classroom-qr" alt="学生课堂入口二维码" hidden />
+                  <div class="qr-placeholder" id="classroom-qr-placeholder">课堂链接生成后显示二维码</div>
+                  <strong>扫码进入课堂</strong>
+                </div>
+                <div class="classroom-link-panel">
+                  <span class="field-caption">课堂访问地址（简洁链接）</span>
+                  <strong class="classroom-url-display" id="classroom-url-display">登录后显示课堂地址</strong>
+                  <input class="visually-hidden" id="classroom-url" readonly tabindex="-1" aria-hidden="true" />
+                  <div class="classroom-link-actions">
+                    <button class="button soft" id="copy-classroom-url" type="button"><span class="ui-icon icon-copy" aria-hidden="true"></span><span>复制链接</span></button>
+                    <button class="button soft" id="toggle-classroom-url" type="button" aria-expanded="false"><span class="ui-icon icon-eye" aria-hidden="true"></span><span>显示完整链接</span></button>
+                    <button class="button soft" id="rotate-classroom-token" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>重新生成入口</span></button>
+                  </div>
+                  <p class="hint classroom-link-hint"><span class="ui-icon icon-info" aria-hidden="true"></span><span>课堂链接会跨课次和重启保持不变；只有重新生成入口才会永久淘汰旧链接。</span></p>
+                </div>
               </div>
-              <div class="list-card">
-                <div class="row">
+            </section>
+
+            <section class="dashboard-card classroom-ai-settings">
+              <div class="card-heading-row"><h2>课堂 AI 设置</h2></div>
+              <div class="compact-setting-list">
+                <div class="compact-setting-row">
                   <div class="row-main">
                     <p class="row-title">允许学生使用 AI</p>
-                    <div class="row-meta">关闭后，学生将暂时无法获得 AI 回答。</div>
+                    <div class="row-meta">开启后，学生可向 AI 提问并获得回答。</div>
                   </div>
                   <button class="switch" id="ai-enabled-switch" type="button" aria-label="切换 AI 服务" aria-pressed="false"></button>
                 </div>
-              </div>
-            </section>
 
-            <section class="section">
-              <div class="section-title">
-                <h2>选择 AI 模型</h2>
-                <button class="button soft" id="reload-models">刷新模型</button>
-              </div>
-              <div class="list-card" id="model-list"></div>
-              <p class="hint">同一时间只启用一个课堂默认模型。</p>
-            </section>
-
-            <section class="section">
-              <div class="section-title">
-                <h2>挂载知识库</h2>
-                <button class="button soft" id="reload-sources">刷新知识库</button>
-              </div>
-              <div class="list-card">
-                <div class="row">
-                  <div class="row-main">
-                    <p class="row-title">知识库</p>
-                    <div class="row-meta">选择后保存场景配置，学生端回答会检索并注入该知识库片段。</div>
+                <div class="compact-setting-row model-setting-row">
+                  <span class="ui-icon icon-brain" aria-hidden="true"></span>
+                  <div class="compact-setting-body">
+                    <span class="field-caption">AI 模型</span>
+                    <div class="model-list-compact" id="model-list"></div>
                   </div>
-                  <select id="source-select" aria-label="选择知识库"></select>
+                  <button class="text-action" id="reload-models" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新模型</span></button>
                 </div>
+
+                <div class="compact-setting-row source-setting-row">
+                  <span class="ui-icon icon-book" aria-hidden="true"></span>
+                  <div class="compact-setting-body">
+                    <span class="field-caption">课堂知识库</span>
+                    <select id="source-select" aria-label="选择知识库"></select>
+                  </div>
+                  <button class="text-action" id="reload-sources" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新知识库</span></button>
+                </div>
+
+                <details class="compact-setting-row advanced-policy-link">
+                  <summary>
+                    <span>
+                      <strong>高级 AI 教学策略</strong>
+                      <small>更多教学行为与回答约束设置</small>
+                    </span>
+                    <span class="ui-icon icon-chevron" aria-hidden="true"></span>
+                  </summary>
+                  <p>右侧策略面板用于设置教学要求、回答风格、回答长度和知识库约束。</p>
+                </details>
               </div>
             </section>
           </div>
 
-          <aside class="side-panel">
-            <h2>当前课堂 AI 策略</h2>
-            <div class="form-grid">
-              <label>系统提示词<textarea id="system-prompt" placeholder="教师控制的教学提示词，学生端不可见也不可修改。"></textarea></label>
-              <label>回答随机性
-                <div class="range-row">
-                  <input id="temperature" type="range" min="0" max="2" step="0.1" value="0.4" />
-                  <input id="temperature-value" value="0.4" />
-                </div>
+          <aside class="side-panel strategy-panel">
+            <div class="strategy-heading"><span class="ui-icon icon-sparkles" aria-hidden="true"></span><h2>AI 教学策略</h2></div>
+            <div class="form-grid strategy-form">
+              <label>教学要求
+                <textarea id="system-prompt" maxlength="500" placeholder="教师控制的教学提示词，学生端不可见。"></textarea>
+                <span class="character-count" id="prompt-character-count">0 / 500</span>
               </label>
-              <label>回答长度上限（Tokens，可留空）<input id="max-tokens" type="number" min="1" placeholder="例如 800" /></label>
-              <label class="checkbox-row"><input id="knowledge-strict" type="checkbox" /><span>严格知识库模式</span></label>
-              <button class="button primary" id="save-scenario">保存当前 AI 策略</button>
-              <p class="hint">保存后，这套模型、提示词、知识库和参数会立即应用到学生课堂。</p>
+
+              <div class="strategy-field">
+                <span class="strategy-label">回答风格</span>
+                <div class="temperature-control">
+                  <span>严谨</span>
+                  <input id="temperature" type="range" min="0" max="1" step="0.1" value="0.4" />
+                  <span>灵活</span>
+                  <input id="temperature-value" value="0.4" inputmode="decimal" aria-label="回答随机性数值" />
+                </div>
+              </div>
+
+              <div class="strategy-field">
+                <span class="strategy-label">回答长度</span>
+                <input id="max-tokens" type="hidden" />
+                <div class="length-segments" role="group" aria-label="回答长度">
+                  <button type="button" data-token-preset="300">简短</button>
+                  <button type="button" data-token-preset="800">适中</button>
+                  <button type="button" data-token-preset="1600">详细</button>
+                </div>
+              </div>
+
+              <fieldset class="knowledge-mode-field">
+                <legend>回答依据</legend>
+                <label class="radio-row"><input id="knowledge-open" type="radio" name="knowledge-mode" value="open" checked /><span>AI 可使用通用知识</span></label>
+                <label class="radio-row"><input id="knowledge-strict" type="radio" name="knowledge-mode" value="strict" /><span>仅根据课堂知识库回答</span></label>
+              </fieldset>
+
+              <button class="button primary strategy-save" id="save-scenario"><span class="ui-icon icon-save" aria-hidden="true"></span><span>保存当前 AI 策略</span></button>
+              <p class="hint">保存后，模型、提示词、知识库和参数会立即应用到当前课堂。</p>
             </div>
           </aside>
         </div>
 
-        <section class="section classroom-entry" id="classroom-entry">
-          <div class="section-title">
-            <div class="classroom-entry-heading">
-              <h2>学生课堂入口</h2>
-              <span class="badge" id="classroom-state" aria-live="polite">未开始</span>
-            </div>
-            <div class="class-controls" id="class-controls" hidden>
-              <button class="button primary" id="start-class" type="button">开始课堂</button>
-              <button class="button danger" id="end-class" type="button">结束课堂</button>
-            </div>
-          </div>
-          <div class="list-card" style="padding:18px">
-            <div class="classroom-link">
-              <label>课堂链接<input id="classroom-url" readonly placeholder="点击“开始课堂”生成" /></label>
-              <button class="button soft" id="copy-classroom-url" type="button">复制链接</button>
-              <button class="button ghost" id="rotate-classroom-token" type="button">换一个链接</button>
-            </div>
-            <p class="hint" style="margin:10px 0 0">开始课堂后把链接发给学生。结束课堂会立即停用当前链接和学生会话，但教师控制台会继续运行。</p>
-          </div>
-        </section>
       </section>
 
       <section id="records-view" hidden>
-        <section class="section">
+        <section class="section records-overview-card">
           <div class="section-title">
             <div>
               <h2>课堂记录</h2>
               <p class="hint" style="margin:6px 0 0">按学生电脑名和 IP 查看 AI 对话与 Python 运行记录。</p>
             </div>
-            <button class="button soft" id="refresh-records" type="button">刷新记录</button>
+            <button class="button soft" id="refresh-records" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新记录</span></button>
           </div>
           <div class="recording-note" id="recording-note">正在读取本机记录设置。</div>
           <div class="system-grid record-summary" id="record-summary" style="margin-top:14px"></div>
         </section>
 
         <div class="record-layout">
-          <section class="section">
+          <section class="section records-list-card">
             <div class="section-title"><h2>课堂列表</h2></div>
             <div class="record-session-list" id="record-session-list"></div>
           </section>
 
-          <section class="section record-detail">
+          <section class="section record-detail records-detail-card">
             <div class="section-title">
               <div>
                 <h2 id="record-detail-title">选择一节课堂</h2>
@@ -783,17 +1501,16 @@
       </section>
 
       <section id="settings-view" hidden>
-        <div class="settings-grid single">
-          <section class="section">
-            <div class="section-title">
-              <h2>知识库管理</h2>
-              <button class="button soft" id="refresh-source-admin" type="button">刷新知识库</button>
-            </div>
+        <section class="section resource-knowledge-section">
+          <div class="section-title">
+            <h2 class="section-icon-title"><span class="ui-icon icon-database" aria-hidden="true"></span><span>知识库管理</span></h2>
+            <button class="button soft" id="refresh-source-admin" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新知识库</span></button>
+          </div>
+          <div class="knowledge-source-frame">
             <div class="list-card" id="source-admin-list"></div>
-
-            <details class="collapsible-panel compact-panel" id="source-editor-panel" style="margin-top:14px">
+            <details class="collapsible-panel compact-panel" id="source-editor-panel">
               <summary>新建或编辑知识库</summary>
-              <div class="list-card" style="padding:18px">
+              <div class="source-editor-body">
                 <div class="stack">
                   <label>知识库 ID<input id="new-source-id" placeholder="例如 ip-address" /></label>
                   <label>知识库名称<input id="new-source-name" placeholder="例如 IP 地址教学知识库" /></label>
@@ -805,30 +1522,32 @@
                 </div>
               </div>
             </details>
+          </div>
+        </section>
 
-            <div class="section-title" style="margin-top:20px"><h2>上传资料</h2></div>
-            <div class="list-card upload-card">
-              <div class="upload-layout">
-                <label>上传到哪个知识库<select id="upload-source"></select></label>
-                <div class="upload-file-field">
-                  <span class="field-label">选择文件</span>
-                  <div class="file-picker">
-                    <input class="file-input-hidden" id="knowledge-file" type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.xml,.log,.pdf" aria-hidden="true" tabindex="-1" hidden />
-                    <button class="file-picker-button" id="knowledge-file-trigger" type="button">选择文件</button>
-                    <span class="file-picker-name" id="knowledge-file-name">未选择文件</span>
-                  </div>
+        <section class="section resource-upload-section">
+          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-upload" aria-hidden="true"></span><span>上传资料</span></h2></div>
+          <div class="list-card upload-card">
+            <div class="upload-layout">
+              <label>上传到哪个知识库<select id="upload-source"></select></label>
+              <div class="upload-file-field">
+                <span class="field-label">选择文件</span>
+                <div class="file-picker">
+                  <input class="file-input-hidden" id="knowledge-file" type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.xml,.log,.pdf" aria-hidden="true" tabindex="-1" hidden />
+                  <button class="file-picker-button" id="knowledge-file-trigger" type="button">选择文件</button>
+                  <span class="file-picker-name" id="knowledge-file-name">未选择文件</span>
                 </div>
-                <button class="button primary" id="upload-file">上传并索引</button>
-                <p class="hint">支持 txt、md、csv、json、html、xml、log、pdf。PDF 会抽取文本，扫描版图片 PDF 可能无法识别。</p>
               </div>
+              <button class="button primary" id="upload-file"><span class="ui-icon icon-cloud-upload" aria-hidden="true"></span><span>上传并索引</span></button>
+              <p class="hint">支持 txt、md、csv、json、html、xml、log、pdf。PDF 会抽取文本，扫描版图片 PDF 可能无法识别。</p>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        <section class="section">
+        <section class="section resource-files-section">
           <div class="section-title">
-            <h2>已上传知识库文件</h2>
-            <button class="button soft" id="reload-files">刷新文件</button>
+            <h2 class="section-icon-title"><span class="ui-icon icon-file-description" aria-hidden="true"></span><span>已上传知识库文件</span></h2>
+            <button class="button soft" id="reload-files"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新文件</span></button>
           </div>
           <div class="list-card" id="file-list"></div>
         </section>
@@ -836,7 +1555,7 @@
       </section>
 
       <section id="system-view" hidden data-admin-only>
-        <section class="section">
+        <section class="section system-overview-section">
           <div class="section-title">
             <div class="system-status-heading">
               <h2>运行状态</h2>
@@ -854,16 +1573,15 @@
             </div>
           </div>
           <div class="system-grid" id="system-metrics"></div>
+          <div class="system-request-block">
+            <div class="section-title"><h2>请求统计</h2></div>
+            <div class="system-grid" id="dashboard-metrics"></div>
+            <div class="list-card" id="request-log-list"></div>
+          </div>
         </section>
 
         <section class="section">
-          <div class="section-title"><h2>请求统计</h2></div>
-          <div class="system-grid" id="dashboard-metrics"></div>
-          <div class="list-card" id="request-log-list" style="margin-top:14px"></div>
-        </section>
-
-        <section class="section">
-          <details class="collapsible-panel" id="backup-panel">
+          <details class="collapsible-panel" id="backup-panel" open>
             <summary>备份与恢复</summary>
             <div class="list-card" style="padding:18px">
               <div class="stack">
@@ -886,7 +1604,7 @@
         </section>
 
         <section class="section">
-          <details class="collapsible-panel model-api-panel" id="model-api-panel">
+          <details class="collapsible-panel model-api-panel" id="model-api-panel" open>
             <summary>上游模型 API 管理</summary>
             <p class="hint" style="margin:4px 0 14px">可配置多个上游供应商；同名模型会按“供应商 + 上游模型 ID”分别管理。</p>
             <div class="provider-picker">
@@ -948,14 +1666,14 @@
         </section>
 
         <section class="section">
-          <details class="collapsible-panel system-log-panel" id="system-log-panel">
+          <details class="collapsible-panel system-log-panel" id="system-log-panel" open>
             <summary>系统日志</summary>
             <pre class="log-view" id="launcher-log-view">暂无系统日志</pre>
           </details>
         </section>
 
         <section class="section">
-          <details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">
+          <details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel" open>
             <summary>高级设置</summary>
             <div class="list-card" style="padding:18px">
               <div class="setting-list" id="advanced-setting-list"></div>
@@ -973,14 +1691,15 @@
       </section>
 
       <div class="footer-note">
-        <span>● 教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
-        <span>v1.5 · 便携课堂版</span>
+        <span>教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
+        <span>v2.1 · 单教师课堂版</span>
       </div>
     </main>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="assets/vendor/qrcode-generator.js"></script>
   <script>
     function defaultBackendBaseUrl() {
       if (window.location.protocol === "http:" || window.location.protocol === "https:") {
@@ -1000,6 +1719,8 @@
       sessionExpiresAt: 0,
       classroomActive: false,
       classroomToken: "",
+      classroomStudentCount: 0,
+      classroomUrlExpanded: false,
       activeTab: "control",
       config: null,
       models: [],
@@ -1038,13 +1759,17 @@
       modelList: document.querySelector("#model-list"),
       currentModel: document.querySelector("#current-model"),
       currentAiState: document.querySelector("#current-ai-state"),
+      currentStudentCount: document.querySelector("#current-student-count"),
       aiEnabledSwitch: document.querySelector("#ai-enabled-switch"),
       currentSource: document.querySelector("#current-source"),
       systemPrompt: document.querySelector("#system-prompt"),
       temperature: document.querySelector("#temperature"),
       temperatureValue: document.querySelector("#temperature-value"),
       maxTokens: document.querySelector("#max-tokens"),
+      knowledgeOpen: document.querySelector("#knowledge-open"),
       knowledgeStrict: document.querySelector("#knowledge-strict"),
+      promptCharacterCount: document.querySelector("#prompt-character-count"),
+      tokenPresetButtons: document.querySelectorAll("[data-token-preset]"),
       sourceSelect: document.querySelector("#source-select"),
       uploadSource: document.querySelector("#upload-source"),
       newSourceId: document.querySelector("#new-source-id"),
@@ -1077,7 +1802,11 @@
       endClass: document.querySelector("#end-class"),
       classroomState: document.querySelector("#classroom-state"),
       classroomUrl: document.querySelector("#classroom-url"),
+      classroomUrlDisplay: document.querySelector("#classroom-url-display"),
+      classroomQr: document.querySelector("#classroom-qr"),
+      classroomQrPlaceholder: document.querySelector("#classroom-qr-placeholder"),
       copyClassroomUrl: document.querySelector("#copy-classroom-url"),
+      toggleClassroomUrl: document.querySelector("#toggle-classroom-url"),
       rotateClassroomToken: document.querySelector("#rotate-classroom-token"),
       toast: document.querySelector("#toast"),
       tabs: document.querySelectorAll(".tab"),
@@ -1117,10 +1846,6 @@
       return headers;
     }
 
-    function isAdmin() {
-      return state.currentTeacher?.role === "admin";
-    }
-
     function updateFilePicker(input, output) {
       if (!input || !output) return;
       const selectedName = input.files?.[0]?.name || "未选择文件";
@@ -1129,22 +1854,18 @@
     }
 
     function applyRoleUI() {
-      const admin = isAdmin();
-      el.tabNav.classList.toggle("teacher-tabs", !admin);
       document.querySelectorAll("[data-admin-only]").forEach((node) => {
-        node.hidden = !admin;
+        node.hidden = false;
       });
       const hint = document.querySelector(".footer-note span");
       if (hint) {
         hint.textContent = state.portableMode && state.adminToken
-          ? "● 本机已自动进入教师控制台；复制整个程序文件夹即可保留当前课堂配置。"
+          ? "本机已自动进入教师控制台；复制整个程序文件夹即可保留当前课堂配置。"
           : !state.adminToken
           ? "● 请先完成首次初始化或进入教师控制台。"
-          : admin
-          ? "● 可管理模型供应商、课堂策略、知识库和本机运行设置。"
-          : "● 普通老师只能复制自己的 API，并管理以自己用户名开头的知识库。";
+          : "● 可管理模型供应商、课堂策略、知识库和本机运行设置。";
       }
-      if (el.systemView) el.systemView.hidden = !admin || state.activeTab !== "system";
+      if (el.systemView) el.systemView.hidden = !state.adminToken || state.activeTab !== "system";
       if (el.recordsView) el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
     }
 
@@ -1176,6 +1897,8 @@
       state.sessionExpiresAt = 0;
       state.classroomActive = false;
       state.classroomToken = "";
+      state.classroomStudentCount = 0;
+      state.classroomUrlExpanded = false;
       state.classroomRecords = [];
       state.selectedClassroomRecord = null;
       sessionStorage.removeItem("edugate-admin-session");
@@ -1188,8 +1911,7 @@
     }
 
     function updateLoginState() {
-      const role = state.currentTeacher?.role === "admin" ? "管理员" : "普通老师";
-      el.loginState.textContent = state.adminToken ? `已登录：${state.username}（${role}）` : "未登录";
+      el.loginState.textContent = state.adminToken ? `已登录：${state.username}（教师管理员）` : "未登录";
       el.logoutButton.disabled = !state.adminToken;
       el.tabs.forEach((tab) => {
         tab.disabled = !state.adminToken;
@@ -1198,7 +1920,7 @@
       el.controlView.hidden = !state.adminToken || state.activeTab !== "control";
       el.recordsView.hidden = !state.adminToken || state.activeTab !== "records";
       el.settingsView.hidden = !state.adminToken || state.activeTab !== "settings";
-      el.systemView.hidden = !state.adminToken || !isAdmin() || state.activeTab !== "system";
+      el.systemView.hidden = !state.adminToken || state.activeTab !== "system";
       applyRoleUI();
     }
 
@@ -1282,31 +2004,72 @@
 
     function setStatus(text, online = false) {
       el.status.className = `status-pill${online ? " online" : ""}`;
-      el.status.innerHTML = `<span class="dot"></span><span>${text}</span>`;
+      el.status.innerHTML = `<span class="ui-icon icon-circle-check" aria-hidden="true"></span><span>${text}</span>`;
     }
 
     function classroomUrl() {
-      if (!state.classroomActive || !state.classroomToken) return "";
+      if (!state.classroomToken) return "";
+      const studentBaseUrl = state.systemStatus?.lan_base_url || state.baseUrl;
       const params = new URLSearchParams({
-        teacher_id: state.currentTeacher?.username || state.username,
         class_token: state.classroomToken,
       });
-      return `${state.baseUrl.replace(/\/+$/, "")}/student.html#${params}`;
+      return `${studentBaseUrl.replace(/\/+$/, "")}/student.html#${params}`;
+    }
+
+    function classroomDisplayUrl(fullUrl) {
+      if (!fullUrl || state.classroomUrlExpanded) return fullUrl;
+      try {
+        const parsed = new URL(fullUrl);
+        return `${parsed.host}/student`;
+      } catch {
+        return fullUrl;
+      }
+    }
+
+    function renderClassroomQr(url) {
+      if (!url || typeof qrcode !== "function") {
+        el.classroomQr.hidden = true;
+        el.classroomQrPlaceholder.hidden = false;
+        el.classroomQr.removeAttribute("src");
+        el.classroomQr.dataset.url = "";
+        return;
+      }
+      if (el.classroomQr.dataset.url !== url) {
+        const code = qrcode(0, "M");
+        code.addData(url);
+        code.make();
+        el.classroomQr.src = code.createDataURL(5, 6);
+        el.classroomQr.dataset.url = url;
+      }
+      el.classroomQr.hidden = false;
+      el.classroomQrPlaceholder.hidden = true;
     }
 
     function renderClassroomAccess() {
       const connected = Boolean(state.adminToken);
-      const active = connected && state.classroomActive && Boolean(state.classroomToken);
+      const hasLink = connected && Boolean(state.classroomToken);
+      const active = hasLink && state.classroomActive;
+      const fullUrl = hasLink ? classroomUrl() : "";
       el.classControls.hidden = !connected;
       el.startClass.disabled = !connected || active;
       el.endClass.disabled = !active;
-      el.copyClassroomUrl.disabled = !active;
-      el.rotateClassroomToken.disabled = !active;
-      el.classroomUrl.value = active ? classroomUrl() : "";
-      el.classroomState.textContent = active ? "进行中" : "未开始";
+      el.copyClassroomUrl.disabled = !hasLink;
+      el.toggleClassroomUrl.disabled = !hasLink;
+      el.rotateClassroomToken.disabled = !hasLink;
+      el.classroomUrl.value = fullUrl;
+      el.classroomUrlDisplay.textContent = fullUrl
+        ? classroomDisplayUrl(fullUrl)
+        : "登录后显示课堂地址";
+      el.classroomUrlDisplay.classList.toggle("expanded", Boolean(fullUrl && state.classroomUrlExpanded));
+      el.toggleClassroomUrl.setAttribute("aria-expanded", String(state.classroomUrlExpanded));
+      const toggleText = el.toggleClassroomUrl.querySelector("span:last-child");
+      if (toggleText) toggleText.textContent = state.classroomUrlExpanded ? "隐藏完整链接" : "显示完整链接";
+      el.classroomState.textContent = active ? "已开放" : "已暂停";
       el.classroomState.className = `badge${active ? " green" : ""}`;
+      el.currentStudentCount.textContent = String(active ? state.classroomStudentCount : 0);
       el.startClass.setAttribute("aria-pressed", String(active));
       el.endClass.setAttribute("aria-disabled", String(!active));
+      renderClassroomQr(fullUrl);
     }
 
     function escapeHtml(value) {
@@ -1339,10 +2102,6 @@
       }
     }
 
-    function teacherSourcePrefix() {
-      return `${(state.currentTeacher?.username || state.username || "").trim().toLowerCase()}-`;
-    }
-
     function mountedSourceStorageKey() {
       const username = (state.currentTeacher?.username || state.username || "default").trim().toLowerCase();
       return `edugate-mounted-source:${username}`;
@@ -1362,52 +2121,42 @@
     }
 
     function normalizeTeacherSourceId(sourceId) {
-      if (isAdmin()) return sourceId;
-      const prefix = teacherSourcePrefix();
-      return sourceId.startsWith(prefix) ? sourceId : `${prefix}${sourceId}`;
-    }
-
-    function normalizeModels(raw) {
-      const list = Array.isArray(raw?.data) ? raw.data : [];
-      return list.map((item) => {
-        const id = item.id || item.model_name || item.name;
-        return {
-          id,
-          name: item.display_name || item.name || item.upstream_model_id || id,
-          provider: item.owned_by || item.provider || "未标记供应商",
-          provider_id: item.provider_id || "",
-          upstream_model_id: item.upstream_model_id || id,
-          description: "来自上游 /models 的可用模型",
-          available: true,
-        };
-      }).filter((item) => item.id);
-    }
-
-    function mergeModels(litellmModels, catalogModels) {
-      const merged = new Map();
-      litellmModels.forEach((model) => merged.set(model.id, model));
-      catalogModels.forEach((model) => {
-        const existing = merged.get(model.id);
-        const directAvailable = model.source === "openai_compatible" && model.base_url && model.api_key_set;
-        const catalogAvailable = !isAdmin() && model.source !== "openai_compatible";
-        merged.set(model.id, {
-          id: model.id,
-          name: model.name || model.id,
-          provider: model.provider || existing?.provider || "未标记供应商",
-          provider_id: model.provider_id || existing?.provider_id || "",
-          upstream_model_id: model.upstream_model_id || existing?.upstream_model_id || model.id,
-          description: model.description || "教师维护的模型目录项",
-          source: model.source || "openai_compatible",
-          base_url: model.base_url || "",
-          api_key_set: Boolean(model.api_key_set),
-          available: catalogAvailable || directAvailable || Boolean(existing?.available),
-        });
-      });
-      return Array.from(merged.values());
+      return sourceId;
     }
 
     function currentScenario() {
       return state.config?.scenarios?.default || null;
+    }
+
+    function modelDisplayName(model) {
+      const value = String(model?.name || model?.upstream_model_id || model?.id || "-");
+      return value.toLowerCase() === "deepseek-v4-flash" ? "DeepSeek V4 Flash" : value;
+    }
+
+    function sourceDisplayName(sourceId) {
+      return state.sources.find((source) => source.id === sourceId)?.name || sourceId;
+    }
+
+    function updatePromptCharacterCount() {
+      el.promptCharacterCount.textContent = `${el.systemPrompt.value.length} / 500`;
+    }
+
+    function updateTemperatureProgress() {
+      const min = Number(el.temperature.min || 0);
+      const max = Number(el.temperature.max || 1);
+      const value = Math.min(max, Math.max(min, Number(el.temperature.value || min)));
+      const progress = max > min ? ((value - min) / (max - min)) * 100 : 0;
+      el.temperature.style.setProperty("--range-progress", `${progress}%`);
+    }
+
+    function renderTokenPreset(value) {
+      const numericValue = Number(value || 1600);
+      const selected = numericValue <= 450 ? 300 : numericValue <= 1000 ? 800 : 1600;
+      el.tokenPresetButtons.forEach((button) => {
+        const active = Number(button.dataset.tokenPreset) === selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
     }
 
     function renderAll() {
@@ -1418,21 +2167,25 @@
       const source = existingSource(rememberedSource) ? rememberedSource : (scenario?.knowledge_source_id || "general");
       const aiEnabled = scenario?.ai_enabled !== false;
       el.currentAiState.textContent = aiEnabled ? "开启" : "关闭";
-      el.currentAiState.style.color = aiEnabled ? "" : "#ffd9d5";
+      el.currentAiState.style.color = aiEnabled ? "" : "var(--red)";
       el.aiEnabledSwitch.classList.toggle("active", aiEnabled);
       el.aiEnabledSwitch.setAttribute("aria-pressed", String(aiEnabled));
       el.currentModel.textContent = activeModel
-        ? `${activeModel.provider} · ${activeModel.name || activeModel.upstream_model_id}`
+        ? modelDisplayName(activeModel)
         : model;
-      el.currentSource.textContent = source;
+      el.currentSource.textContent = sourceDisplayName(source);
 
       if (scenario) {
         el.systemPrompt.value = scenario.system_prompt || "";
         el.temperature.value = scenario.temperature ?? 0.4;
         el.temperatureValue.value = scenario.temperature ?? 0.4;
+        updateTemperatureProgress();
         el.maxTokens.value = scenario.max_tokens ?? "";
         el.knowledgeStrict.checked = Boolean(scenario.knowledge_strict);
+        el.knowledgeOpen.checked = !scenario.knowledge_strict;
       }
+      updatePromptCharacterCount();
+      renderTokenPreset(el.maxTokens.value);
 
       renderSources(source);
       renderModels(model);
@@ -1444,7 +2197,7 @@
     async function persistMountedSource(sourceId, { reload = false } = {}) {
       if (!sourceId) return;
       rememberMountedSource(sourceId);
-      el.currentSource.textContent = sourceId;
+      el.currentSource.textContent = sourceDisplayName(sourceId);
       try {
         await request("/config/scenarios/default", {
           method: "PUT",
@@ -1460,7 +2213,7 @@
       const sourceId = rememberedMountedSource();
       if (!sourceId || !existingSource(sourceId)) return;
       el.sourceSelect.value = sourceId;
-      el.currentSource.textContent = sourceId;
+      el.currentSource.textContent = sourceDisplayName(sourceId);
       const scenario = currentScenario();
       if (scenario?.knowledge_source_id !== sourceId) {
         await persistMountedSource(sourceId, { reload: true });
@@ -1471,34 +2224,33 @@
       const options = state.sources.map((source) => (
         `<option value="${escapeHtml(source.id)}">${escapeHtml(source.name)} (${escapeHtml(source.id)}) · ${source.file_count} 文件</option>`
       )).join("");
-      const writableSources = isAdmin()
-        ? state.sources
-        : state.sources.filter((source) => source.id.startsWith(teacherSourcePrefix()));
+      const writableSources = state.sources;
       const uploadOptions = writableSources.map((source) => (
         `<option value="${escapeHtml(source.id)}">${escapeHtml(source.name)} (${escapeHtml(source.id)}) · ${source.file_count} 文件</option>`
       )).join("");
       el.sourceSelect.innerHTML = options || `<option value="general">general</option>`;
-      el.uploadSource.innerHTML = uploadOptions || `<option value="">请先创建 ${escapeHtml(teacherSourcePrefix())} 开头的知识库</option>`;
+      el.uploadSource.innerHTML = uploadOptions || `<option value="">请先创建知识库</option>`;
       el.sourceSelect.value = activeSource;
       if (writableSources.some((source) => source.id === activeSource)) {
         el.uploadSource.value = activeSource;
       }
       el.sourceAdminList.innerHTML = writableSources.map((source) => `
-        <div class="row">
+        <div class="row resource-source-row">
+          <span class="resource-icon-tile"><span class="ui-icon icon-book" aria-hidden="true"></span></span>
           <div class="row-main">
             <p class="row-title">${escapeHtml(source.name)}</p>
             <div class="row-meta">
               <span class="badge">${escapeHtml(source.id)}</span>
               <span>${source.file_count} 文件</span>
               <span>${source.chunk_count} 片段</span>
-              ${source.description ? `<span>${escapeHtml(source.description)}</span>` : ""}
-              ${source.id === "general" ? `<span class="badge">默认知识库，不可删除</span>` : ""}
+              ${source.id === "general" ? `<span class="badge">默认知识库</span><span class="badge">不可删除</span>` : ""}
             </div>
+            ${source.description ? `<p class="resource-description">${escapeHtml(source.description)}</p>` : ""}
           </div>
           <div class="actions row-actions">
-            <button class="button soft" type="button" data-source-open="${escapeHtml(source.id)}">打开文件夹</button>
+            <button class="button soft" type="button" data-source-open="${escapeHtml(source.id)}"><span class="ui-icon icon-folder-open" aria-hidden="true"></span><span>打开文件夹</span></button>
             <details class="action-menu">
-              <summary>更多操作</summary>
+              <summary><span class="ui-icon icon-dots" aria-hidden="true"></span><span>更多操作</span></summary>
               <div class="action-menu-panel">
                 <button class="button soft" type="button" data-source-scan="${escapeHtml(source.id)}">扫描同步</button>
                 <button class="button ghost" type="button" data-source-edit="${escapeHtml(source.id)}">编辑</button>
@@ -1523,31 +2275,23 @@
     }
 
     function renderModels(activeModel) {
-      const empty = `<div class="row"><div class="row-main"><p class="row-title">暂无模型数据</p><div class="row-meta">请确认已登录，并点击刷新模型。</div></div></div>`;
+      const empty = `<div class="model-compact-empty">暂无模型数据，请刷新模型。</div>`;
       if (!state.models.length) {
         el.modelList.innerHTML = empty;
         return;
       }
-      const rows = state.models.map((model) => {
-        const active = model.id === activeModel;
-        return `
-          <div class="row ${active ? "active" : ""}">
-            <div class="row-main">
-              <p class="row-title">${escapeHtml(model.name)}</p>
-              <div class="row-meta">
-                <span class="badge">${escapeHtml(model.provider)}</span>
-                <span class="badge">上游 ${escapeHtml(model.upstream_model_id || model.id)}</span>
-                <span class="badge">${model.source === "openai_compatible" ? "EduGate 直连" : "兼容旧 LiteLLM"}</span>
-                <span>${escapeHtml(model.description)}</span>
-              </div>
-            </div>
-            <button class="switch ${active ? "active" : ""}" type="button" data-model-id="${escapeHtml(model.id)}" aria-label="切换到模型 ${escapeHtml(model.name)}" aria-pressed="${active}" ${model.available ? "" : "disabled"}></button>
-          </div>
-        `;
-      }).join("");
-      el.modelList.innerHTML = rows;
-      document.querySelectorAll("[data-model-id]").forEach((button) => {
-        button.addEventListener("click", () => switchModel(button.dataset.modelId));
+      const active = state.models.find((model) => model.id === activeModel) || state.models[0];
+      const options = state.models.map((model) => `
+        <option value="${escapeHtml(model.id)}" ${model.id === active.id ? "selected" : ""} ${model.available ? "" : "disabled"}>
+          ${escapeHtml(modelDisplayName(model))}
+        </option>
+      `).join("");
+      el.modelList.innerHTML = `
+        <select class="model-compact-select" aria-label="选择课堂 AI 模型">${options}</select>
+        <div class="model-compact-meta">${escapeHtml(active.provider)} · ${active.source === "openai_compatible" ? "EduGate 直连" : "兼容旧 LiteLLM"}</div>
+      `;
+      el.modelList.querySelector("select")?.addEventListener("change", (event) => {
+        switchModel(event.target.value);
       });
     }
 
@@ -1699,11 +2443,12 @@
 
     function renderFiles() {
       if (!state.files.length) {
-        el.fileList.innerHTML = `<div class="row"><div class="row-main"><p class="row-title">暂无文件</p><div class="row-meta">上传 txt、md、pdf 等文件后，学生问答会检索这些内容。</div></div></div>`;
+        el.fileList.innerHTML = `<div class="resource-file-empty"><span class="resource-icon-tile neutral"><span class="ui-icon icon-file-description" aria-hidden="true"></span></span><div class="row-main"><p class="row-title">暂无文件</p><div class="row-meta">上传 txt、md、pdf 等文件后，学生问答会检索这些内容。</div></div></div>`;
         return;
       }
       el.fileList.innerHTML = state.files.map((file) => `
-        <div class="row">
+        <div class="row resource-file-row">
+          <span class="resource-icon-tile neutral"><span class="ui-icon icon-file-description" aria-hidden="true"></span></span>
           <div class="row-main">
             <p class="row-title">${escapeHtml(file.filename)}</p>
             <div class="row-meta">
@@ -1727,6 +2472,8 @@
       STUDENT_JOIN_RATE_LIMIT_PER_5_MINUTES: "同一来源 5 分钟加入课堂上限",
       CLASSROOM_RATE_LIMIT_PER_MINUTE: "学生每分钟请求上限",
       LOGIN_RATE_LIMIT_PER_5_MINUTES: "5 分钟登录尝试上限",
+      ALLOW_LAN_ADMIN: "允许从局域网访问教师管理端",
+      ADMIN_ALLOWED_IPS: "局域网教师设备 IP 白名单（逗号分隔）",
       MODEL_MAX_CONCURRENCY: "模型最大并发",
       REQUEST_TIMEOUT_SECONDS: "普通请求超时（秒）",
       STREAM_READ_TIMEOUT_SECONDS: "流式读取超时（秒）",
@@ -1764,29 +2511,51 @@
       const modelRunning = modelPool.running ?? 0;
       const modelWaiting = modelPool.waiting ?? 0;
       const modelCapacity = modelPool.capacity ?? 0;
-      const modelStatus = modelWaiting > 0
-        ? `满载 ${modelRunning} / ${modelCapacity} · 等待 ${modelWaiting}`
-        : modelRunning > 0
-        ? `工作中 ${modelRunning} / ${modelCapacity}`
-        : `空闲 0 / ${modelCapacity}`;
+      const allowedAdminIps = Array.isArray(system.lan_admin_allowed_ips)
+        ? system.lan_admin_allowed_ips.filter(Boolean)
+        : [];
+      const allowedAdminIpCount = allowedAdminIps.length;
+      const adminAccessIps = system.lan_admin_enabled && allowedAdminIpCount
+        ? allowedAdminIps.join(", ")
+        : "127.0.0.1";
       el.systemUptime.textContent = `已运行 ${formatDuration(system.uptime_seconds)}`;
       const metrics = [
-        ["局域网地址", system.lan_base_url || "-", "lan-url"],
-        ["模型工作状态", modelStatus],
-        ["Python 执行槽位", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
-        ["Python 排队任务", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
+        ["学生端局域网地址", system.lan_base_url || "-", "lan-url"],
+        ["教师端访问范围", adminAccessIps, "admin-ip"],
+        ["模型执行状态（线程｜队列）", null, "runtime", [
+          ["模型执行线程", `${modelRunning} / ${modelCapacity}`],
+          ["模型等待队列", `${modelWaiting}`],
+        ]],
+        ["Python 工作状态（线程｜队列）", null, "runtime", [
+          ["Python 执行线程", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
+          ["Python 等待队列", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
+        ]],
       ];
-      el.systemMetrics.innerHTML = metrics.map(([label, value, kind]) => `
-        <div class="system-metric">
+      el.systemMetrics.innerHTML = metrics.map(([label, value, kind, stats]) => `
+        <div class="system-metric${kind === "runtime" ? " runtime-metric" : ""}">
           <span>${escapeHtml(label)}</span>
-          <div class="system-metric-value">
-            <strong>${escapeHtml(value)}</strong>
-            ${kind === "lan-url" ? `<button class="button mini ghost" id="copy-lan-url" type="button" ${system.lan_base_url ? "" : "disabled"}>复制</button>` : ""}
-          </div>
+          ${kind === "runtime" ? `
+            <div class="system-metric-value runtime-metric-value">
+              ${stats.map(([statLabel, statValue]) => `
+                <div class="runtime-stat" aria-label="${escapeHtml(statLabel)}">
+                  <strong>${escapeHtml(statValue)}</strong>
+                </div>
+              `).join("")}
+            </div>
+          ` : `
+            <div class="system-metric-value">
+              <strong>${escapeHtml(value)}</strong>
+              ${kind === "lan-url" ? `<button class="button mini ghost" id="copy-lan-url" type="button" ${system.lan_base_url ? "" : "disabled"}>复制</button>` : ""}
+              ${kind === "admin-ip" ? `<button class="button mini ghost" id="copy-admin-ip" type="button">复制</button>` : ""}
+            </div>
+          `}
         </div>
       `).join("");
       document.querySelector("#copy-lan-url")?.addEventListener("click", () => {
         if (system.lan_base_url) copyText(system.lan_base_url, "局域网地址");
+      });
+      document.querySelector("#copy-admin-ip")?.addEventListener("click", () => {
+        copyText(adminAccessIps, "教师端允许访问 IP");
       });
 
       const dashboard = state.dashboard || {};
@@ -1840,17 +2609,21 @@
         result.python += Number(record.python_count || 0);
         return result;
       }, { students: 0, turns: 0, python: 0 });
-      el.recordingNote.textContent = state.classroomRecordConfig.recording_enabled
-        ? `课堂记录包含学生填写的电脑名和请求 IP，仅保存在这台教师电脑中，默认保留 ${state.classroomRecordConfig.retention_days} 天。`
+      const recordingMessage = state.classroomRecordConfig.recording_enabled
+        ? `课堂记录包含自动生成的设备标签和请求 IP，仅保存在这台教师电脑中，默认保留 ${state.classroomRecordConfig.retention_days} 天。`
         : "课堂内容记录当前已关闭。管理员可在“系统 -> 高级设置”中启用。";
+      el.recordingNote.innerHTML = `<span class="ui-icon icon-info" aria-hidden="true"></span><span>${escapeHtml(recordingMessage)}</span>`;
       const summary = [
-        ["课堂数", records.length],
-        ["学生电脑合计", totals.students],
-        ["互动记录", totals.turns],
-        ["Python 运行", totals.python],
+        ["课堂数", records.length, "school", "blue"],
+        ["学生电脑合计", totals.students, "desktop", "green"],
+        ["互动记录", totals.turns, "message", "violet"],
+        ["Python 运行", totals.python, "code", "orange"],
       ];
-      el.recordSummary.innerHTML = summary.map(([label, value]) => `
-        <div class="system-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+      el.recordSummary.innerHTML = summary.map(([label, value, icon, tone]) => `
+        <div class="system-metric record-summary-card ${tone}">
+          <span class="record-summary-icon"><span class="ui-icon icon-${icon}" aria-hidden="true"></span></span>
+          <span class="record-summary-copy"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></span>
+        </div>
       `).join("");
 
       const selectedId = state.selectedClassroomRecord?.session?.id || "";
@@ -1860,7 +2633,7 @@
           <span>${escapeHtml(record.teacher_display_name || record.teacher_username)} · ${escapeHtml(formatRecordTime(record.started_at))}</span>
           <span>${record.student_count} 台学生电脑 · ${record.chat_count} 次对话 · ${record.python_count} 次 Python</span>
         </button>
-      `).join("") : `<div class="row"><div class="row-main"><p class="row-title">暂无课堂记录</p><div class="row-meta">学生开始对话或运行 Python 后会出现在这里。</div></div></div>`;
+      `).join("") : `<div class="record-empty-state"><span class="ui-icon icon-records" aria-hidden="true"></span><p class="row-title">暂无课堂记录</p><p>学生开始对话或运行 Python 后会出现在这里。</p></div>`;
       el.recordSessionList.querySelectorAll("[data-record-id]").forEach((button) => {
         button.addEventListener("click", () => loadClassroomRecord(button.dataset.recordId));
       });
@@ -1872,7 +2645,7 @@
         el.recordDetailTitle.textContent = "选择一节课堂";
         el.recordDetailMeta.textContent = "选择左侧课堂后查看记录。";
         el.recordStudentFilter.innerHTML = `<option value="all">全部电脑</option>`;
-        el.recordTurnList.innerHTML = `<div class="recording-note">暂无可显示的课堂内容。</div>`;
+        el.recordTurnList.innerHTML = `<div class="record-detail-empty"><span class="ui-icon icon-file-description" aria-hidden="true"></span><span>暂无可显示的课堂内容。</span></div>`;
         el.deleteRecord.hidden = true;
         return;
       }
@@ -2024,6 +2797,7 @@
       }
       setStatus("连接中");
       const steps = [
+        ["系统状态", loadSystem],
         ["配置", loadConfig],
         ["模型目录", loadModels],
         ["知识库", loadSources],
@@ -2031,7 +2805,6 @@
         ["课堂记录", loadClassroomRecords],
         ["课堂链接", loadClassroom],
       ];
-      if (isAdmin()) steps.push(["系统状态", loadSystem]);
       const failures = [];
       for (const [label, loader] of steps) {
         try {
@@ -2058,16 +2831,11 @@
     }
 
     async function loadModels() {
-      const catalog = await request("/model-catalog");
+      const catalog = await request("/admin/models");
       state.catalog = catalog || [];
-      if (isAdmin()) {
-        const modelsRaw = await request("/models");
-        state.models = mergeModels(normalizeModels(modelsRaw), state.catalog);
-        initializeProviderForm();
-        renderCatalog();
-      } else {
-        state.models = mergeModels([], state.catalog);
-      }
+      state.models = state.catalog;
+      initializeProviderForm();
+      renderCatalog();
       renderAll();
     }
 
@@ -2095,6 +2863,7 @@
       state.launcherLogs = launcherLogs.lines || [];
       state.advancedSettings = advanced.settings || [];
       renderSystem();
+      renderClassroomAccess();
     }
 
     async function refreshSystemStatus() {
@@ -2111,7 +2880,7 @@
     }
 
     async function loadClassroomRecords(preferredId = "") {
-      const data = await request("/teacher/classroom-records?limit=100");
+      const data = await request("/admin/classroom-records?limit=100");
       state.classroomRecordConfig = {
         recording_enabled: Boolean(data.recording_enabled),
         retention_days: Number(data.retention_days || 30),
@@ -2131,7 +2900,7 @@
     }
 
     async function loadClassroomRecord(recordId) {
-      state.selectedClassroomRecord = await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}?limit=2000`);
+      state.selectedClassroomRecord = await request(`/admin/classroom-records/${encodeURIComponent(recordId)}?limit=2000`);
       renderClassroomRecords();
       renderClassroomRecordDetail();
     }
@@ -2141,7 +2910,7 @@
       if (!recordId) return;
       if (!confirm("确定永久删除这节课堂的全部本地记录吗？此操作无法撤销。")) return;
       try {
-        await request(`/teacher/classroom-records/${encodeURIComponent(recordId)}`, { method: "DELETE" });
+        await request(`/admin/classroom-records/${encodeURIComponent(recordId)}`, { method: "DELETE" });
         state.selectedClassroomRecord = null;
         await loadClassroomRecords();
         showToast("课堂记录已删除。");
@@ -2154,6 +2923,7 @@
       const data = await request("/admin/classroom");
       state.classroomActive = Boolean(data.active);
       state.classroomToken = data.class_token || "";
+      state.classroomStudentCount = Number(data.student_count || 0);
       renderClassroomAccess();
     }
 
@@ -2163,8 +2933,9 @@
         const data = await request("/admin/classroom/start", { method: "POST" });
         state.classroomActive = Boolean(data.active);
         state.classroomToken = data.class_token || "";
+        state.classroomStudentCount = Number(data.student_count || 0);
         renderClassroomAccess();
-        showToast("课堂已开始，学生入口现在可以使用。 ");
+        showToast("课堂已开放，固定学生链接现在可以使用。 ");
       } catch (error) {
         showToast(`开始课堂失败：${error.message}`, true);
       } finally {
@@ -2173,14 +2944,15 @@
     }
 
     async function endClassroom() {
-      if (!confirm("结束后，当前学生链接和学生会话会立即失效；教师控制台仍保持开启。确定结束吗？")) return;
+      if (!confirm("结束后，固定链接会暂停使用，当前学生会话立即失效；下次开始课堂时同一链接恢复可用。确定结束吗？")) return;
       el.endClass.disabled = true;
       try {
         const data = await request("/admin/classroom/end", { method: "POST" });
         state.classroomActive = Boolean(data.active);
         state.classroomToken = data.class_token || "";
+        state.classroomStudentCount = 0;
         renderClassroomAccess();
-        showToast("课堂已结束。教师控制台仍在运行，可随时开始下一节课。 ");
+        showToast("课堂已结束并暂停入口。固定链接已保留，可用于下一节课。 ");
       } catch (error) {
         showToast(`结束课堂失败：${error.message}`, true);
       } finally {
@@ -2189,11 +2961,13 @@
     }
 
     async function rotateClassroomToken() {
-      if (!confirm("换一个课堂链接后，之前发给学生的链接会立即失效。确定继续吗？")) return;
+      if (!confirm("只有确需撤销已发出的链接时才应更换。旧链接和当前学生会话会永久失效，课件中的嵌入地址也必须更新。确定继续吗？")) return;
       try {
         const data = await request("/admin/classroom/rotate", { method: "POST" });
         state.classroomActive = Boolean(data.active);
         state.classroomToken = data.class_token || "";
+        state.classroomStudentCount = 0;
+        state.classroomUrlExpanded = false;
         renderClassroomAccess();
         await copyText(el.classroomUrl.value, "新课堂链接");
       } catch (error) {
@@ -2640,7 +3414,7 @@
       if (!confirm(`确定删除模型 ${deletingLabel} 及其 API Key 吗？\n\n${replacementHint}`)) return;
       try {
         const query = replacement ? `?replacement_model_id=${encodeURIComponent(replacement.id)}` : "";
-        const result = await request(`/model-catalog/${encodeURIComponent(modelId)}${query}`, { method: "DELETE" });
+        const result = await request(`/admin/models/${encodeURIComponent(modelId)}${query}`, { method: "DELETE" });
         await Promise.all([loadConfig(), loadModels()]);
         showToast(result.replacement_model_id
           ? `模型已删除，课堂配置已切换到 ${result.replacement_model_id}。`
@@ -2819,6 +3593,10 @@
     el.copyClassroomUrl.addEventListener("click", () => {
       if (el.classroomUrl.value) copyText(el.classroomUrl.value, "学生课堂链接");
     });
+    el.toggleClassroomUrl.addEventListener("click", () => {
+      state.classroomUrlExpanded = !state.classroomUrlExpanded;
+      renderClassroomAccess();
+    });
     el.rotateClassroomToken.addEventListener("click", rotateClassroomToken);
     el.startClass.addEventListener("click", startClassroom);
     el.endClass.addEventListener("click", endClassroom);
@@ -2842,8 +3620,21 @@
     el.sourceSelect.addEventListener("change", () => {
       persistMountedSource(el.sourceSelect.value, { reload: true });
     });
-    el.temperature.addEventListener("input", () => { el.temperatureValue.value = el.temperature.value; });
-    el.temperatureValue.addEventListener("input", () => { el.temperature.value = el.temperatureValue.value; });
+    el.temperature.addEventListener("input", () => {
+      el.temperatureValue.value = el.temperature.value;
+      updateTemperatureProgress();
+    });
+    el.temperatureValue.addEventListener("input", () => {
+      el.temperature.value = el.temperatureValue.value;
+      updateTemperatureProgress();
+    });
+    el.systemPrompt.addEventListener("input", updatePromptCharacterCount);
+    el.tokenPresetButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        el.maxTokens.value = button.dataset.tokenPreset;
+        renderTokenPreset(el.maxTokens.value);
+      });
+    });
     el.tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         const name = tab.dataset.tab;
@@ -2853,7 +3644,7 @@
         el.controlView.hidden = name !== "control";
         el.recordsView.hidden = name !== "records";
         el.settingsView.hidden = name !== "settings";
-        el.systemView.hidden = name !== "system" || !isAdmin();
+        el.systemView.hidden = name !== "system";
         if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
         window.scrollTo({ top: 0 });
       });
@@ -2879,7 +3670,17 @@
       }
     }
 
+    async function refreshClassroomStatus() {
+      if (!state.adminToken || el.controlView.hidden) return;
+      try {
+        await loadClassroom();
+      } catch (error) {
+        console.debug("Classroom status refresh skipped", error);
+      }
+    }
+
     setInterval(refreshSystemStatus, 2000);
+    setInterval(refreshClassroomStatus, 5000);
     boot();
   </script>
 </body>

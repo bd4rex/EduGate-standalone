@@ -391,6 +391,20 @@
       width: 130px;
     }
 
+    .jump-to-ai {
+      display: none;
+      width: fit-content;
+      min-height: 44px;
+      margin-top: 12px;
+      padding: 0 16px;
+      align-items: center;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
     @media (max-width: 1080px) {
       .layout {
         grid-template-columns: 1fr;
@@ -398,7 +412,10 @@
 
       .assistant-panel {
         min-height: auto;
+        scroll-margin-top: 12px;
       }
+
+      .jump-to-ai { display: inline-flex; }
 
       .chat-history {
         max-height: 420px;
@@ -422,8 +439,9 @@
         <div class="topbar-title">信息科技课堂学习单：认识 IP 地址</div>
       </div>
       <div class="topbar-subtitle">
-        左侧是课堂学习单，右侧是嵌入式 AI 学习助手。页面会优先调用流式接口，实现边生成边显示；若失败，则自动回退到普通接口。
+        页面包含课堂学习单和嵌入式 AI 学习助手。AI 回答会优先流式显示；若失败，则自动回退到普通接口。
       </div>
+      <a class="jump-to-ai" href="#ai-assistant">跳到 AI 助手</a>
     </div>
 
     <div class="layout">
@@ -527,7 +545,7 @@
         </div>
       </section>
 
-      <aside class="card assistant-panel">
+      <aside class="card assistant-panel" id="ai-assistant">
         <div class="assistant-header">
           <div class="assistant-title">课堂 AI 助手</div>
           <div class="assistant-desc">
@@ -569,9 +587,7 @@
       ============================================
       后端配置：对用户隐藏，前端内置
       ============================================
-      如需修改后端地址或默认教学策略，请改这里。
-      如果 URL 带 ?teacher=xxx / ?teacher_id=xxx，
-      页面会按该教师当前加载的 AI 策略请求后端。
+      学生通过老师发送的课堂链接加入，页面始终使用本机教师当前的课堂策略。
     */
     function defaultBackendBaseUrl() {
       if (window.location.protocol === "http:" || window.location.protocol === "https:") {
@@ -588,7 +604,6 @@
     const URL_PARAMS = new URLSearchParams(
       window.location.hash ? window.location.hash.slice(1) : window.location.search
     );
-    const TEACHER_ID = URL_PARAMS.get("teacher_id") || URL_PARAMS.get("teacher") || "";
     const CLASS_TOKEN = URL_PARAMS.get("class_token") || "";
 
     const MAX_MESSAGES_TO_SEND = 10;
@@ -609,10 +624,7 @@
       return (hash >>> 0).toString(16).padStart(8, "0");
     }
 
-    const CLASSROOM_STORAGE_SCOPE = [
-      TEACHER_ID || SCENARIO_ID,
-      tokenFingerprint(CLASS_TOKEN)
-    ].join(":");
+    const CLASSROOM_STORAGE_SCOPE = [SCENARIO_ID, tokenFingerprint(CLASS_TOKEN)].join(":");
     const HISTORY_STORAGE_KEY = `edugate-student-history:v1:${CLASSROOM_STORAGE_SCOPE}`;
     const SESSION_STORAGE_KEY = `edugate-student-session:v1:${CLASSROOM_STORAGE_SCOPE}`;
     const DEVICE_ID_STORAGE_KEY = "edugate-student-device-id:v1";
@@ -756,13 +768,7 @@
     }
 
     function buildPayload() {
-      const payload = { messages: getRecentMessages() };
-      if (TEACHER_ID) {
-        payload.teacher_id = TEACHER_ID;
-      } else {
-        payload.scenario_id = SCENARIO_ID;
-      }
-      return payload;
+      return { messages: getRecentMessages(), scenario_id: SCENARIO_ID };
     }
 
     function extractAssistantTextFromJson(dataObj) {
@@ -1071,7 +1077,7 @@
       setStatus("正在连接课堂……", "warn");
       joinClassroom()
         .then(() => {
-          setStatus(TEACHER_ID ? "已使用教师策略：" + TEACHER_ID : "课堂已连接。", "ok");
+          setStatus("课堂已连接。", "ok");
         })
         .catch((error) => {
           classroomReady = false;

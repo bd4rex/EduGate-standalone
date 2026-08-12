@@ -120,7 +120,7 @@ def test_async_writer_runs_cleanup_on_a_timer(tmp_path: Path, monkeypatch) -> No
         assert db.stop_writer(timeout=5) is True
 
 
-def test_sqlite_business_db_stores_teachers_and_logs(tmp_path: Path) -> None:
+def test_sqlite_business_db_stores_single_admin_and_logs(tmp_path: Path) -> None:
     db = BusinessDB(str(tmp_path / "edugate.sqlite3"))
     db.init()
     db.seed_teacher(username="admin", password="edugate", display_name="Admin", role="admin")
@@ -130,19 +130,10 @@ def test_sqlite_business_db_stores_teachers_and_logs(tmp_path: Path) -> None:
     assert admin["username"] == "admin"
     assert admin["is_active"] is True
 
-    teacher = db.upsert_teacher(
-        username="zhang",
-        password="secret123",
-        display_name="Zhang",
-        role="teacher",
-    )
-    assert teacher["display_name"] == "Zhang"
-    assert db.get_teacher("zhang")["role"] == "teacher"
-
     db.log_request(
         route="/chat",
-        scenario_id="teacher:zhang",
-        teacher_id="zhang",
+        scenario_id="default",
+        teacher_id="admin",
         model="deepseek-chat",
         knowledge_source_id=None,
         user_message_preview="hello",
@@ -153,7 +144,7 @@ def test_sqlite_business_db_stores_teachers_and_logs(tmp_path: Path) -> None:
 
     logs = db.list_logs()
     assert len(logs) == 1
-    assert logs[0]["teacher_id"] == "zhang"
+    assert logs[0]["teacher_id"] == "admin"
     assert logs[0]["total_tokens"] == 3
     assert db.dashboard()["total_requests"] == 1
 
@@ -176,20 +167,14 @@ def test_first_admin_setup_is_one_time_and_has_no_default_password(tmp_path: Pat
         raise AssertionError("second administrator setup should be rejected")
 
 
-def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: Path) -> None:
+def test_classroom_records_are_grouped_by_class_and_scoped_to_admin(tmp_path: Path) -> None:
     db = BusinessDB(str(tmp_path / "records.sqlite3"))
     db.init()
-    for username in ("teacher-a", "teacher-b"):
-        db.upsert_teacher(
-            username=username,
-            password="secure-password",
-            display_name=username,
-            role="teacher",
-        )
+    db.seed_teacher(username="admin", password="secure-password", display_name="Admin", role="admin")
 
     first_run_id = db.record_classroom_turn(
         classroom_instance_id="classroom-one",
-        teacher_username="teacher-a",
+        teacher_username="admin",
         student_session_id="student-session-1",
         computer_name="LAB-PC-01",
         client_ip="192.168.10.31",
@@ -201,7 +186,7 @@ def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: 
     )
     second_turn_run_id = db.record_classroom_turn(
         classroom_instance_id="classroom-one",
-        teacher_username="teacher-a",
+        teacher_username="admin",
         student_session_id="student-session-2",
         computer_name="LAB-PC-02",
         client_ip="192.168.10.32",
@@ -213,40 +198,27 @@ def test_classroom_records_are_grouped_by_class_and_scoped_to_teacher(tmp_path: 
         queue_wait_ms=4,
         timed_out=False,
     )
-    db.record_classroom_turn(
-        classroom_instance_id="classroom-one",
-        teacher_username="teacher-b",
-        student_session_id="student-session-3",
-        computer_name="LAB-PC-03",
-        client_ip="192.168.10.33",
-        kind="chat",
-        input_content="另一个老师的问题",
-        output_content="另一个老师的回答",
-        status_code=200,
-        latency_ms=50,
-    )
-
     assert first_run_id == second_turn_run_id
-    teacher_a_records = db.list_classroom_records(teacher_username="teacher-a")
-    assert len(teacher_a_records) == 1
-    assert teacher_a_records[0]["student_count"] == 2
-    assert teacher_a_records[0]["chat_count"] == 1
-    assert teacher_a_records[0]["python_count"] == 1
-    assert len(db.list_classroom_records(teacher_username=None)) == 2
+    records = db.list_classroom_records(teacher_username="admin")
+    assert len(records) == 1
+    assert records[0]["student_count"] == 2
+    assert records[0]["chat_count"] == 1
+    assert records[0]["python_count"] == 1
+    assert len(db.list_classroom_records(teacher_username=None)) == 1
 
-    detail = db.get_classroom_record(first_run_id, teacher_username="teacher-a")
+    detail = db.get_classroom_record(first_run_id, teacher_username="admin")
     assert detail is not None
     assert [turn["kind"] for turn in detail["turns"]] == ["chat", "python"]
     assert detail["turns"][0]["student_session_id"] == "student-session-1"
     assert detail["turns"][0]["computer_name"] == "LAB-PC-01"
     assert detail["turns"][0]["client_ip"] == "192.168.10.31"
-    assert db.get_classroom_record(first_run_id, teacher_username="teacher-b") is None
+    assert db.get_classroom_record(first_run_id, teacher_username="other") is None
 
     db.end_classroom_instance("classroom-one")
-    ended = db.get_classroom_record(first_run_id, teacher_username="teacher-a")
+    ended = db.get_classroom_record(first_run_id, teacher_username="admin")
     assert ended is not None and ended["session"]["ended_at"] is not None
-    assert db.delete_classroom_record(first_run_id, teacher_username="teacher-b") is False
-    assert db.delete_classroom_record(first_run_id, teacher_username="teacher-a") is True
+    assert db.delete_classroom_record(first_run_id, teacher_username="other") is False
+    assert db.delete_classroom_record(first_run_id, teacher_username="admin") is True
 
 
 def test_classroom_record_schema_adds_computer_identity_without_deleting_old_data(tmp_path: Path) -> None:
@@ -292,15 +264,10 @@ def test_classroom_record_retention_and_content_limits_are_enforced(tmp_path: Pa
         classroom_record_max_content_chars=500,
     )
     db.init()
-    db.upsert_teacher(
-        username="teacher",
-        password="secure-password",
-        display_name="Teacher",
-        role="teacher",
-    )
+    db.seed_teacher(username="admin", password="secure-password", display_name="Admin", role="admin")
     old_run = db.record_classroom_turn(
         classroom_instance_id="old-classroom",
-        teacher_username="teacher",
+        teacher_username="admin",
         student_session_id="student-old",
         kind="chat",
         input_content="x" * 800,
@@ -308,7 +275,7 @@ def test_classroom_record_retention_and_content_limits_are_enforced(tmp_path: Pa
         status_code=200,
         latency_ms=1,
     )
-    old_detail = db.get_classroom_record(old_run, teacher_username="teacher")
+    old_detail = db.get_classroom_record(old_run, teacher_username="admin")
     assert old_detail is not None
     assert len(old_detail["turns"][0]["input_content"]) == 500
     assert len(old_detail["turns"][0]["output_content"]) == 500
@@ -320,7 +287,7 @@ def test_classroom_record_retention_and_content_limits_are_enforced(tmp_path: Pa
         )
     db.record_classroom_turn(
         classroom_instance_id="current-classroom",
-        teacher_username="teacher",
+        teacher_username="admin",
         student_session_id="student-current",
         kind="chat",
         input_content="current",
@@ -328,4 +295,4 @@ def test_classroom_record_retention_and_content_limits_are_enforced(tmp_path: Pa
         status_code=200,
         latency_ms=1,
     )
-    assert db.get_classroom_record(old_run, teacher_username="teacher") is None
+    assert db.get_classroom_record(old_run, teacher_username="admin") is None

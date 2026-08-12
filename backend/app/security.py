@@ -155,6 +155,19 @@ class StudentSessionStore:
         with self._lock:
             self._sessions.clear()
 
+    def active_count(self, *, classroom_token: str | None = None) -> int:
+        now = time.time()
+        with self._lock:
+            self._cleanup_locked(now)
+            records = self._sessions.values()
+            if classroom_token is not None:
+                records = (
+                    record
+                    for record in records
+                    if secrets.compare_digest(record.classroom_token, classroom_token)
+                )
+            return len({record.student_id for record in records})
+
     def _cleanup_locked(self, now: float) -> None:
         for token, record in list(self._sessions.items()):
             if record.expires_at <= now:
@@ -162,9 +175,9 @@ class StudentSessionStore:
 
 
 class ClassroomAccess:
-    def __init__(self) -> None:
+    def __init__(self, token: str | None = None) -> None:
         self._lock = threading.RLock()
-        self._token = secrets.token_urlsafe(24)
+        self._token = token or secrets.token_urlsafe(24)
         self._classroom_id = secrets.token_urlsafe(12)
         self._identity_secret = secrets.token_bytes(32)
         self._active = True
@@ -195,11 +208,14 @@ class ClassroomAccess:
             self._token = secrets.token_urlsafe(24)
             self._classroom_id = secrets.token_urlsafe(12)
             self._identity_secret = secrets.token_bytes(32)
-            self._active = True
             return self._token
 
     def start(self) -> str:
-        return self.rotate()
+        with self._lock:
+            self._classroom_id = secrets.token_urlsafe(12)
+            self._identity_secret = secrets.token_bytes(32)
+            self._active = True
+            return self._token
 
     def end(self) -> None:
         with self._lock:

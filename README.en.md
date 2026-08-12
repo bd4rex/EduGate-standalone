@@ -2,67 +2,40 @@
   <img src="frontend/assets/brand/edugate-logo-horizontal.svg" width="680" alt="EduGate - Local AI Teaching Gateway" />
 </p>
 
-# EduGate Standalone Classroom Edition
+# EduGate Standalone Classroom
 
 <p align="center">
-  <a href="README.md">简体中文</a> · <strong>English</strong>
+  <a href="README.md">中文</a> · <strong>English</strong>
 </p>
 
-EduGate Standalone runs on a teacher's 64-bit Windows computer for one teacher and a single class or small classroom. It connects to OpenAI-compatible model APIs upstream and serves a classroom-token-protected student page and API downstream. The teacher uses one complete web console; there is no separate Windows control window.
+EduGate runs on a teacher's 64-bit Windows computer for a single teacher and a local classroom. The teacher configures model providers, knowledge sources, and the active classroom policy in a web console. Students join through a stable LAN classroom link.
 
-## Teacher quick start
+## Security model
 
-1. Extract or copy the complete `EduGate-Standalone` folder. Do not copy only the EXE.
-2. Double-click `EduGate-Standalone.exe`. The browser opens the teacher console and signs in locally.
-3. Open **System -> Upstream Model API Management**, select **Add provider** or choose an existing provider, enter its source name, API key, API URL, and optional path, then select **Fetch models**. Existing provider groups also expose **Add models**. Search the modal, edit display names, and batch-import the checked models. Multiple providers are supported; identical upstream model IDs remain separate under their provider identities. Deleting a provider also removes its models and API keys, switching classroom references first when required.
-4. Select **Start class**, then copy the student link from the bottom of **Control** and share it with students.
-5. Select **End class** after the lesson. Student links and sessions are revoked while the teacher console stays online. Use **System -> Stop service** only when exiting EduGate.
+- There is one teacher administrator; multi-teacher account and policy APIs are not part of the standalone edition.
+- A classroom token is exchanged for an independent student session. Student clients never receive the teacher token.
+- `ALLOW_LAN_ADMIN=false` by default: the teacher page, login, API docs, and every management API are limited to the host computer. A management tablet requires LAN administration plus an exact `ADMIN_ALLOWED_IPS` entry.
+- The classroom token persists across classes and restarts. Ending a class revokes current student sessions and pauses the link; starting again reuses the same link. Only an explicit rotation permanently invalidates it.
+- Classroom records, configuration, and knowledge files stay on the teacher computer.
 
-The bundle includes independent Python runtimes for EduGate and student code execution. A teacher computer does not need a preinstalled Python or an online dependency installation. If port `8000` is busy, the launcher selects a nearby available port and opens the correct page.
+## Run the packaged edition
 
-Copy the entire folder to another Windows computer or removable drive to retain models, knowledge, policies, credentials, and classroom records:
+Keep the complete `EduGate-Standalone` folder together and launch `EduGate-Standalone.exe`. Add a model provider, configure the default classroom, and copy the stable student link. The same link can be embedded in teaching material and reused until the teacher explicitly rotates it.
 
-```text
-EduGate-Standalone\
-  EduGate-Standalone.exe
-  README.txt
-  config\edugate.env       # startup settings and initial password
-  data\                     # databases, knowledge, credentials, logs
-  runtime\python\           # isolated student-code interpreter
-  _internal\                # EduGate application resources
-```
+An IP allowlist is network admission control, not a replacement for authentication. A LAN management device must still sign in and use an `X-Admin-Token`; reserve its DHCP address and use this feature only on a trusted, isolated network without exposing plain HTTP beyond it.
 
-The first run creates `config` and `data`. The portable administrator is `admin`, with initial password `edugate` stored in `config\edugate.env`. The local browser signs in automatically, so the password is normally only a fallback. Student devices connecting over the LAN cannot call the local automatic-login endpoint.
-
-Portable `data\secrets.json` is deliberately not tied to a Windows account so API keys survive copying the folder. Keys are not echoed in the web UI, but anyone with access to the folder can read its local credentials.
-
-## Classroom workflow
-
-Start and end controls sit beside the student entry at the bottom of Control. Starting creates a fresh student link; ending revokes that link and all student sessions without stopping the teacher console. Students join silently without entering a name, computer name, or seat label. The browser keeps a stable local device ID; the teacher service derives a device label from it and records the request IP. Sessions and rate limits remain independent even behind a shared proxy IP. The student page keeps the latest 50 local messages per classroom and sends only the latest 10 to the model. Generating a new classroom link revokes old links and sessions.
-
-The **Records** view groups AI conversations and Python results by the generated device label and IP. Recording is silent and requires no student participation. These records remain on the teacher computer and are retained for 30 days by default. The **System** view provides status, a copyable LAN address, direct access to the program folder, logs, backup and restore, collapsed-by-default advanced settings, restart, and shutdown.
-
-The **Resources** view puts the knowledge-base list first. Each source can be edited, opened in the teacher computer's file explorer, and incrementally synchronized from that folder. A scan adds new supported files, reindexes changed files, and removes indexes for files deleted from the folder. The default `general` source cannot be deleted; other sources can be removed when no classroom policy uses them. The lower-frequency create/edit form is collapsed by default.
-
-The Python runner defaults to four isolated execution slots with a bounded queue of 64 tasks. `/run_python/stream` emits queued, running, output, and completion events. This is a controlled task queue, not a cache: every task receives a fresh restricted subprocess and shares no student interpreter state. Advanced settings allow up to eight slots.
-
-## Running from source
-
-Source users install Python 3.9 or later, then run:
+The packaged edition includes its own runtime. The source edition requires 64-bit Python 3.10 or newer:
 
 ```text
 desktop\install_backend_deps.bat
 desktop\run_standalone.bat
 ```
 
-The installer always uses the Tsinghua PyPI mirror and creates `runtime\venv` inside the project. Source-mode configuration and data also stay in the project's `config` and `data` directories.
-
-## Development and verification
+## Development
 
 ```powershell
 python -m pytest -q --basetemp=.pytest-tmp
+python -m compileall -q backend\app
 ```
 
-Build the Windows bundle with `desktop\build_windows.bat`. Output is written to `dist\EduGate-Standalone`; the build uses the Tsinghua mirror and adds the standalone student-code Python runtime.
-
-See the [execution and classroom records design](docs/Execution-and-Classroom-Records-Design.md), [model concurrency benchmark](docs/Model-Concurrency-Benchmark-2026-08-10.md), [double-load test report](docs/Double-Load-Test-Report-2026-08-10.md), and [English regression test matrix](docs/Regression-Test-Matrix.md). The detailed [installation guide](docs/安装与故障排查.txt), [user guide](docs/使用手册.txt), and [acceptance checklist](docs/单机版验收清单.txt) are maintained primarily in Chinese. Return to the [Chinese project documentation](README.md) at any time.
+The backend is split into application composition (`main.py`), shared state, dependencies, chat services, schemas, runtime configuration, and domain routers. See the [Chinese documentation index](docs/README.md) for the maintained operations, security, and development guides.

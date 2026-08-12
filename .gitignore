@@ -9,6 +9,7 @@
 .pytest-runtime-*/
 __pycache__/
 .pytest_cache/
+.coverage
 *.pyc
 *.pyo
 *.sqlite
