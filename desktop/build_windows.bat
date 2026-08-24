@@ -13,7 +13,7 @@ if %errorlevel% neq 0 (
   exit /b 1
 )
 
-py -3 -c "import sys; raise SystemExit(0 if sys.version_info ^>= (3, 10) else 1)"
+py -3 -c "import operator,sys; raise SystemExit(0 if operator.ge(sys.version_info, (3, 10)) else 1)"
 if %errorlevel% neq 0 (
   echo [ERROR] EduGate builds require Python 3.10 or newer.
   exit /b 1

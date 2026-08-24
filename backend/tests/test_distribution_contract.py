@@ -28,6 +28,13 @@ def test_teacher_install_and_build_scripts_use_tsinghua_mirror() -> None:
     assert expected in _read("desktop/build_windows.bat")
 
 
+def test_windows_build_version_check_is_valid_python_without_cmd_redirection_escaping() -> None:
+    build = _read("desktop/build_windows.bat")
+
+    assert "operator.ge(sys.version_info, (3, 10))" in build
+    assert "sys.version_info ^>=" not in build
+
+
 def test_windows_bundle_is_a_copyable_portable_classroom_folder() -> None:
     launcher = _read("desktop/edugate_standalone.py")
     build = _read("desktop/build_windows.bat")
