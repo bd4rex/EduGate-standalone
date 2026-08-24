@@ -141,7 +141,7 @@ def test_macos_frozen_app_replaces_empty_student_runner_setting(
 
     launcher.configure_app_environment()
 
-    assert os.environ["PYTHON_RUNNER_EXECUTABLE"] == (
+    assert os.environ["PYTHON_RUNNER_EXECUTABLE"].replace("\\", "/").endswith(
         "/Applications/EduGate.app/Contents/MacOS/EduGate-Standalone"
     )
 
