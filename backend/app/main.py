@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import core
@@ -18,6 +20,7 @@ from app.routers.config import router as config_router
 from app.routers.knowledge import router as knowledge_router
 from app.routers.models import router as models_router
 from app.routers.python import router as python_router
+from app.routers.publishing import router as publishing_router
 from app.routers.system import router as system_router
 from app.runtime_config import RuntimeConfig
 from app.schemas import (
@@ -59,6 +62,58 @@ app = FastAPI(
 )
 
 
+def _openai_error_payload(detail: Any, status_code: int) -> dict[str, Any]:
+    if isinstance(detail, dict) and isinstance(detail.get("error"), dict):
+        return {"error": detail["error"]}
+    if isinstance(detail, (dict, list)):
+        message = str(detail)
+    else:
+        message = str(detail or "EduGate request failed")
+    error_type = "invalid_request_error"
+    code = "invalid_request"
+    if status_code == 401:
+        error_type, code = "authentication_error", "invalid_api_key"
+    elif status_code == 404:
+        code = "model_not_found"
+    elif status_code == 429:
+        error_type, code = "rate_limit_error", "rate_limit_exceeded"
+    elif status_code >= 500:
+        error_type, code = "api_error", "service_unavailable"
+    return {
+        "error": {
+            "message": message,
+            "type": error_type,
+            "param": None,
+            "code": code,
+        }
+    }
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, error: HTTPException) -> JSONResponse:
+    if request.url.path.startswith("/v1/"):
+        return JSONResponse(
+            status_code=error.status_code,
+            content=_openai_error_payload(error.detail, error.status_code),
+            headers=error.headers,
+        )
+    return JSONResponse(
+        status_code=error.status_code,
+        content=jsonable_encoder({"detail": error.detail}),
+        headers=error.headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, error: RequestValidationError) -> JSONResponse:
+    if request.url.path.startswith("/v1/"):
+        return JSONResponse(
+            status_code=422,
+            content=_openai_error_payload(error.errors(), 422),
+        )
+    return JSONResponse(status_code=422, content=jsonable_encoder({"detail": error.errors()}))
+
+
 @app.middleware("http")
 async def restrict_teacher_surface(request: Request, call_next: Any) -> Response:
     if (
@@ -85,6 +140,7 @@ app.include_router(classroom_router)
 app.include_router(models_router)
 app.include_router(knowledge_router)
 app.include_router(python_router)
+app.include_router(publishing_router)
 
 
 @app.get("/health", include_in_schema=True)

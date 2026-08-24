@@ -63,6 +63,7 @@ class Settings:
     runtime_config_path: str = _data_path("RUNTIME_CONFIG_PATH", "runtime_config.json")
     secret_store_path: str = _data_path("SECRET_STORE_PATH", "secrets.json")
     knowledge_dir: str = _data_path("KNOWLEDGE_DIR", "knowledge_files")
+    published_pages_dir: str = _data_path("PUBLISHED_PAGES_DIR", "published_pages")
     knowledge_db_path: str = _data_path("KNOWLEDGE_DB_PATH", "knowledge.sqlite3")
     knowledge_search_limit: int = int(os.getenv("KNOWLEDGE_SEARCH_LIMIT", "5"))
     sqlite_db_path: str = _data_path("EDUGATE_SQLITE_DB_PATH", "edugate.sqlite3")

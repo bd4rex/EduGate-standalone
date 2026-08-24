@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>光的反射 · 教学网页示例</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 28px; background: #f4f7fb; color: #13213c; font-family: "Microsoft YaHei", system-ui, sans-serif; }
+    main { width: min(880px, 100%); margin: auto; display: grid; gap: 18px; }
+    section { padding: 24px; border: 1px solid #dae3ef; border-radius: 16px; background: #fff; box-shadow: 0 10px 30px rgba(36, 68, 120, .07); }
+    h1, h2 { margin-top: 0; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 18px; }
+    p { line-height: 1.75; }
+    textarea { width: 100%; min-height: 110px; padding: 14px; border: 1px solid #cbd7e7; border-radius: 10px; font: inherit; resize: vertical; }
+    button { min-height: 44px; margin-top: 12px; padding: 0 20px; border: 0; border-radius: 10px; background: #2468ed; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: wait; }
+    #answer { min-height: 90px; margin-top: 14px; padding: 16px; border-radius: 10px; background: #f0f5ff; white-space: pre-wrap; line-height: 1.75; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>光的反射</h1>
+      <p>当光照到物体表面时，一部分光会改变传播方向并返回原来的介质。请思考：入射角和反射角有什么关系？</p>
+    </section>
+    <section>
+      <h2>向课堂 AI 提问</h2>
+      <textarea id="question">请用生活中的例子解释光的反射，并给我一个思考题。</textarea>
+      <button id="ask" type="button">流式生成回答</button>
+      <div id="answer">等待提问。</div>
+    </section>
+  </main>
+  <script>
+    const button = document.querySelector("#ask");
+    const question = document.querySelector("#question");
+    const answer = document.querySelector("#answer");
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      answer.textContent = "";
+      try {
+        await EduGate.ask(question.value, (delta) => { answer.textContent += delta; });
+      } catch (error) {
+        answer.textContent = `请求失败：${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

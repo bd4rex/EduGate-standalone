@@ -18,6 +18,7 @@ from app.state import (
     open_local_directory,
     python_pool,
     python_record_tasks,
+    published_pages,
     rate_limiter,
     read_advanced_settings,
     remove_backup_file,

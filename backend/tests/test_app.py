@@ -27,6 +27,7 @@ from app.main import (
     settings,
     student_sessions,
 )
+from app.state import published_pages
 
 
 ADMIN_PASSWORD = "test-admin-password"
@@ -324,6 +325,50 @@ def test_classroom_start_and_end_control_student_access_without_stopping_service
         headers={"X-Class-Token": class_token},
     ).status_code == 200
     assert client.get("/health").status_code == 200
+
+
+def test_published_page_requires_admin_to_publish_and_an_active_classroom_to_open(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    page_root = tmp_path / "published_pages"
+    monkeypatch.setattr(published_pages, "root", page_root)
+    monkeypatch.setattr(published_pages, "index_path", page_root / "index.json")
+    upload = {
+        "file": ("lesson.html", "<!doctype html><html><body>课堂课件</body></html>", "text/html"),
+    }
+
+    assert client.post("/admin/published-pages", files=upload).status_code == 401
+    created = client.post(
+        "/admin/published-pages",
+        headers=admin_headers,
+        files=upload,
+        data={"title": "课堂课件", "activate": "true"},
+    )
+    assert created.status_code == 200
+    page_id = created.json()["id"]
+
+    document = client.get(
+        f"/published-pages/{page_id}",
+        headers={"X-Class-Token": classroom_access.token()},
+    )
+    assert document.status_code == 200
+    assert document.json()["title"] == "课堂课件"
+    assert "课堂课件" in document.json()["html"]
+    assert client.get(
+        f"/published-pages/{page_id}",
+        headers={"X-Class-Token": "wrong"},
+    ).status_code == 401
+
+    client.post("/admin/classroom/end", headers=admin_headers)
+    stopped = client.get(
+        f"/published-pages/{page_id}",
+        headers={"X-Class-Token": classroom_access.token()},
+    )
+    assert stopped.status_code == 403
+    assert stopped.json()["detail"] == "Classroom is not active"
 
 
 def test_student_cannot_override_model_or_system_prompt(
@@ -1272,3 +1317,19 @@ def test_platform_key_is_managed_in_encrypted_store(
         headers=admin_headers,
         json={"api_key": None},
     )
+    assert secret_store.get("system:platform_api_key") is None
+
+    generated = client.post(
+        "/admin/system/platform-key/generate",
+        headers=admin_headers,
+    )
+    assert generated.status_code == 200
+    generated_key = generated.json()["api_key"]
+    assert generated_key.startswith("eg_")
+    assert len(generated_key) >= 40
+    assert secret_store.get("system:platform_api_key") == generated_key
+
+    disabled = client.delete("/admin/system/platform-key", headers=admin_headers)
+    assert disabled.status_code == 200
+    assert disabled.json()["platform_api_key_set"] is False
+    assert secret_store.get("system:platform_api_key") is None

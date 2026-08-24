@@ -66,6 +66,9 @@ def test_backup_contains_consistent_databases_and_knowledge(tmp_path: Path, monk
     knowledge_dir = data_dir / "knowledge_files"
     knowledge_dir.mkdir(parents=True)
     (knowledge_dir / "lesson.txt").write_text("lesson", encoding="utf-8")
+    published_pages_dir = data_dir / "published_pages"
+    published_pages_dir.mkdir()
+    (published_pages_dir / "index.json").write_text('{"version": 1}', encoding="utf-8")
     (data_dir / ".env").write_text("EDUGATE_MODE=standalone\n", encoding="utf-8")
     (data_dir / "runtime_config.json").write_text("{}", encoding="utf-8")
     for name in ("edugate.sqlite3", "knowledge.sqlite3"):
@@ -77,6 +80,7 @@ def test_backup_contains_consistent_databases_and_knowledge(tmp_path: Path, monk
     monkeypatch.setattr(settings, "sqlite_db_path", str(data_dir / "edugate.sqlite3"))
     monkeypatch.setattr(settings, "knowledge_db_path", str(data_dir / "knowledge.sqlite3"))
     monkeypatch.setattr(settings, "knowledge_dir", str(knowledge_dir))
+    monkeypatch.setattr(settings, "published_pages_dir", str(published_pages_dir))
     monkeypatch.setattr(settings, "config_path", str(data_dir / ".env"))
 
     archive = create_backup()
@@ -86,6 +90,7 @@ def test_backup_contains_consistent_databases_and_knowledge(tmp_path: Path, monk
         assert "edugate.sqlite3" in names
         assert "knowledge.sqlite3" in names
         assert "knowledge_files/lesson.txt" in names
+        assert "published_pages/index.json" in names
         assert "backup-info.json" in names
     finally:
         import shutil

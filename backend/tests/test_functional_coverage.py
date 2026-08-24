@@ -107,6 +107,7 @@ def test_route_inventory_openapi_and_root_redirect_are_complete(client: TestClie
         ("POST", "/chat"),
         ("POST", "/chat/stream"),
         ("POST", "/v1/chat/completions"),
+        ("GET", "/v1/models"),
         ("GET", "/config"),
         ("POST", "/config/model"),
         ("POST", "/config/ai"),
@@ -119,13 +120,22 @@ def test_route_inventory_openapi_and_root_redirect_are_complete(client: TestClie
         ("POST", "/admin/system/open-app-dir"),
         ("PUT", "/admin/system/settings"),
         ("PUT", "/admin/system/platform-key"),
+        ("POST", "/admin/system/platform-key/generate"),
+        ("DELETE", "/admin/system/platform-key"),
         ("GET", "/admin/system/backup"),
         ("POST", "/admin/system/restore"),
         ("POST", "/admin/system/action"),
         ("GET", "/admin/classroom"),
         ("POST", "/admin/classroom/rotate"),
         ("POST", "/admin/classroom/start"),
-        ("POST", "/admin/classroom/end"),
+            ("POST", "/admin/classroom/end"),
+            ("GET", "/admin/published-pages"),
+            ("POST", "/admin/published-pages"),
+            ("POST", "/admin/published-pages/{page_id}/activate"),
+            ("POST", "/admin/published-pages/deactivate"),
+            ("DELETE", "/admin/published-pages/{page_id}"),
+            ("GET", "/published-pages/{page_id}"),
+            ("GET", "/published-pages/{page_id}/assets/{asset_path}"),
         ("GET", "/admin/classroom-records"),
         ("GET", "/admin/classroom-records/{run_id}"),
         ("DELETE", "/admin/classroom-records/{run_id}"),
@@ -490,8 +500,10 @@ def test_platform_key_protects_nonstream_and_stream_openai_compatible_requests(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     secret_store.set("system:platform_api_key", "functional-platform-key")
+    captured: dict[str, Any] = {}
 
     async def fake_completion(payload: dict[str, Any]) -> dict[str, Any]:
+        captured.update(payload)
         return {"choices": [{"message": {"content": payload["messages"][-1]["content"]}}]}
 
     async def fake_stream(payload: dict[str, Any]):
@@ -506,13 +518,37 @@ def test_platform_key_protects_nonstream_and_stream_openai_compatible_requests(
         json={"messages": [{"role": "user", "content": "hello"}]},
     )
     assert denied.status_code == 401
+    assert denied.json()["error"]["type"] == "authentication_error"
+    models = client.get("/v1/models", headers=auth)
+    assert models.status_code == 200
+    assert models.json()["object"] == "list"
+    assert models.json()["data"][0]["id"] == "edugate"
     normal = client.post(
         "/v1/chat/completions",
         headers=auth,
-        json={"messages": [{"role": "user", "content": "hello"}]},
+        json={
+            "model": "edugate",
+            "temperature": 0.8,
+            "max_tokens": 123,
+            "messages": [
+                {"role": "system", "content": "Use short sentences."},
+                {"role": "user", "content": "hello"},
+            ],
+        },
     )
     assert normal.status_code == 200
     assert normal.json()["choices"][0]["message"]["content"] == "hello"
+    assert normal.json()["model"] == "edugate"
+    assert captured["temperature"] == 0.8
+    assert captured["max_tokens"] == 123
+    assert {"role": "system", "content": "Use short sentences."} in captured["messages"]
+    unknown = client.post(
+        "/v1/chat/completions",
+        headers=auth,
+        json={"model": "not-a-model", "messages": [{"role": "user", "content": "hello"}]},
+    )
+    assert unknown.status_code == 404
+    assert unknown.json()["error"]["code"] == "model_not_found"
     streamed = client.post(
         "/v1/chat/completions",
         headers=auth,
@@ -520,6 +556,8 @@ def test_platform_key_protects_nonstream_and_stream_openai_compatible_requests(
     )
     assert streamed.status_code == 200
     assert "streamed" in streamed.text and "[DONE]" in streamed.text
+    assert streamed.headers["cache-control"] == "no-cache, no-transform"
+    assert streamed.headers["x-accel-buffering"] == "no"
 
 
 @pytest.mark.parametrize("kind", ["status", "connection"])

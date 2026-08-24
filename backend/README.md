@@ -21,6 +21,7 @@ python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 - `app/dependencies.py`：教师、学生和平台权限。
 - `app/chat_service.py`：对话、模型、知识检索和流式处理。
 - `app/runtime_config.py`：模型目录和唯一 `default` 场景。
+- `app/published_pages.py`：教学网页安全校验、存储和活动入口。
 - `app/routers/`：按业务域拆分的 API。
 - `app/core.py`：旧导入路径兼容门面。
 
@@ -42,17 +43,25 @@ POST /run_python/stream             X-Student-Token
 
 GET/PUT /config...                  X-Admin-Token
 GET/POST /admin/classroom...        X-Admin-Token
+GET/POST/DELETE /admin/published-pages... X-Admin-Token
 GET/DELETE /admin/classroom-records... X-Admin-Token
 GET/POST/PATCH/DELETE /admin/models... X-Admin-Token
 GET/DELETE /admin/providers...      X-Admin-Token
 GET/PUT/POST /admin/system...       X-Admin-Token
 
-POST /v1/chat/completions           Bearer PLATFORM_API_KEY；未配置时关闭
+GET  /v1/models                     Bearer PLATFORM_API_KEY；列出 EduGate 虚拟模型
+POST /v1/chat/completions           Bearer PLATFORM_API_KEY；支持普通和 SSE 流式响应
+
+GET  /published-pages/{page_id}     课堂开放 + X-Class-Token；读取活动网页
 ```
 
 默认 `ALLOW_LAN_ADMIN=false`，即使令牌有效，局域网来源也不能调用管理 API。远程管理必须同时设置 `ALLOW_LAN_ADMIN=true`、将设备精确 IP 写入逗号分隔的 `ADMIN_ALLOWED_IPS`，并完成教师登录。IP 白名单只做网络准入，不替代 `X-Admin-Token`。
 
 课堂令牌首次启动时生成并保存在密钥存储的 `system:classroom_token` 中。`/admin/classroom/start` 只创建新课次并复用令牌；`/end` 暂停入口并撤销学生会话；只有 `/rotate` 会生成并持久化新令牌。详细边界见 [架构与安全边界](../docs/架构与安全边界.md)。
+
+下游虚拟模型名为 `edugate`，执行当前 `default` 课堂策略。平台密钥仅用于可信后端；浏览器教学页应加载 `/assets/edugate-client.js`，经 `/classroom/join` 换取学生会话后再调用 `/chat/stream`。跨域网页必须在 `CORS_ORIGINS` 中列出准确 Origin。完整示例见 [下游接口与网页嵌入](../docs/下游接口与网页嵌入.md)。
+
+教师也可在系统页上传 HTML/ZIP，由 `/published.html` 使用无同源权限的 iframe 沙箱加载，并向页面注入 `EduGate.ask()` 流式桥接。内置 `student.html` 是 Demo 测试页；课堂未开始时 Demo、发布文档、加入和对话都不可用。上传格式见 [教学网页发布](../docs/教学网页发布.md)。
 
 ## 测试
 

@@ -34,6 +34,7 @@ from app.python_runner import (
     PythonStudentBusy,
     run_python_code,
 )
+from app.published_pages import PublishedPageStore
 from app.secret_store import SecretStore
 from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter, StudentIdentity, StudentSessionStore
 from app.system_control import system_control
@@ -68,6 +69,10 @@ knowledge_store = KnowledgeStore(
     settings.knowledge_dir,
     max_upload_bytes=settings.max_upload_bytes,
     max_pdf_pages=settings.max_pdf_pages,
+)
+published_pages = PublishedPageStore(
+    settings.published_pages_dir,
+    max_upload_bytes=settings.max_upload_bytes,
 )
 business_db = BusinessDB(
     settings.sqlite_db_path,

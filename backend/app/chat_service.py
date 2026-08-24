@@ -707,7 +707,7 @@ async def _stream_with_completion_log(
     scenario: TeachingScenario,
     effective_scenario_id: str,
     teacher_id: str | None,
-    student: StudentIdentity,
+    student: StudentIdentity | None,
 ):
     start = time.perf_counter()
     stream_chunks = 0
@@ -775,15 +775,16 @@ async def _stream_with_completion_log(
         output = "".join(assistant_parts)
         if not output and error_text:
             output = error_text
-        _record_classroom_turn(
-            teacher_id=teacher_id,
-            student=student,
-            kind="chat",
-            input_content=_latest_user_content(request.messages),
-            output_content=output,
-            status_code=status_code,
-            latency_ms=now_ms(start),
-        )
+        if student is not None:
+            _record_classroom_turn(
+                teacher_id=teacher_id,
+                student=student,
+                kind="chat",
+                input_content=_latest_user_content(request.messages),
+                output_content=output,
+                status_code=status_code,
+                latency_ms=now_ms(start),
+            )
 
     try:
         async for chunk in _iterate_stream_bytes(source):

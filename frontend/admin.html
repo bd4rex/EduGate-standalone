@@ -438,6 +438,17 @@
     .system-actions { gap: 12px; }
     .system-action-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .system-action-group.critical { padding-left: 12px; border-left: 1px solid var(--line-strong); }
+    .integration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .integration-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--soft); }
+    .integration-card h3 { margin: 0; font-size: 15px; }
+    .integration-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .integration-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .35fr); gap: 8px; }
+    .integration-fields .full { grid-column: 1 / -1; }
+    .integration-key-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+    .integration-key-actions { display: flex; gap: 6px; }
+    .integration-code { min-height: 144px; max-height: 220px; overflow: auto; margin: 10px 0 0; padding: 11px 12px; border: 1px solid #d7e0ec; border-radius: 7px; background: #101a2d; color: #dce8f8; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.55 Consolas, monospace; }
+    .integration-note { display: flex; align-items: flex-start; gap: 7px; margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .integration-note .ui-icon { flex: 0 0 15px; width: 15px; height: 15px; margin-top: 1px; }
     .row-actions { flex: 0 0 auto; }
     .action-menu { min-width: 112px; }
     .action-menu > summary {
@@ -546,6 +557,7 @@
       .record-layout { grid-template-columns: 1fr; }
       .record-session-list { max-height: 360px; }
       .system-grid, .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .integration-grid { grid-template-columns: 1fr; }
       .upload-layout { grid-template-columns: 1fr; }
       .upload-layout .hint { grid-column: auto; }
       .system-actions { justify-content: flex-start; }
@@ -1261,6 +1273,15 @@
       #system-view #advanced-settings-panel #platform-api-key { min-height: 23px; }
       #system-view #advanced-settings-panel .actions .button { min-height: 27px; }
       #system-view #advanced-settings-panel .hint { margin: 0; }
+      #system-view #downstream-api-panel > summary { min-height: 24px; }
+      #system-view #downstream-api-panel .integration-grid { gap: 8px; }
+      #system-view #downstream-api-panel .integration-card { padding: 8px 10px; }
+      #system-view #downstream-api-panel .integration-card-head { margin-bottom: 6px; }
+      #system-view #downstream-api-panel .integration-card h3 { font-size: 12px; }
+      #system-view #downstream-api-panel .integration-code { min-height: 88px; max-height: 130px; margin-top: 6px; padding: 6px 8px; font-size: 8px; line-height: 1.35; }
+      #system-view #downstream-api-panel .integration-note { margin-top: 5px; font-size: 9px; line-height: 1.35; }
+      #system-view #downstream-api-panel .integration-fields,
+      #system-view #downstream-api-panel .integration-key-row { gap: 5px; }
     }
 
     @media (max-width: 900px) and (min-width: 761px) {
@@ -1279,6 +1300,11 @@
       .resource-upload-section .upload-layout { grid-template-columns: 1fr; }
       .resource-upload-section .hint { grid-column: auto; }
       .resource-upload-section #upload-file { width: 100%; }
+      .page-publish-form { grid-template-columns: 1fr; }
+      .page-publish-form .button { width: 100%; }
+      .published-page-row { align-items: stretch; flex-direction: column; }
+      .published-page-actions { width: 100%; }
+      .published-page-actions .button { flex: 1; }
     }
 
     @media (max-width: 480px) {
@@ -1288,6 +1314,44 @@
       .resource-knowledge-section,
       .resource-upload-section,
       .resource-files-section { padding: 15px !important; }
+    }
+
+    .page-publish-body { display: grid; gap: 12px; }
+    .page-publish-form {
+      display: grid;
+      grid-template-columns: minmax(180px, .55fr) minmax(280px, 1fr) auto;
+      align-items: end;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--soft);
+    }
+    .page-publish-form label { min-width: 0; }
+    .page-publish-form .file-picker { background: #fff; }
+    .published-page-list { display: grid; gap: 8px; }
+    .published-page-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 64px;
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: #fff;
+    }
+    .published-page-row.active { border-color: #b9cff9; background: var(--brand-soft); }
+    .published-page-copy { min-width: 0; }
+    .published-page-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 700; }
+    .published-page-meta { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .published-page-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 7px; }
+    @media (max-width: 760px) {
+      .page-publish-form { grid-template-columns: 1fr; }
+      .page-publish-form .button { width: 100%; }
+      .published-page-row { align-items: stretch; flex-direction: column; }
+      .published-page-actions { width: 100%; }
+      .published-page-actions .button { flex: 1; }
     }
   </style>
 </head>
@@ -1368,7 +1432,7 @@
                     <button class="button soft" id="toggle-classroom-url" type="button" aria-expanded="false"><span class="ui-icon icon-eye" aria-hidden="true"></span><span>显示完整链接</span></button>
                     <button class="button soft" id="rotate-classroom-token" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>重新生成入口</span></button>
                   </div>
-                  <p class="hint classroom-link-hint"><span class="ui-icon icon-info" aria-hidden="true"></span><span>课堂链接会跨课次和重启保持不变；只有重新生成入口才会永久淘汰旧链接。</span></p>
+                  <p class="hint classroom-link-hint"><span class="ui-icon icon-info" aria-hidden="true"></span><span id="classroom-link-note">课堂链接会跨课次和重启保持不变；只有重新生成入口才会永久淘汰旧链接。</span></p>
                 </div>
               </div>
             </section>
@@ -1581,6 +1645,55 @@
         </section>
 
         <section class="section">
+          <details class="collapsible-panel" id="downstream-api-panel" open>
+            <summary>下游接口与网页嵌入</summary>
+            <div class="integration-grid">
+              <article class="integration-card">
+                <div class="integration-card-head">
+                  <h3>OpenAI 兼容接口</h3>
+                  <span class="badge" id="platform-key-status">未启用</span>
+                </div>
+                <div class="integration-fields">
+                  <label>API Base URL<input id="openai-base-url" readonly /></label>
+                  <label>模型<input id="openai-model-id" readonly /></label>
+                  <div class="integration-key-row full">
+                    <label>下游 API 密钥<input id="platform-api-key" type="password" autocomplete="new-password" placeholder="输入自定义密钥，或生成新密钥" /></label>
+                    <div class="integration-key-actions">
+                      <button class="button ghost" id="generate-platform-key" type="button">生成</button>
+                      <button class="button soft" id="save-platform-key" type="button">保存</button>
+                      <button class="button danger" id="disable-platform-key" type="button">关闭</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="actions" style="justify-content:flex-start;margin-top:8px">
+                  <button class="button ghost" id="copy-openai-base" type="button">复制接口地址</button>
+                  <button class="button ghost" id="copy-platform-key" type="button" disabled>复制新密钥</button>
+                  <button class="button primary" id="copy-openai-example" type="button">复制调用示例</button>
+                </div>
+                <pre class="integration-code" id="openai-example"></pre>
+                <p class="integration-note"><span class="ui-icon icon-info" aria-hidden="true"></span><span>平台密钥用于后端程序，不要写进浏览器网页。生成的密钥只在当前页面回显一次。</span></p>
+              </article>
+
+              <article class="integration-card">
+                <div class="integration-card-head">
+                  <h3>教学网页流式接口</h3>
+                  <span class="badge" id="browser-cors-status">同源可用</span>
+                </div>
+                <div class="integration-fields">
+                  <label class="full">浏览器 SDK<input id="browser-sdk-url" readonly /></label>
+                </div>
+                <div class="actions" style="justify-content:flex-start;margin-top:8px">
+                  <button class="button ghost" id="copy-browser-sdk" type="button">复制 SDK 地址</button>
+                  <button class="button primary" id="copy-browser-example" type="button">复制嵌入代码</button>
+                </div>
+                <pre class="integration-code" id="browser-embed-example"></pre>
+                <p class="integration-note"><span class="ui-icon icon-info" aria-hidden="true"></span><span id="browser-integration-note">外部网页需在高级设置的“额外允许的跨域来源”中填写网页 Origin。</span></p>
+              </article>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
           <details class="collapsible-panel" id="backup-panel" open>
             <summary>备份与恢复</summary>
             <div class="list-card" style="padding:18px">
@@ -1678,13 +1791,36 @@
             <div class="list-card" style="padding:18px">
               <div class="setting-list" id="advanced-setting-list"></div>
               <div class="stack" style="margin-top:16px">
-                <label>下游 API 密钥<input id="platform-api-key" type="password" placeholder="留空并保存可关闭 /v1/chat/completions" /></label>
                 <div class="actions">
-                  <button class="button soft" id="save-platform-key" type="button">保存平台密钥</button>
                   <button class="button primary" id="save-advanced-settings" type="button">保存高级设置</button>
                 </div>
                 <p class="hint">高级设置保存后需要重启服务才会生效。修改端口后，EduGate 会在新地址重新打开教师控制台。</p>
               </div>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="collapsible-panel teaching-page-panel" id="teaching-page-panel" open>
+            <summary>教学网页发布</summary>
+            <div class="page-publish-body">
+              <p class="hint">上传教师制作的单个 HTML，或上传含 <code>index.html</code> 和资源文件的 ZIP。发布后，控制页的学生课堂入口会自动切换到该网页。</p>
+              <div class="page-publish-form">
+                <label>网页名称
+                  <input id="published-page-title" maxlength="120" placeholder="例如 初二物理：光的反射" />
+                </label>
+                <div>
+                  <span class="field-label">网页文件</span>
+                  <div class="file-picker">
+                    <input class="file-input-hidden" id="published-page-file" type="file" accept=".html,.htm,.zip,text/html,application/zip" aria-hidden="true" tabindex="-1" hidden />
+                    <button class="file-picker-button" id="published-page-file-trigger" type="button">选择网页</button>
+                    <span class="file-picker-name" id="published-page-file-name">未选择文件</span>
+                  </div>
+                </div>
+                <button class="button primary" id="publish-page" type="button">上传并发布</button>
+              </div>
+              <div class="published-page-list" id="published-page-list"></div>
+              <p class="hint"><span class="ui-icon icon-info" aria-hidden="true"></span><span>网页运行在隔离沙箱中，不会获得教师会话或下游平台密钥。网页脚本可调用 <code>EduGate.ask(question, onDelta)</code> 获取课堂 AI 流式回答；课堂未开始时，已发布网页和 Demo 测试页都不可使用。</span></p>
             </div>
           </details>
         </section>
@@ -1734,6 +1870,9 @@
       files: [],
       systemStatus: null,
       systemStatusRefreshing: false,
+      generatedPlatformKey: "",
+      publishedPages: [],
+      activePublishedPageId: "",
       dashboard: null,
       requestLogs: [],
       launcherLogs: [],
@@ -1805,6 +1944,7 @@
       classroomUrlDisplay: document.querySelector("#classroom-url-display"),
       classroomQr: document.querySelector("#classroom-qr"),
       classroomQrPlaceholder: document.querySelector("#classroom-qr-placeholder"),
+      classroomLinkNote: document.querySelector("#classroom-link-note"),
       copyClassroomUrl: document.querySelector("#copy-classroom-url"),
       toggleClassroomUrl: document.querySelector("#toggle-classroom-url"),
       rotateClassroomToken: document.querySelector("#rotate-classroom-token"),
@@ -1822,9 +1962,23 @@
       launcherLogView: document.querySelector("#launcher-log-view"),
       advancedSettingList: document.querySelector("#advanced-setting-list"),
       platformApiKey: document.querySelector("#platform-api-key"),
+      platformKeyStatus: document.querySelector("#platform-key-status"),
+      openaiBaseUrl: document.querySelector("#openai-base-url"),
+      openaiModelId: document.querySelector("#openai-model-id"),
+      openaiExample: document.querySelector("#openai-example"),
+      browserSdkUrl: document.querySelector("#browser-sdk-url"),
+      browserCorsStatus: document.querySelector("#browser-cors-status"),
+      browserEmbedExample: document.querySelector("#browser-embed-example"),
+      browserIntegrationNote: document.querySelector("#browser-integration-note"),
+      copyPlatformKey: document.querySelector("#copy-platform-key"),
       restoreBackupFile: document.querySelector("#restore-backup-file"),
       restoreBackupFileTrigger: document.querySelector("#restore-backup-file-trigger"),
       restoreBackupFileName: document.querySelector("#restore-backup-file-name"),
+      publishedPageTitle: document.querySelector("#published-page-title"),
+      publishedPageFile: document.querySelector("#published-page-file"),
+      publishedPageFileTrigger: document.querySelector("#published-page-file-trigger"),
+      publishedPageFileName: document.querySelector("#published-page-file-name"),
+      publishedPageList: document.querySelector("#published-page-list"),
       recordingNote: document.querySelector("#recording-note"),
       recordSummary: document.querySelector("#record-summary"),
       recordSessionList: document.querySelector("#record-session-list"),
@@ -1901,9 +2055,13 @@
       state.classroomUrlExpanded = false;
       state.classroomRecords = [];
       state.selectedClassroomRecord = null;
+      state.generatedPlatformKey = "";
+      state.publishedPages = [];
+      state.activePublishedPageId = "";
       sessionStorage.removeItem("edugate-admin-session");
       localStorage.removeItem("edugate-admin-session");
       el.classroomUrl.value = "";
+      el.platformApiKey.value = "";
       renderClassroomAccess();
       updateLoginState();
       applyRoleUI();
@@ -2010,17 +2168,18 @@
     function classroomUrl() {
       if (!state.classroomToken) return "";
       const studentBaseUrl = state.systemStatus?.lan_base_url || state.baseUrl;
-      const params = new URLSearchParams({
-        class_token: state.classroomToken,
-      });
-      return `${studentBaseUrl.replace(/\/+$/, "")}/student.html#${params}`;
+      const activePage = state.publishedPages.find((page) => page.id === state.activePublishedPageId);
+      const params = new URLSearchParams({ class_token: state.classroomToken });
+      if (activePage) params.set("page", activePage.id);
+      const pathname = activePage ? "/published.html" : "/student.html";
+      return `${studentBaseUrl.replace(/\/+$/, "")}${pathname}#${params}`;
     }
 
     function classroomDisplayUrl(fullUrl) {
       if (!fullUrl || state.classroomUrlExpanded) return fullUrl;
       try {
         const parsed = new URL(fullUrl);
-        return `${parsed.host}/student`;
+        return `${parsed.host}/classroom`;
       } catch {
         return fullUrl;
       }
@@ -2070,6 +2229,46 @@
       el.startClass.setAttribute("aria-pressed", String(active));
       el.endClass.setAttribute("aria-disabled", String(!active));
       renderClassroomQr(fullUrl);
+      const activePage = state.publishedPages.find((page) => page.id === state.activePublishedPageId);
+      const pageLabel = activePage ? `已发布网页“${activePage.title}”` : "Demo 测试页";
+      el.classroomLinkNote.textContent = active
+        ? `当前入口使用${pageLabel}；链接跨课次和重启保持不变。`
+        : `课堂尚未开始，${pageLabel}当前不可使用；开始课堂后同一链接恢复。`;
+      renderDownstreamIntegration();
+    }
+
+    function renderPublishedPages() {
+      if (!el.publishedPageList) return;
+      const demoActive = !state.activePublishedPageId;
+      const rows = [{
+        id: "",
+        title: "Demo 测试页",
+        filename: "内置 IP 地址学习单，仅用于联调和体验",
+        active: demoActive,
+        demo: true,
+      }, ...state.publishedPages];
+      el.publishedPageList.innerHTML = rows.map((page) => {
+        const active = Boolean(page.active || (!page.id && demoActive));
+        const createdAt = page.created_at
+          ? new Date(Number(page.created_at) * 1000).toLocaleString("zh-CN", { hour12: false })
+          : "无需上传";
+        const meta = page.demo
+          ? page.filename
+          : `${page.filename} · ${page.asset_count || 0} 个资源 · ${createdAt}`;
+        return `
+          <div class="published-page-row${active ? " active" : ""}">
+            <div class="published-page-copy">
+              <p class="published-page-title">${escapeHtml(page.title)} ${active ? '<span class="badge green">当前入口</span>' : ""}</p>
+              <div class="published-page-meta">${escapeHtml(meta)}</div>
+            </div>
+            <div class="published-page-actions">
+              ${!active ? `<button class="button soft" type="button" data-publish-activate="${escapeHtml(page.id || "demo")}">设为课堂入口</button>` : ""}
+              ${active && state.classroomToken ? '<button class="button ghost" type="button" data-publish-copy>复制入口</button>' : ""}
+              ${page.demo ? "" : `<button class="button danger" type="button" data-publish-delete="${escapeHtml(page.id)}">删除</button>`}
+            </div>
+          </div>`;
+      }).join("");
+      renderClassroomAccess();
     }
 
     function escapeHtml(value) {
@@ -2504,6 +2703,66 @@
       return hours ? `${hours} 小时 ${minutes} 分` : `${minutes} 分钟`;
     }
 
+    function renderDownstreamIntegration() {
+      if (!el.openaiBaseUrl) return;
+      const system = state.systemStatus || {};
+      const baseUrl = system.lan_base_url || state.baseUrl || "http://127.0.0.1:8000";
+      const openaiBaseUrl = system.openai_base_url || `${baseUrl.replace(/\/+$/, "")}/v1`;
+      const modelId = system.openai_model || "edugate";
+      const sdkUrl = system.browser_sdk_url || `${baseUrl.replace(/\/+$/, "")}/assets/edugate-client.js`;
+      const visibleKey = state.generatedPlatformKey || "<YOUR_EDUGATE_API_KEY>";
+      const corsOrigins = Array.isArray(system.cors_origins) ? system.cors_origins.filter(Boolean) : [];
+      const classToken = state.classroomToken || "<YOUR_CLASSROOM_TOKEN>";
+
+      el.openaiBaseUrl.value = openaiBaseUrl;
+      el.openaiModelId.value = modelId;
+      el.browserSdkUrl.value = sdkUrl;
+      el.platformKeyStatus.textContent = system.platform_api_key_set ? "已启用" : "未启用";
+      el.platformKeyStatus.className = `badge${system.platform_api_key_set ? " green" : ""}`;
+      el.copyPlatformKey.disabled = !state.generatedPlatformKey;
+      el.browserCorsStatus.textContent = corsOrigins.length ? `已允许 ${corsOrigins.length} 个跨域` : "仅同源";
+      el.browserCorsStatus.className = `badge${corsOrigins.length ? " green" : ""}`;
+
+      el.openaiExample.textContent = [
+        "from openai import OpenAI",
+        "",
+        `client = OpenAI(base_url=${JSON.stringify(openaiBaseUrl)}, api_key=${JSON.stringify(visibleKey)})`,
+        "stream = client.chat.completions.create(",
+        `    model=${JSON.stringify(modelId)},`,
+        "    messages=[{\"role\": \"user\", \"content\": \"请解释这个知识点\"}],",
+        "    stream=True,",
+        ")",
+        "for chunk in stream:",
+        "    print(chunk.choices[0].delta.content or \"\", end=\"\")",
+      ].join("\n");
+
+      const closeScript = "<" + "/script>";
+      el.browserEmbedExample.textContent = [
+        `<script src=${JSON.stringify(sdkUrl)}>${closeScript}`,
+        "<script>",
+        "const edugate = new EduGateClient({",
+        `  baseUrl: ${JSON.stringify(baseUrl)},`,
+        `  classToken: ${JSON.stringify(classToken)}`,
+        "});",
+        "",
+        "async function askEduGate(question, appendText) {",
+        "  const messages = [{ role: \"user\", content: question }];",
+        "  for await (const text of edugate.streamText(messages)) appendText(text);",
+        "}",
+        closeScript,
+      ].join("\n");
+
+      if (!state.classroomToken) {
+        el.browserIntegrationNote.textContent = "课堂令牌尚未加载，嵌入代码中的令牌是占位符。";
+      } else if (!state.classroomActive) {
+        el.browserIntegrationNote.textContent = "课堂当前暂停；代码可先嵌入，开始课堂后生效。外部网页还需配置准确的 Origin。";
+      } else if (corsOrigins.length) {
+        el.browserIntegrationNote.textContent = `课堂已开放；允许跨域来源：${corsOrigins.join(", ")}。课堂令牌会出现在网页源码中，只授予学生权限。`;
+      } else {
+        el.browserIntegrationNote.textContent = "课堂已开放；同源网页可直接使用。外部网页需在高级设置填写准确的 Origin 并重启服务。";
+      }
+    }
+
     function renderSystem() {
       const system = state.systemStatus || {};
       const modelPool = system.model_pool || {};
@@ -2590,8 +2849,9 @@
         return `<label>${escapeHtml(label)}<input type="${inputType}" step="${step}" data-setting-key="${escapeHtml(setting.key)}" value="${escapeHtml(setting.value)}" /></label>`;
       }).join("");
       el.platformApiKey.placeholder = system.platform_api_key_set
-        ? "平台密钥已设置；输入新值可替换，留空保存会关闭"
-        : "留空并保存可保持关闭";
+        ? "平台密钥已设置；输入新值可替换"
+        : "输入自定义密钥，或生成新密钥";
+      renderDownstreamIntegration();
     }
 
     function formatRecordTime(value) {
@@ -2803,6 +3063,7 @@
         ["知识库", loadSources],
         ["知识库文件", loadFiles],
         ["课堂记录", loadClassroomRecords],
+        ["教学网页", loadPublishedPages],
         ["课堂链接", loadClassroom],
       ];
       const failures = [];
@@ -2925,6 +3186,64 @@
       state.classroomToken = data.class_token || "";
       state.classroomStudentCount = Number(data.student_count || 0);
       renderClassroomAccess();
+    }
+
+    async function loadPublishedPages() {
+      const data = await request("/admin/published-pages");
+      state.publishedPages = Array.isArray(data.pages) ? data.pages : [];
+      state.activePublishedPageId = data.active_page_id || "";
+      renderPublishedPages();
+    }
+
+    async function uploadPublishedPage() {
+      const file = el.publishedPageFile.files?.[0];
+      if (!file) {
+        showToast("请先选择 HTML 或 ZIP 网页文件。", true);
+        return;
+      }
+      const body = new FormData();
+      body.append("file", file);
+      body.append("title", el.publishedPageTitle.value.trim());
+      body.append("activate", "true");
+      const button = document.querySelector("#publish-page");
+      button.disabled = true;
+      try {
+        await request("/admin/published-pages", { method: "POST", body, json: false });
+        el.publishedPageFile.value = "";
+        el.publishedPageTitle.value = "";
+        updateFilePicker(el.publishedPageFile, el.publishedPageFileName);
+        await loadPublishedPages();
+        showToast("教学网页已上传并设为学生课堂入口。 ");
+      } catch (error) {
+        showToast(`发布网页失败：${error.message}`, true);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function activatePublishedPage(pageId) {
+      try {
+        const path = pageId === "demo"
+          ? "/admin/published-pages/deactivate"
+          : `/admin/published-pages/${encodeURIComponent(pageId)}/activate`;
+        await request(path, { method: "POST" });
+        await loadPublishedPages();
+        showToast(pageId === "demo" ? "学生入口已切换到 Demo 测试页。" : "学生入口已切换到该教学网页。 ");
+      } catch (error) {
+        showToast(`切换课堂入口失败：${error.message}`, true);
+      }
+    }
+
+    async function deletePublishedPage(pageId) {
+      const page = state.publishedPages.find((item) => item.id === pageId);
+      if (!page || !confirm(`确定删除教学网页“${page.title}”及其本地资源吗？`)) return;
+      try {
+        await request(`/admin/published-pages/${encodeURIComponent(pageId)}`, { method: "DELETE" });
+        await loadPublishedPages();
+        showToast("教学网页已删除。 ");
+      } catch (error) {
+        showToast(`删除教学网页失败：${error.message}`, true);
+      }
     }
 
     async function startClassroom() {
@@ -3506,17 +3825,49 @@
     }
 
     async function savePlatformKey() {
+      const value = el.platformApiKey.value.trim();
+      if (!value) {
+        showToast("请输入下游 API 密钥，或点击“生成”。", true);
+        return;
+      }
       try {
         const result = await request("/admin/system/platform-key", {
           method: "PUT",
-          body: JSON.stringify({ api_key: el.platformApiKey.value.trim() || null }),
+          body: JSON.stringify({ api_key: value }),
         });
-        el.platformApiKey.value = "";
+        state.generatedPlatformKey = value;
         state.systemStatus.platform_api_key_set = result.platform_api_key_set;
         renderSystem();
-        showToast(result.platform_api_key_set ? "平台 API Key 已保存到本地数据目录。" : "平台兼容接口已关闭。");
+        showToast("平台 API Key 已保存；可在离开页面前复制。 ");
       } catch (error) {
         showToast(`保存平台密钥失败：${error.message}`, true);
+      }
+    }
+
+    async function generatePlatformKey() {
+      try {
+        const result = await request("/admin/system/platform-key/generate", { method: "POST" });
+        state.generatedPlatformKey = result.api_key || "";
+        el.platformApiKey.value = state.generatedPlatformKey;
+        state.systemStatus.platform_api_key_set = true;
+        renderSystem();
+        showToast("已生成并保存新密钥；旧平台密钥立即失效。 ");
+      } catch (error) {
+        showToast(`生成平台密钥失败：${error.message}`, true);
+      }
+    }
+
+    async function disablePlatformKey() {
+      if (!confirm("确定关闭 OpenAI 兼容接口吗？已有下游客户端会立即失去访问权限。")) return;
+      try {
+        await request("/admin/system/platform-key", { method: "DELETE" });
+        state.generatedPlatformKey = "";
+        el.platformApiKey.value = "";
+        state.systemStatus.platform_api_key_set = false;
+        renderSystem();
+        showToast("OpenAI 兼容接口已关闭。 ");
+      } catch (error) {
+        showToast(`关闭平台接口失败：${error.message}`, true);
       }
     }
 
@@ -3606,6 +3957,13 @@
     document.querySelector("#open-app-directory").addEventListener("click", openAppDirectory);
     document.querySelector("#save-advanced-settings").addEventListener("click", saveAdvancedSettings);
     document.querySelector("#save-platform-key").addEventListener("click", savePlatformKey);
+    document.querySelector("#generate-platform-key").addEventListener("click", generatePlatformKey);
+    document.querySelector("#disable-platform-key").addEventListener("click", disablePlatformKey);
+    document.querySelector("#copy-openai-base").addEventListener("click", () => copyText(el.openaiBaseUrl.value, "OpenAI API Base URL"));
+    document.querySelector("#copy-platform-key").addEventListener("click", () => copyText(state.generatedPlatformKey, "新平台密钥"));
+    document.querySelector("#copy-openai-example").addEventListener("click", () => copyText(el.openaiExample.textContent, "OpenAI 调用示例"));
+    document.querySelector("#copy-browser-sdk").addEventListener("click", () => copyText(el.browserSdkUrl.value, "浏览器 SDK 地址"));
+    document.querySelector("#copy-browser-example").addEventListener("click", () => copyText(el.browserEmbedExample.textContent, "教学网页嵌入代码"));
     document.querySelector("#download-backup").addEventListener("click", downloadBackup);
     document.querySelector("#restore-backup").addEventListener("click", restoreBackup);
     el.deleteRecord.addEventListener("click", deleteSelectedClassroomRecord);
@@ -3614,8 +3972,19 @@
     document.querySelector("#upload-file").addEventListener("click", uploadFile);
     el.knowledgeFileTrigger.addEventListener("click", () => el.knowledgeFile.click());
     el.restoreBackupFileTrigger.addEventListener("click", () => el.restoreBackupFile.click());
+    el.publishedPageFileTrigger.addEventListener("click", () => el.publishedPageFile.click());
     el.knowledgeFile.addEventListener("change", () => updateFilePicker(el.knowledgeFile, el.knowledgeFileName));
     el.restoreBackupFile.addEventListener("change", () => updateFilePicker(el.restoreBackupFile, el.restoreBackupFileName));
+    el.publishedPageFile.addEventListener("change", () => updateFilePicker(el.publishedPageFile, el.publishedPageFileName));
+    document.querySelector("#publish-page").addEventListener("click", uploadPublishedPage);
+    el.publishedPageList.addEventListener("click", (event) => {
+      const activateButton = event.target.closest("[data-publish-activate]");
+      const deleteButton = event.target.closest("[data-publish-delete]");
+      const copyButton = event.target.closest("[data-publish-copy]");
+      if (activateButton) activatePublishedPage(activateButton.dataset.publishActivate);
+      else if (deleteButton) deletePublishedPage(deleteButton.dataset.publishDelete);
+      else if (copyButton) copyText(classroomUrl(), "学生课堂链接");
+    });
     el.aiEnabledSwitch.addEventListener("click", toggleAIEnabled);
     el.sourceSelect.addEventListener("change", () => {
       persistMountedSource(el.sourceSelect.value, { reload: true });

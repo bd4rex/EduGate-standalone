@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IP 地址学习单 + AI 助手</title>
+  <title>EduGate Demo：IP 地址学习单 + AI 助手</title>
   <link rel="icon" href="assets/brand/edugate-icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/brand/edugate-icon-1024.png" />
   <style>
@@ -429,17 +429,30 @@
       }
     }
 
+    [hidden] { display: none !important; }
+    .classroom-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    .classroom-gate-card { width: min(520px, 100%); padding: 32px; text-align: center; }
+    .classroom-gate-card h1 { margin: 0 0 12px; font-size: 25px; }
+    .classroom-gate-card p { margin: 0; color: var(--muted); line-height: 1.75; }
+    .classroom-gate-card.error h1 { color: #b42318; }
+
   </style>
 </head>
 <body>
-  <div class="page">
+  <main class="classroom-gate" id="classroomGate">
+    <section class="card classroom-gate-card" id="classroomGateCard">
+      <h1>正在验证 Demo 课堂</h1>
+      <p id="classroomGateMessage">只有教师开始课堂后，内置 Demo 测试页才会开放。</p>
+    </section>
+  </main>
+  <div class="page" id="demoApp" hidden>
     <div class="topbar card">
       <div class="topbar-heading">
         <img class="topbar-brand-mark" src="assets/brand/edugate-icon.svg" alt="EduGate" />
-        <div class="topbar-title">信息科技课堂学习单：认识 IP 地址</div>
+        <div class="topbar-title">Demo 测试页：信息科技课堂学习单 · 认识 IP 地址</div>
       </div>
       <div class="topbar-subtitle">
-        页面包含课堂学习单和嵌入式 AI 学习助手。AI 回答会优先流式显示；若失败，则自动回退到普通接口。
+        这是用于联调和体验的内置 Demo。课堂未开始时不可使用；正式教学请由教师在系统页发布自己的网页。
       </div>
       <a class="jump-to-ai" href="#ai-assistant">跳到 AI 助手</a>
     </div>
@@ -696,6 +709,23 @@
     const sendThinkingBtnEl = document.getElementById("sendThinkingBtn");
     const stopBtnEl = document.getElementById("stopBtn");
     const clearBtnEl = document.getElementById("clearBtn");
+    const classroomGateEl = document.getElementById("classroomGate");
+    const classroomGateCardEl = document.getElementById("classroomGateCard");
+    const classroomGateMessageEl = document.getElementById("classroomGateMessage");
+    const demoAppEl = document.getElementById("demoApp");
+
+    function showClassroomGate(message, isError = false) {
+      classroomGateEl.hidden = false;
+      demoAppEl.hidden = true;
+      classroomGateMessageEl.textContent = message;
+      classroomGateCardEl.classList.toggle("error", isError);
+      classroomGateCardEl.querySelector("h1").textContent = isError ? "暂时无法进入" : "正在验证 Demo 课堂";
+    }
+
+    function openDemoClassroom() {
+      classroomGateEl.hidden = true;
+      demoAppEl.hidden = false;
+    }
 
     function escapeHtml(str) {
       return String(str)
@@ -812,7 +842,11 @@
         body: JSON.stringify({ device_id: deviceId })
       });
       if (!response.ok) {
-        throw new Error("加入课堂失败，HTTP 状态码：" + response.status);
+        const payload = await response.json().catch(() => ({}));
+        const message = payload.detail === "Classroom is not active"
+          ? "课堂尚未开始或已经结束，请等待教师开始课堂。"
+          : `加入课堂失败（HTTP ${response.status}）。`;
+        throw new Error(message);
       }
       const data = await response.json();
       studentToken = data.student_token || "";
@@ -1072,16 +1106,20 @@
     renderMessages();
     setGeneratingState(false);
     if (!CLASS_TOKEN) {
+      showClassroomGate("课堂链接不完整，请让教师重新复制入口地址。", true);
       setStatus("课堂链接缺少访问令牌，请重新打开老师提供的完整链接。", "error");
     } else {
+      showClassroomGate("正在验证课堂状态，请稍候。 ");
       setStatus("正在连接课堂……", "warn");
       joinClassroom()
         .then(() => {
+          openDemoClassroom();
           setStatus("课堂已连接。", "ok");
         })
         .catch((error) => {
           classroomReady = false;
           setGeneratingState(false);
+          showClassroomGate(error.message, true);
           setStatus(error.message + "，请重新打开老师提供的课堂链接。", "error");
         });
     }

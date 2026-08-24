@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -100,6 +101,23 @@ async def admin_update_platform_key(request: PlatformKeyRequest) -> dict[str, An
     else:
         secret_store.delete("system:platform_api_key")
     return {"status": "saved", "platform_api_key_set": bool(value)}
+
+
+@router.post("/admin/system/platform-key/generate", dependencies=[Depends(require_admin)])
+async def admin_generate_platform_key() -> dict[str, Any]:
+    value = f"eg_{secrets.token_urlsafe(32)}"
+    secret_store.set("system:platform_api_key", value)
+    return {
+        "status": "generated",
+        "platform_api_key_set": True,
+        "api_key": value,
+    }
+
+
+@router.delete("/admin/system/platform-key", dependencies=[Depends(require_admin)])
+async def admin_delete_platform_key() -> dict[str, Any]:
+    secret_store.delete("system:platform_api_key")
+    return {"status": "disabled", "platform_api_key_set": False}
 
 
 @router.get("/admin/system/backup", dependencies=[Depends(require_admin)])

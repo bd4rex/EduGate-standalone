@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EduGate 教学网页</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, "Microsoft YaHei", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { width: 100%; height: 100%; margin: 0; background: #f7f9fd; color: #0f1d3a; }
+    #page-frame { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+    .status { min-height: 100%; display: grid; place-items: center; padding: 24px; }
+    .status-card { width: min(520px, 100%); padding: 32px; border: 1px solid #dce4f1; border-radius: 18px; background: #fff; box-shadow: 0 16px 44px rgba(23, 48, 92, .08); text-align: center; }
+    .brand { color: #1769e8; font-size: 14px; font-weight: 700; letter-spacing: .08em; }
+    h1 { margin: 12px 0 10px; font-size: 24px; }
+    p { margin: 0; color: #64748b; line-height: 1.7; }
+    .error h1 { color: #b42318; }
+  </style>
+  <script src="assets/edugate-client.js" defer></script>
+</head>
+<body>
+  <main class="status" id="status">
+    <section class="status-card">
+      <div class="brand">EDUGATE</div>
+      <h1>正在进入课堂网页</h1>
+      <p>正在验证课堂状态并加载教师发布的内容。</p>
+    </section>
+  </main>
+  <iframe
+    id="page-frame"
+    title="教学网页"
+    sandbox="allow-scripts allow-forms allow-modals allow-downloads"
+    referrerpolicy="no-referrer"
+    hidden
+  ></iframe>
+
+  <script>
+    const statusView = document.querySelector("#status");
+    const pageFrame = document.querySelector("#page-frame");
+    const fragment = new URLSearchParams(location.hash.slice(1));
+    const pageId = fragment.get("page") || "";
+    const classToken = fragment.get("class_token") || "";
+    const activeRequests = new Map();
+    let client = null;
+
+    function showError(message) {
+      pageFrame.hidden = true;
+      statusView.hidden = false;
+      statusView.innerHTML = `
+        <section class="status-card error">
+          <div class="brand">EDUGATE</div>
+          <h1>暂时无法进入</h1>
+          <p>${escapeHtml(message)}</p>
+        </section>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function responseMessage(response) {
+      try {
+        const payload = await response.json();
+        if (payload.detail === "Classroom is not active") return "课堂尚未开始或已经结束，请等待教师开始课堂。";
+        return String(payload.detail || `HTTP ${response.status}`);
+      } catch {
+        return `加载失败（HTTP ${response.status}）`;
+      }
+    }
+
+    function normalizeMessages(value) {
+      const source = typeof value === "string"
+        ? [{ role: "user", content: value }]
+        : Array.isArray(value) ? value : [];
+      if (!source.length || source.length > 20) throw new Error("每次请求需要 1–20 条消息。");
+      return source.map((message) => {
+        const role = String(message?.role || "");
+        const content = String(message?.content || "");
+        if (!new Set(["user", "assistant"]).has(role) || !content.trim() || content.length > 12000) {
+          throw new Error("网页提交了不符合要求的课堂消息。");
+        }
+        return { role, content };
+      });
+    }
+
+    function sendToPage(payload) {
+      pageFrame.contentWindow?.postMessage({ source: "edugate-host", ...payload }, "*");
+    }
+
+    async function handleAsk(id, messages) {
+      const controller = new AbortController();
+      activeRequests.set(id, controller);
+      try {
+        if (!client) {
+          client = new EduGateClient({
+            baseUrl: location.origin,
+            classToken,
+            computerName: "教学网页",
+          });
+        }
+        let answer = "";
+        for await (const delta of client.streamText(normalizeMessages(messages), { signal: controller.signal })) {
+          answer += delta;
+          sendToPage({ type: "delta", id, delta });
+        }
+        sendToPage({ type: "done", id, text: answer });
+      } catch (error) {
+        const message = error?.name === "AbortError" ? "请求已取消。" : String(error?.message || error);
+        sendToPage({ type: "error", id, message });
+      } finally {
+        activeRequests.delete(id);
+      }
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.source !== pageFrame.contentWindow || event.data?.source !== "edugate-page") return;
+      const id = String(event.data.id || "");
+      if (!id || id.length > 100) return;
+      if (event.data.type === "ask" && !activeRequests.has(id)) {
+        handleAsk(id, event.data.messages);
+      } else if (event.data.type === "cancel") {
+        activeRequests.get(id)?.abort();
+      }
+    });
+
+    function bridgeScript() {
+      return `
+        (() => {
+          const pending = new Map();
+          let sequence = 0;
+          addEventListener("message", (event) => {
+            const data = event.data || {};
+            if (event.source !== parent || data.source !== "edugate-host") return;
+            const request = pending.get(data.id);
+            if (!request) return;
+            if (data.type === "delta") {
+              request.onDelta(data.delta);
+            } else if (data.type === "done") {
+              pending.delete(data.id);
+              request.resolve(data.text || "");
+            } else if (data.type === "error") {
+              pending.delete(data.id);
+              request.reject(new Error(data.message || "EduGate 请求失败"));
+            }
+          });
+          window.EduGate = Object.freeze({
+            ask(input, onDelta) {
+              const id = "ask-" + Date.now() + "-" + (++sequence);
+              const messages = typeof input === "string" ? [{ role: "user", content: input }] : input;
+              const promise = new Promise((resolve, reject) => {
+                pending.set(id, { resolve, reject, onDelta: typeof onDelta === "function" ? onDelta : () => {} });
+                parent.postMessage({ source: "edugate-page", type: "ask", id, messages }, "*");
+              });
+              promise.cancel = () => parent.postMessage({ source: "edugate-page", type: "cancel", id }, "*");
+              return promise;
+            }
+          });
+          dispatchEvent(new CustomEvent("edugate-ready"));
+        })();`;
+    }
+
+    function buildSandboxDocument(html) {
+      const assetBase = `${location.origin}/published-pages/${encodeURIComponent(pageId)}/assets/`;
+      const csp = [
+        "default-src 'none'",
+        "img-src http: https: data: blob:",
+        "media-src http: https: data: blob:",
+        "style-src 'unsafe-inline' http: https:",
+        "font-src http: https: data:",
+        "script-src 'unsafe-inline' http: https:",
+        "connect-src 'none'",
+        "form-action 'none'",
+      ].join("; ");
+      const closeScript = "<" + "/script>";
+      const injection = [
+        `<base href="${assetBase}">`,
+        `<meta http-equiv="Content-Security-Policy" content="${csp}">`,
+        `<script>${bridgeScript()}${closeScript}`,
+      ].join("");
+      if (/<head(?:\s[^>]*)?>/i.test(html)) {
+        return html.replace(/<head(?:\s[^>]*)?>/i, (match) => `${match}${injection}`);
+      }
+      return `<!doctype html><html><head>${injection}</head><body>${html}</body></html>`;
+    }
+
+    async function loadPublishedPage() {
+      if (!pageId || !classToken) {
+        showError("课堂链接不完整，请让教师重新复制入口地址。");
+        return;
+      }
+      const response = await fetch(`/published-pages/${encodeURIComponent(pageId)}`, {
+        headers: { "X-Class-Token": classToken },
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        showError(await responseMessage(response));
+        return;
+      }
+      const page = await response.json();
+      document.title = `${page.title || "教学网页"} · EduGate`;
+      pageFrame.title = page.title || "教学网页";
+      pageFrame.srcdoc = buildSandboxDocument(String(page.html || ""));
+      statusView.hidden = true;
+      pageFrame.hidden = false;
+    }
+
+    addEventListener("DOMContentLoaded", loadPublishedPage, { once: true });
+  </script>
+</body>
+</html>

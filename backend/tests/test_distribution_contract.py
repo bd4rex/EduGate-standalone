@@ -110,6 +110,9 @@ def test_student_page_persists_history_and_joins_silently() -> None:
     assert 'JSON.stringify({ device_id: deviceId })' in page
     assert 'id="computerNameModal"' not in page
     assert 'id="computerNameInput"' not in page
+    assert 'id="demoApp" hidden' in page
+    assert 'id="classroomGate"' in page
+    assert "openDemoClassroom();" in page
     assert "电脑名或座位号" not in page
     assert "TEACHER_ID" not in page
     assert "teacher_id" not in page
@@ -122,6 +125,23 @@ def test_system_view_remains_admin_only() -> None:
 
     assert 'data-tab="system" role="tab" aria-selected="false" aria-controls="system-view" data-admin-only' in page
     assert '<section id="system-view" hidden data-admin-only>' in page
+
+
+def test_teaching_page_publishing_is_last_system_panel_and_controls_student_entry() -> None:
+    page = _read("frontend/admin.html")
+    wrapper = _read("frontend/published.html")
+    demo = _read("frontend/student.html")
+
+    assert page.index('id="advanced-settings-panel"') < page.index('id="teaching-page-panel"')
+    assert 'id="published-page-file"' in page
+    assert 'request("/admin/published-pages"' in page
+    assert 'const pathname = activePage ? "/published.html" : "/student.html";' in page
+    assert "EduGate.ask(question, onDelta)" in page
+    assert 'sandbox="allow-scripts allow-forms allow-modals allow-downloads"' in wrapper
+    assert "[hidden] { display: none !important; }" in wrapper
+    assert "event.source !== pageFrame.contentWindow" in wrapper
+    assert "Classroom is not active" in wrapper
+    assert "Demo 测试页" in demo
 
 
 def test_upstream_models_can_be_discovered_selected_and_batch_imported() -> None:
@@ -208,6 +228,15 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     assert 'id="model-api-panel" open' in page
     assert "模型与供应商管理" not in page
     assert "下游 API 密钥" in page
+    assert 'id="downstream-api-panel" open' in page
+    assert 'id="openai-base-url"' in page
+    assert 'id="generate-platform-key"' in page
+    assert 'id="copy-openai-example"' in page
+    assert 'id="copy-browser-example"' in page
+    assert "EduGateClient" in page
+    assert "/admin/system/platform-key/generate" in page
+    assert 'method: "DELETE"' in page
+    assert 'state.generatedPlatformKey = "";' in page
     system_log = page.index('id="system-log-panel"')
     model_api = page.index('id="model-api-panel"')
     advanced = page.index('id="advanced-settings-panel"')
@@ -221,6 +250,21 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     )[0]
     assert 'id="download-backup"' in backup_actions
     assert 'id="restore-backup"' in backup_actions
+
+
+def test_browser_embed_sdk_is_distributed_and_uses_scoped_student_sessions() -> None:
+    sdk_path = ROOT / "frontend/assets/edugate-client.js"
+    assert sdk_path.is_file()
+    sdk = sdk_path.read_text(encoding="utf-8")
+
+    assert "class EduGateClient" in sdk
+    assert "/classroom/join" in sdk
+    assert "/chat/stream" in sdk
+    assert '"X-Class-Token"' in sdk
+    assert '"X-Student-Token"' in sdk
+    assert "Authorization" not in sdk
+    assert "async *streamText" in sdk
+    assert "[DONE]" in sdk
 
 
 def test_resource_view_exposes_complete_folder_management() -> None:

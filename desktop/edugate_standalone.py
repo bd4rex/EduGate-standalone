@@ -147,6 +147,11 @@ def migrate_legacy_data() -> bool:
     if legacy_knowledge.exists() and not portable_knowledge.exists():
         shutil.copytree(legacy_knowledge, portable_knowledge)
         copied = True
+    legacy_published_pages = LEGACY_DATA_DIR / "published_pages"
+    portable_published_pages = DATA_DIR / "published_pages"
+    if legacy_published_pages.exists() and not portable_published_pages.exists():
+        shutil.copytree(legacy_published_pages, portable_published_pages)
+        copied = True
     legacy_env = LEGACY_DATA_DIR / ".env"
     if legacy_env.exists() and not CONFIG_PATH.exists():
         shutil.copy2(legacy_env, CONFIG_PATH)
@@ -218,6 +223,7 @@ def apply_pending_restore(logger: logging.Logger) -> None:
                     member.filename in RESTORABLE_FILES
                     or member.filename in IGNORED_RESTORE_FILES
                     or member.filename.startswith("knowledge_files/")
+                    or member.filename.startswith("published_pages/")
                 )
                 if not allowed:
                     raise ValueError(f"Unsupported backup entry: {member.filename}")
@@ -233,6 +239,11 @@ def apply_pending_restore(logger: logging.Logger) -> None:
             current_knowledge = DATA_DIR / "knowledge_files"
             shutil.rmtree(current_knowledge, ignore_errors=True)
             shutil.move(str(restored_knowledge), str(current_knowledge))
+        restored_published_pages = staging / "published_pages"
+        if restored_published_pages.exists():
+            current_published_pages = DATA_DIR / "published_pages"
+            shutil.rmtree(current_published_pages, ignore_errors=True)
+            shutil.move(str(restored_published_pages), str(current_published_pages))
         logger.info("Pending backup restored successfully")
         RESTORE_ARCHIVE.unlink(missing_ok=True)
     except Exception:

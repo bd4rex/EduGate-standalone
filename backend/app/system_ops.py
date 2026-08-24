@@ -89,6 +89,10 @@ def system_status(*, supervised: bool, started_at: float, platform_key_set: bool
         "local_ip": ip,
         "admin_url": f"http://127.0.0.1:{port}/admin.html",
         "lan_base_url": f"http://{ip}:{port}",
+        "openai_base_url": f"http://{ip}:{port}/v1",
+        "openai_model": "edugate",
+        "browser_sdk_url": f"http://{ip}:{port}/assets/edugate-client.js",
+        "cors_origins": list(settings.cors_origins),
         "lan_admin_enabled": settings.allow_lan_admin,
         "lan_admin_allowed_ips": list(settings.admin_allowed_ips),
         "disk_free_bytes": disk.free,
@@ -184,9 +188,14 @@ def create_backup() -> Path:
             for path in knowledge_dir.rglob("*"):
                 if path.is_file():
                     archive.write(path, Path("knowledge_files") / path.relative_to(knowledge_dir))
+        published_pages_dir = Path(settings.published_pages_dir)
+        if published_pages_dir.exists():
+            for path in published_pages_dir.rglob("*"):
+                if path.is_file():
+                    archive.write(path, Path("published_pages") / path.relative_to(published_pages_dir))
         archive.writestr(
             "backup-info.json",
-            json.dumps({"version": 2, "portable": settings.portable_mode, "created_at": time.time()}, ensure_ascii=False),
+            json.dumps({"version": 3, "portable": settings.portable_mode, "created_at": time.time()}, ensure_ascii=False),
         )
     return archive_path
 
@@ -230,6 +239,7 @@ def _validate_backup(path: Path) -> None:
                 allowed = (
                     member.filename in {".env", "config/edugate.env", "edugate.sqlite3", "knowledge.sqlite3", "runtime_config.json", "secrets.json", "backup-info.json"}
                     or member.filename.startswith("knowledge_files/")
+                    or member.filename.startswith("published_pages/")
                 )
                 if not allowed:
                     raise HTTPException(status_code=400, detail=f"Unsupported backup entry: {member.filename}")

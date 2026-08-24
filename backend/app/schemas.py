@@ -33,7 +33,7 @@ class ChatRequest(BaseModel):
 class V1ChatCompletionRequest(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    messages: list[ClientMessage] = Field(..., min_length=1)
+    messages: list[Message] = Field(..., min_length=1)
     model: str | None = None
     stream: bool = False
     scenario_id: str = Field(default="default", min_length=1)

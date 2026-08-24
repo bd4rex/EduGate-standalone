@@ -26,15 +26,22 @@ def test_pending_restore_replaces_configuration_and_knowledge(
     knowledge = tmp_path / "knowledge_files"
     knowledge.mkdir()
     (knowledge / "old.txt").write_text("old", encoding="utf-8")
+    published = tmp_path / "published_pages"
+    published.mkdir()
+    (published / "old.html").write_text("old", encoding="utf-8")
     with zipfile.ZipFile(archive, "w") as backup:
         backup.writestr(".env", "DEFAULT_MODEL=restored\n")
         backup.writestr("knowledge_files/new.txt", "new")
+        backup.writestr("published_pages/index.json", '{"version": 1}')
+        backup.writestr("published_pages/page-1234567890abcdef/index.html", "<html>new</html>")
 
     launcher.apply_pending_restore(logging.getLogger("test-launcher"))
 
     assert (tmp_path.parent / "config" / "edugate.env").read_text(encoding="utf-8") == "DEFAULT_MODEL=restored\n"
     assert not (knowledge / "old.txt").exists()
     assert (knowledge / "new.txt").read_text(encoding="utf-8") == "new"
+    assert not (published / "old.html").exists()
+    assert (published / "page-1234567890abcdef" / "index.html").read_text(encoding="utf-8") == "<html>new</html>"
     assert not archive.exists()
 
 
