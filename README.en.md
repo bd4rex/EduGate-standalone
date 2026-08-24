@@ -8,7 +8,7 @@
   <a href="README.md">中文</a> · <strong>English</strong>
 </p>
 
-EduGate runs on a teacher's 64-bit Windows computer for a single teacher and a local classroom. The teacher configures model providers, knowledge sources, and the active classroom policy in a web console. Students join through a stable LAN classroom link.
+EduGate runs on a teacher's 64-bit Windows computer or Apple Silicon Mac for a single teacher and a local classroom. The teacher configures model providers, knowledge sources, and the active classroom policy in a web console. Students join through a stable LAN classroom link.
 
 It can also act as a classroom AI relay: trusted backend clients use an OpenAI-compatible API, while teaching webpages use a scoped student-session streaming API.
 
@@ -34,15 +34,29 @@ The stable `edugate` model follows the teacher's current upstream model, prompt,
 
 ## Run the packaged edition
 
-Keep the complete `EduGate-Standalone` folder together and launch `EduGate-Standalone.exe`. Add a model provider, configure the default classroom, and optionally publish a teaching webpage from the System page. Start class before distributing the stable student link or built-in QR code. The same token can be reused until the teacher explicitly rotates it; ending class makes both the hosted page and Demo unavailable.
+On Windows, keep the complete `EduGate-Standalone` folder together and launch `EduGate-Standalone.exe`. On an Apple Silicon Mac running macOS 11 or later, extract the ZIP and open `EduGate.app`; because this build is ad-hoc signed and not notarized with an Apple Developer ID, Control-click the app and choose Open on first launch. The current macOS package does not support Intel Macs.
+
+Add a model provider, configure the default classroom, and optionally publish a teaching webpage from the System page. Start class before distributing the stable student link or built-in QR code. The same token can be reused until the teacher explicitly rotates it; ending class makes both the hosted page and Demo unavailable.
+
+Windows stores portable data beside the executable. macOS stores configuration, model credentials, knowledge files, records, and logs in `~/Library/Application Support/EduGate`, so replacing `EduGate.app` does not remove classroom data.
+
+To support local backup and migration, macOS stores model credentials in a portable format and restricts the data directory to the current user. Do not share the complete EduGate data directory or upload it to a public drive or repository.
 
 An IP allowlist is network admission control, not a replacement for authentication. A LAN management device must still sign in and use an `X-Admin-Token`; reserve its DHCP address and use this feature only on a trusted, isolated network without exposing plain HTTP beyond it.
 
-The packaged edition includes its own runtime. The source edition requires 64-bit Python 3.10 or newer:
+The packaged edition includes its own runtime. The source edition requires 64-bit Python 3.10 or newer. Windows can use:
 
 ```text
 desktop\install_backend_deps.bat
 desktop\run_standalone.bat
+```
+
+macOS can use:
+
+```bash
+python3 -m venv runtime/venv
+runtime/venv/bin/python -m pip install -r backend/requirements.txt
+runtime/venv/bin/python desktop/edugate_standalone.py
 ```
 
 ## Development
@@ -53,3 +67,5 @@ python -m compileall -q backend\app
 ```
 
 The backend is split into application composition (`main.py`), shared state, dependencies, chat services, a published-page store, schemas, runtime configuration, and domain routers. See the [Chinese documentation index](docs/README.md) and the [teaching page publishing guide](docs/教学网页发布.md) for the maintained operations, security, and development guides.
+
+Build the Windows folder with `desktop\build_windows.bat`. On Apple Silicon, run `EDUGATE_VERSION=2.2.0 desktop/build_macos.sh` to produce the signed `.app` and release ZIP.

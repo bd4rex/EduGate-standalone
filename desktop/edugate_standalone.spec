@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
 from pathlib import Path
 import sys
 
@@ -9,6 +10,9 @@ from PyInstaller.utils.hooks import collect_submodules
 root = Path(SPECPATH).resolve().parent
 sys.path.insert(0, str(root / "backend"))
 hiddenimports = collect_submodules("app") + collect_submodules("uvicorn")
+is_macos = sys.platform == "darwin"
+icon_path = root / "desktop" / "assets" / ("edugate.icns" if is_macos else "edugate.ico")
+app_version = os.environ.get("EDUGATE_VERSION", "0.0.0")
 
 analysis = Analysis(
     [str(root / "desktop" / "edugate_standalone.py")],
@@ -38,8 +42,10 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
-    icon=str(root / "desktop" / "assets" / "edugate.ico"),
+    # The macOS subprocess runner needs real stdin/stdout pipes. LaunchServices
+    # still opens the .app without a Terminal window.
+    console=is_macos,
+    icon=str(icon_path),
     disable_windowed_traceback=False,
 )
 
@@ -51,3 +57,20 @@ bundle = COLLECT(
     upx=True,
     name="EduGate-Standalone",
 )
+
+if is_macos:
+    app = BUNDLE(
+        bundle,
+        name="EduGate.app",
+        icon=str(icon_path),
+        bundle_identifier="com.bd4rex.edugate.standalone",
+        info_plist={
+            "CFBundleDisplayName": "EduGate",
+            "CFBundleName": "EduGate",
+            "CFBundleShortVersionString": app_version,
+            "CFBundleVersion": app_version,
+            "LSMinimumSystemVersion": "11.0",
+            "LSUIElement": True,
+            "NSHighResolutionCapable": True,
+        },
+    )

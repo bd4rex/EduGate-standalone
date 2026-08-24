@@ -17,11 +17,17 @@ from pathlib import Path
 
 
 RESOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1])).resolve()
-APP_DIR = (
-    Path(sys.executable).resolve().parent
-    if getattr(sys, "frozen", False)
-    else RESOURCE_DIR
-)
+
+
+def default_app_dir() -> Path:
+    if not getattr(sys, "frozen", False):
+        return RESOURCE_DIR
+    if sys.platform == "darwin":
+        return (Path.home() / "Library" / "Application Support" / "EduGate").resolve()
+    return Path(sys.executable).resolve().parent
+
+
+APP_DIR = default_app_dir()
 BACKEND_DIR = RESOURCE_DIR / "backend"
 FRONTEND_DIR = RESOURCE_DIR / "frontend"
 DATA_DIR = Path(os.getenv("EDUGATE_DATA_DIR") or APP_DIR / "data").resolve()
@@ -29,7 +35,15 @@ CONFIG_PATH = Path(os.getenv("EDUGATE_CONFIG_PATH") or APP_DIR / "config" / "edu
 LEGACY_DATA_DIR = (
     Path(os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or Path.home()) / "EduGate"
 ).resolve()
-REQUIRED_BACKEND_MODULES = ("fastapi", "httpx", "uvicorn", "pydantic", "multipart", "pypdf")
+REQUIRED_BACKEND_MODULES = (
+    "fastapi",
+    "httpx",
+    "uvicorn",
+    "pydantic",
+    "multipart",
+    "pypdf",
+    "psutil",
+)
 RESTORE_ARCHIVE = DATA_DIR / "pending-restore.zip"
 RESTORABLE_FILES = {
     ".env",
@@ -53,15 +67,12 @@ def main() -> int:
         return 2
 
     apply_pending_restore(logger)
+    restrict_macos_permissions()
 
     from dotenv import load_dotenv
 
     load_dotenv(CONFIG_PATH, override=True)
-    os.environ["EDUGATE_PORTABLE_MODE"] = "true"
-    os.environ["EDUGATE_APP_DIR"] = str(APP_DIR)
-    os.environ["EDUGATE_DATA_DIR"] = str(DATA_DIR)
-    os.environ["EDUGATE_CONFIG_PATH"] = str(CONFIG_PATH)
-    os.environ["EDUGATE_FRONTEND_DIR"] = str(FRONTEND_DIR)
+    configure_app_environment()
 
     configured_port = int(os.getenv("EDUGATE_BACKEND_PORT", "8000"))
     configured_health_url = f"http://127.0.0.1:{configured_port}/health"
@@ -115,6 +126,20 @@ def main() -> int:
     return 0
 
 
+def configure_app_environment() -> None:
+    os.environ["EDUGATE_PORTABLE_MODE"] = "true"
+    os.environ["EDUGATE_APP_DIR"] = str(APP_DIR)
+    os.environ["EDUGATE_DATA_DIR"] = str(DATA_DIR)
+    os.environ["EDUGATE_CONFIG_PATH"] = str(CONFIG_PATH)
+    os.environ["EDUGATE_FRONTEND_DIR"] = str(FRONTEND_DIR)
+    if (
+        sys.platform == "darwin"
+        and getattr(sys, "frozen", False)
+        and not os.environ.get("PYTHON_RUNNER_EXECUTABLE")
+    ):
+        os.environ["PYTHON_RUNNER_EXECUTABLE"] = str(Path(sys.executable).resolve())
+
+
 def ensure_runtime_environment() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -122,6 +147,17 @@ def ensure_runtime_environment() -> None:
     example_path = BACKEND_DIR / ".env.example"
     if not CONFIG_PATH.exists() and example_path.exists():
         shutil.copyfile(example_path, CONFIG_PATH)
+    restrict_macos_permissions()
+
+
+def restrict_macos_permissions() -> None:
+    if sys.platform != "darwin":
+        return
+    for directory in {DATA_DIR, CONFIG_PATH.parent}:
+        if directory.exists():
+            directory.chmod(0o700)
+    if CONFIG_PATH.exists():
+        CONFIG_PATH.chmod(0o600)
 
 
 def migrate_legacy_data() -> bool:
@@ -272,5 +308,18 @@ def restart_process() -> None:
     )
 
 
+def run_embedded_python() -> int:
+    """Run the trusted student-runner bootstrap in an isolated app subprocess."""
+    arguments = sys.argv[1:]
+    if len(arguments) != 4 or arguments[:3] != ["-I", "-S", "-c"]:
+        print("Unsupported embedded Python invocation", file=sys.stderr)
+        return 2
+    namespace = {"__name__": "__main__", "__builtins__": __builtins__}
+    exec(compile(arguments[3], "<edugate-student-runner>", "exec"), namespace, namespace)
+    return 0
+
+
 if __name__ == "__main__":
+    if os.getenv("EDUGATE_STUDENT_RUNNER_MODE") == "1":
+        raise SystemExit(run_embedded_python())
     raise SystemExit(main())

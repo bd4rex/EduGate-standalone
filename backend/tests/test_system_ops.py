@@ -10,9 +10,25 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException, UploadFile
 
+from app import system_ops
 from app.config import settings
 from app.system_control import SystemControl
 from app.system_ops import create_backup, read_advanced_settings, save_restore_archive, update_advanced_settings
+
+
+def test_macos_opens_local_directories_with_finder(tmp_path: Path, monkeypatch) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(system_ops.sys, "platform", "darwin")
+    monkeypatch.setattr(
+        system_ops.subprocess,
+        "run",
+        lambda command, **kwargs: calls.append(command),
+    )
+
+    result = system_ops.open_local_directory(tmp_path)
+
+    assert result == {"status": "opened", "path": str(tmp_path.resolve())}
+    assert calls == [["/usr/bin/open", str(tmp_path.resolve())]]
 
 
 def test_system_control_schedules_supervisor_action() -> None:

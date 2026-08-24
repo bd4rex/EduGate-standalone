@@ -16,7 +16,7 @@ def test_teacher_launcher_is_web_only_and_windowless() -> None:
     batch = _read("desktop/run_standalone.bat").lower()
 
     assert "tkinter" not in launcher
-    assert "console=False" in spec
+    assert "console=is_macos" in spec
     assert "pythonw.exe" in batch
     assert 'start "" /b' in batch
 
@@ -33,6 +33,27 @@ def test_windows_build_version_check_is_valid_python_without_cmd_redirection_esc
 
     assert "operator.ge(sys.version_info, (3, 10))" in build
     assert "sys.version_info ^>=" not in build
+
+
+def test_macos_bundle_is_an_ad_hoc_signed_apple_silicon_app() -> None:
+    launcher = _read("desktop/edugate_standalone.py")
+    runner = _read("backend/app/python_runner.py")
+    spec = _read("desktop/edugate_standalone.spec")
+    build = _read("desktop/build_macos.sh")
+    instructions = _read("desktop/MACOS-README.txt")
+
+    assert (ROOT / "desktop/assets/edugate.icns").is_file()
+    assert 'Path.home() / "Library" / "Application Support" / "EduGate"' in launcher
+    assert 'not os.environ.get("PYTHON_RUNNER_EXECUTABLE")' in launcher
+    assert 'os.environ["PYTHON_RUNNER_EXECUTABLE"]' in launcher
+    assert '"EDUGATE_STUDENT_RUNNER_MODE": "1"' in runner
+    assert 'name="EduGate.app"' in spec
+    assert 'bundle_identifier="com.bd4rex.edugate.standalone"' in spec
+    assert 'codesign --verify --deep --strict' in build
+    assert "macos-arm64" in build
+    assert "--norsrc --noextattr --noqtn --noacl" in build
+    assert "--sequesterRsrc" not in build
+    assert "未使用 Apple Developer ID 公证" in instructions
 
 
 def test_windows_bundle_is_a_copyable_portable_classroom_folder() -> None:
@@ -382,9 +403,9 @@ def test_brand_assets_are_used_by_docs_web_and_windows_bundle() -> None:
         page = _read(f"frontend/{page_name}")
         assert 'rel="icon" href="assets/brand/edugate-icon.svg"' in page
         assert 'src="assets/brand/edugate-icon.svg"' in page
-    assert 'icon=str(root / "desktop" / "assets" / "edugate.ico")' in _read(
-        "desktop/edugate_standalone.spec"
-    )
+    spec = _read("desktop/edugate_standalone.spec")
+    assert '"edugate.icns" if is_macos else "edugate.ico"' in spec
+    assert "icon=str(icon_path)" in spec
 
 
 def test_current_project_docs_are_indexed_without_dated_report_copies() -> None:

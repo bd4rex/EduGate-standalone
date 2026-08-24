@@ -1,6 +1,7 @@
 .env
 .venv/
 .venv-build/
+.venv-build-macos/
 .venv-bootstrap/
 .venv-test/
 .venv-test312/

@@ -8,7 +8,7 @@
   <strong>中文</strong> · <a href="README.en.md">English</a>
 </p>
 
-EduGate 在教师的 64 位 Windows 电脑上运行，面向单教师、单节课或小型课堂。教师用 Web 控制台配置模型、知识库和课堂策略；学生通过局域网课堂链接加入。管理数据、课堂记录和知识库保存在教师电脑中。
+EduGate 在教师的 64 位 Windows 电脑或 Apple 芯片 Mac 上运行，面向单教师、单节课或小型课堂。教师用 Web 控制台配置模型、知识库和课堂策略；学生通过局域网课堂链接加入。管理数据、课堂记录和知识库保存在教师电脑中。
 
 它也可以作为教室内的 AI 中转站：为后端应用提供 OpenAI-compatible API，为学习单和网页课件提供带学生会话隔离的流式接口。
 
@@ -26,21 +26,33 @@ EduGate 在教师的 64 位 Windows 电脑上运行，面向单教师、单节�
 
 ### 打包版
 
-1. 解压完整 `EduGate-Standalone` 文件夹，不要只复制 EXE。
-2. 双击 `EduGate-Standalone.exe`，本机浏览器会打开教师控制台。
+1. Windows：解压完整 `EduGate-Standalone` 文件夹，不要只复制 EXE；双击 `EduGate-Standalone.exe`。
+2. Apple 芯片 Mac：解压 ZIP，可把 `EduGate.app` 拖入“应用程序”；首次启动时按住 Control 点击应用并选择“打开”。
 3. 在“系统”中添加模型供应商并导入模型。
 4. 正式教学可在“系统 → 教学网页发布”上传 HTML/ZIP；不上传时入口使用内置 Demo 测试页。
 5. 在“控制”中配置课堂并点击“开始课堂”，再复制链接或二维码发给学生；下课点击“结束课堂”。
 
-便携版初始账号为 `admin`、密码为 `edugate`。本机默认自动进入，首次使用后仍建议修改密码。程序数据位于同目录的 `config` 和 `data`；迁移前先在“系统”页停止服务，再复制完整文件夹。
+打包版初始账号为 `admin`、密码为 `edugate`。本机默认自动进入，首次使用后仍建议修改密码。Windows 数据位于程序同目录的 `config` 和 `data`；macOS 数据位于 `~/Library/Application Support/EduGate`。迁移前先在“系统”页停止服务并创建备份。
+
+macOS 为支持本机备份和迁移，模型密钥使用可迁移的便携格式保存；目录权限限制为当前用户访问。不要共享整个 EduGate 数据目录，也不要把它上传到公开网盘或代码仓库。
+
+当前 macOS Release 支持 macOS 11+ 的 Apple Silicon（arm64），不支持 Intel Mac。发布包采用 ad-hoc 签名，未使用 Apple Developer ID 公证，因此首次启动需要使用上面的 Control 点击打开方式。
 
 ### 源码版
 
-安装 64 位 Python 3.10 或更高版本，然后运行：
+安装 64 位 Python 3.10 或更高版本。Windows 可运行：
 
 ```text
 desktop\install_backend_deps.bat
 desktop\run_standalone.bat
+```
+
+macOS 可运行：
+
+```bash
+python3 -m venv runtime/venv
+runtime/venv/bin/python -m pip install -r backend/requirements.txt
+runtime/venv/bin/python desktop/edugate_standalone.py
 ```
 
 ## 学生如何分发
@@ -155,10 +167,11 @@ EduGate-standalone/
 │  ├─ assets/edugate-client.js  # 教学网页流式接入 SDK
 │  └─ assets/brand/             # EduGate 图标和横向标识
 ├─ desktop/
-│  ├─ edugate_standalone.py     # Windows 后台监督启动器
+│  ├─ edugate_standalone.py     # Windows / macOS 后台监督启动器
 │  ├─ run_standalone.bat        # 源码日常启动
 │  ├─ install_backend_deps.bat  # Python 3.10+ 依赖环境安装
-│  └─ build_windows.bat         # Windows 便携目录打包
+│  ├─ build_windows.bat         # Windows 便携目录打包
+│  └─ build_macos.sh            # macOS Apple Silicon 应用打包
 ├─ docs/                        # 使用、安装、安全和开发文档
 ├─ samples/                     # 示例资料
 └─ .github/workflows/           # Python 3.10 / 3.12 回归测试
@@ -166,7 +179,7 @@ EduGate-standalone/
 
 `app/core.py` 只保留旧导入路径兼容；新增功能应放入对应服务或路由模块。
 
-打包版首次运行后会在 EXE 旁创建 `config/` 和 `data/`。它们包含密码设置、数据库、知识库、教学网页、模型密钥和课堂记录，不属于源码目录，也不应提交到 GitHub。
+Windows 打包版首次运行后会在 EXE 旁创建 `config/` 和 `data/`；macOS 打包版使用 `~/Library/Application Support/EduGate`。这些目录包含密码设置、数据库、知识库、教学网页、模型密钥和课堂记录，不属于源码目录，也不应提交到 GitHub。
 
 ## 开发验证
 
@@ -175,7 +188,7 @@ python -m pytest -q -p no:cacheprovider -m "not e2e" --basetemp=.pytest-tmp --co
 python -m compileall -q backend\app
 ```
 
-Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-Standalone`。
+Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-Standalone`。Apple Silicon Mac 打包运行 `EDUGATE_VERSION=2.2.0 desktop/build_macos.sh`，输出 `.app` 和可发布 ZIP。
 
 ## 文档
 

@@ -31,6 +31,18 @@ def test_python_runner_timeout() -> None:
     assert "程序运行超时" in result.stderr
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS uses the RSS watchdog")
+def test_macos_python_runner_enforces_memory_limit() -> None:
+    result = run_python_code(
+        "payload = 'x' * (128 * 1024 * 1024)\nwhile True:\n    pass",
+        memory_limit_mb=64,
+    )
+
+    assert result.exit_code == 137
+    assert result.timed_out is False
+    assert "程序使用内存过多" in result.stderr
+
+
 def test_python_runner_emits_output_before_process_completion() -> None:
     first_output = threading.Event()
     holder = {}
@@ -54,6 +66,27 @@ def test_python_runner_emits_output_before_process_completion() -> None:
     assert holder["result"].timed_out is True
 
 
+def test_python_runner_truncates_both_streams_and_ignores_callback_errors() -> None:
+    def broken_callback(stream: str, content: str) -> None:
+        raise RuntimeError(f"callback failed for {stream}: {content}")
+
+    stdout_result = run_python_code(
+        "print('x' * 200)",
+        output_limit=24,
+        on_output=broken_callback,
+    )
+    stderr_result = run_python_code(
+        "raise ValueError('x' * 200)",
+        output_limit=24,
+        on_output=broken_callback,
+    )
+
+    assert len(stdout_result.stdout) == 24
+    assert "输出过长，已截断" in stdout_result.stderr
+    assert len(stderr_result.stderr.split("\n错误输出过长", 1)[0]) == 24
+    assert "错误输出过长，已截断" in stderr_result.stderr
+
+
 def test_python_runner_does_not_inherit_application_secrets(monkeypatch) -> None:
     monkeypatch.setenv("UPSTREAM_API_KEY", "must-not-enter-student-process")
     monkeypatch.setenv("LITELLM_API_KEY", "must-not-enter-student-process")
@@ -62,6 +95,7 @@ def test_python_runner_does_not_inherit_application_secrets(monkeypatch) -> None
 
     assert "UPSTREAM_API_KEY" not in env
     assert "LITELLM_API_KEY" not in env
+    assert env["EDUGATE_STUDENT_RUNNER_MODE"] == "1"
     assert env["PYTHONIOENCODING"] == "utf-8"
     assert env["PYTHONUNBUFFERED"] == "1"
 

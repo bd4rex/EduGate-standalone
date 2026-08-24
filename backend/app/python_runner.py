@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+import psutil
+
 if os.name == "nt":
     import ctypes
     from ctypes import wintypes
@@ -388,6 +390,15 @@ def run_python_code(
             )
             if os.name == "nt":
                 job_handle = _assign_windows_job(process, memory_limit_mb)
+            memory_exceeded = threading.Event()
+            memory_monitor = None
+            if sys.platform == "darwin":  # pragma: no cover - exercised by the macOS bundle smoke test
+                memory_monitor = threading.Thread(
+                    target=_monitor_macos_memory,
+                    args=(process, memory_limit_mb, memory_exceeded),
+                    daemon=True,
+                )
+                memory_monitor.start()
             assert process.stdin is not None and process.stdout is not None and process.stderr is not None
             output: dict[str, list[str]] = {"stdout": [], "stderr": []}
             output_lengths = {"stdout": 0, "stderr": 0}
@@ -442,6 +453,8 @@ def run_python_code(
                 process.wait()
             for reader in readers:
                 reader.join(timeout=2)
+            if memory_monitor is not None:
+                memory_monitor.join(timeout=1)
 
             stdout = "".join(output["stdout"])
             stderr = "".join(output["stderr"])
@@ -454,10 +467,15 @@ def run_python_code(
                 stderr = (stderr + "\n" + timeout_message).strip()
                 if on_output:
                     on_output("stderr", f"\n{timeout_message}\n")
+            if memory_exceeded.is_set():  # pragma: no cover - exercised by the macOS bundle smoke test
+                memory_message = "程序使用内存过多，已终止。"
+                stderr = (stderr + "\n" + memory_message).strip()
+                if on_output:
+                    on_output("stderr", f"\n{memory_message}\n")
             return PythonRunResult(
                 stdout=stdout,
                 stderr=stderr,
-                exit_code=124 if timed_out else int(process.returncode or 0),
+                exit_code=137 if memory_exceeded.is_set() else (124 if timed_out else int(process.returncode or 0)),
                 timed_out=timed_out,
                 duration_ms=int((time.perf_counter() - start) * 1000),
             )
@@ -549,12 +567,19 @@ def _runner_environment(python_executable: str | None = None) -> dict[str, str]:
         path_entries.extend([str(Path(system_root) / "System32"), system_root])
     if path_entries:
         env["PATH"] = os.pathsep.join(dict.fromkeys(path_entries))
-    env.update({"PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1", "PYTHONUNBUFFERED": "1"})
+    env.update(
+        {
+            "EDUGATE_STUDENT_RUNNER_MODE": "1",
+            "PYTHONIOENCODING": "utf-8",
+            "PYTHONUTF8": "1",
+            "PYTHONUNBUFFERED": "1",
+        }
+    )
     return env
 
 
 def _unix_memory_limit(memory_limit_mb: int):
-    if os.name == "nt":
+    if os.name == "nt" or sys.platform == "darwin":
         return None
 
     def apply_limit() -> None:
@@ -564,6 +589,27 @@ def _unix_memory_limit(memory_limit_mb: int):
         resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
 
     return apply_limit
+
+
+def _monitor_macos_memory(
+    process: subprocess.Popen[bytes],
+    memory_limit_mb: int,
+    exceeded: threading.Event,
+) -> None:  # pragma: no cover - exercised by the macOS bundle smoke test
+    limit = memory_limit_mb * 1024 * 1024
+    try:
+        monitored = psutil.Process(process.pid)
+    except (psutil.Error, OSError):
+        return
+    while process.poll() is None:
+        try:
+            if monitored.memory_info().rss > limit:
+                exceeded.set()
+                process.kill()
+                return
+        except (psutil.Error, OSError, ProcessLookupError):
+            return
+        time.sleep(0.02)
 
 
 if os.name == "nt":

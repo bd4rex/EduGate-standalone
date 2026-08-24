@@ -6,6 +6,8 @@ import os
 import shutil
 import socket
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import time
 import zipfile
@@ -112,12 +114,23 @@ def open_local_directory(path: Path, *, missing_detail: str = "Directory does no
     directory = path.resolve()
     if not directory.is_dir():
         raise HTTPException(status_code=404, detail=missing_detail)
-    startfile = getattr(os, "startfile", None)
-    if os.name != "nt" or not callable(startfile):
-        raise HTTPException(status_code=501, detail="Opening the application directory requires Windows")
     try:
-        startfile(str(directory))
-    except OSError as error:
+        if sys.platform == "darwin":
+            subprocess.run(
+                ["/usr/bin/open", str(directory)],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            startfile = getattr(os, "startfile", None)
+            if os.name != "nt" or not callable(startfile):
+                raise HTTPException(
+                    status_code=501,
+                    detail="Opening a local directory is not supported on this platform",
+                )
+            startfile(str(directory))
+    except (OSError, subprocess.CalledProcessError) as error:
         raise HTTPException(status_code=500, detail="Could not open the directory") from error
     return {"status": "opened", "path": str(directory)}
 

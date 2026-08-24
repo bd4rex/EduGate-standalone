@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import logging
+import os
+import stat
+import sys
 import zipfile
 from pathlib import Path
 
@@ -117,3 +120,57 @@ def test_first_available_port_skips_an_occupied_port() -> None:
         occupied.listen()
         port = occupied.getsockname()[1]
         assert launcher.first_available_port(port, attempts=2) == port + 1
+
+
+def test_macos_frozen_app_uses_application_support(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+
+    assert launcher.default_app_dir() == (
+        Path.home() / "Library" / "Application Support" / "EduGate"
+    ).resolve()
+
+
+def test_macos_frozen_app_replaces_empty_student_runner_setting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", "/Applications/EduGate.app/Contents/MacOS/EduGate-Standalone")
+    monkeypatch.setenv("PYTHON_RUNNER_EXECUTABLE", "")
+
+    launcher.configure_app_environment()
+
+    assert os.environ["PYTHON_RUNNER_EXECUTABLE"] == (
+        "/Applications/EduGate.app/Contents/MacOS/EduGate-Standalone"
+    )
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS permission contract")
+def test_macos_runtime_configuration_is_private(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data_dir = tmp_path / "data"
+    config_path = tmp_path / "config" / "edugate.env"
+    monkeypatch.setattr(launcher, "DATA_DIR", data_dir)
+    monkeypatch.setattr(launcher, "CONFIG_PATH", config_path)
+
+    launcher.ensure_runtime_environment()
+
+    assert stat.S_IMODE(data_dir.stat().st_mode) == 0o700
+    assert stat.S_IMODE(config_path.parent.stat().st_mode) == 0o700
+    assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
+
+
+def test_embedded_python_accepts_only_the_runner_cli_shape(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["EduGate", "-I", "-S", "-c", "print('ready')"])
+    assert launcher.run_embedded_python() == 0
+    assert capsys.readouterr().out == "ready\n"
+
+    monkeypatch.setattr(sys, "argv", ["EduGate", "-c", "print('unsafe')"])
+    assert launcher.run_embedded_python() == 2
+    assert "Unsupported embedded Python invocation" in capsys.readouterr().err

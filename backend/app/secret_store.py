@@ -81,6 +81,8 @@ class SecretStore:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temp, self.path)
+        if os.name != "nt":
+            os.chmod(self.path, 0o600)
 
 
 if os.name == "nt":
