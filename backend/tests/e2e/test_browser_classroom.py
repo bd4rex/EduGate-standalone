@@ -210,7 +210,10 @@ def test_teacher_student_stream_record_and_revocation_in_a_real_browser(live_cla
             teacher.locator("#classroom-state").filter(has_text="已暂停").wait_for()
             assert teacher.locator("#classroom-url").input_value() == distributed_url
             student.reload(wait_until="domcontentloaded")
-            student.locator("#statusBar").filter(has_text="加入课堂失败").wait_for(timeout=10_000)
+            student.locator("#classroomGate").wait_for(state="visible")
+            student.locator("#classroomGateMessage").filter(
+                has_text="课堂尚未开始或已经结束"
+            ).wait_for(timeout=10_000)
 
             teacher.locator("#start-class").click()
             teacher.locator("#classroom-state").filter(has_text="已开放").wait_for()
