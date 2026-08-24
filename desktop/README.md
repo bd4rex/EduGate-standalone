@@ -47,9 +47,9 @@ dist\EduGate-Standalone\
 Apple Silicon Mac 运行：
 
 ```bash
-EDUGATE_VERSION=2.2.0 desktop/build_macos.sh
+EDUGATE_VERSION=2.1.0 desktop/build_macos.sh
 ```
 
-脚本生成 `dist/EduGate.app` 和 `dist/EduGate-Standalone-v2.2.0-macos-arm64.zip`，执行 ad-hoc 签名并验证应用包结构。没有 Apple Developer ID 时无法完成公证，发布说明必须保留首次 Control 点击打开的提示。
+脚本生成 `dist/EduGate.app` 和 `dist/EduGate-Standalone-v2.1.0-macos-arm64.zip`，执行 ad-hoc 签名并验证应用包结构。没有 Apple Developer ID 时无法完成公证，发布说明必须保留首次 Control 点击打开的提示。
 
 发布和验收步骤见 [开发与测试](../docs/开发与测试.md)。

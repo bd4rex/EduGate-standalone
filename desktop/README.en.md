@@ -25,9 +25,9 @@ runtime/venv/bin/python desktop/edugate_standalone.py
 Run `build_windows.bat` for the Windows portable folder. On Apple Silicon, run:
 
 ```bash
-EDUGATE_VERSION=2.2.0 desktop/build_macos.sh
+EDUGATE_VERSION=2.1.0 desktop/build_macos.sh
 ```
 
-The macOS script creates `dist/EduGate.app` and `dist/EduGate-Standalone-v2.2.0-macos-arm64.zip`, applies an ad-hoc signature, and verifies the bundle. Without an Apple Developer ID certificate the app cannot be notarized, so the release instructions must retain the first-launch Control-click guidance.
+The macOS script creates `dist/EduGate.app` and `dist/EduGate-Standalone-v2.1.0-macos-arm64.zip`, applies an ad-hoc signature, and verifies the bundle. Without an Apple Developer ID certificate the app cannot be notarized, so the release instructions must retain the first-launch Control-click guidance.
 
 See the [Chinese development and testing guide](../docs/开发与测试.md) for release acceptance checks.

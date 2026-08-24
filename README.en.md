@@ -68,4 +68,4 @@ python -m compileall -q backend\app
 
 The backend is split into application composition (`main.py`), shared state, dependencies, chat services, a published-page store, schemas, runtime configuration, and domain routers. See the [Chinese documentation index](docs/README.md) and the [teaching page publishing guide](docs/教学网页发布.md) for the maintained operations, security, and development guides.
 
-Build the Windows folder with `desktop\build_windows.bat`. On Apple Silicon, run `EDUGATE_VERSION=2.2.0 desktop/build_macos.sh` to produce the signed `.app` and release ZIP.
+Build the Windows folder with `desktop\build_windows.bat`. On Apple Silicon, run `EDUGATE_VERSION=2.1.0 desktop/build_macos.sh` to produce the signed `.app` and release ZIP.

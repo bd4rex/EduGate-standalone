@@ -188,7 +188,7 @@ python -m pytest -q -p no:cacheprovider -m "not e2e" --basetemp=.pytest-tmp --co
 python -m compileall -q backend\app
 ```
 
-Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-Standalone`。Apple Silicon Mac 打包运行 `EDUGATE_VERSION=2.2.0 desktop/build_macos.sh`，输出 `.app` 和可发布 ZIP。
+Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-Standalone`。Apple Silicon Mac 打包运行 `EDUGATE_VERSION=2.1.0 desktop/build_macos.sh`，输出 `.app` 和可发布 ZIP。
 
 ## 文档
 
