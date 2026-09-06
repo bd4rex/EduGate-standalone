@@ -446,7 +446,7 @@ def test_openai_compatible_endpoint_is_disabled_without_platform_key(client: Tes
     assert response.status_code == 503
 
 
-def test_model_api_key_is_encrypted_and_never_returned(
+def test_model_api_key_storage_matches_secret_store_mode_and_is_never_returned(
     client: TestClient,
     admin_headers: dict[str, str],
 ) -> None:
@@ -468,7 +468,11 @@ def test_model_api_key_is_encrypted_and_never_returned(
     assert "api_key" not in response.json()
     assert response.json()["api_key_set"] is True
     assert api_key not in Path(settings.runtime_config_path).read_text(encoding="utf-8")
-    assert api_key not in Path(settings.secret_store_path).read_text(encoding="utf-8")
+    secret_payload = Path(settings.secret_store_path).read_text(encoding="utf-8")
+    if secret_store.mode == "portable":
+        assert json.loads(secret_payload)["format"] == "portable-plain-v1"
+    else:
+        assert api_key not in secret_payload
     assert secret_store.get(f"model:{model_id}") == api_key
     runtime_config.delete_model(model_id)
 

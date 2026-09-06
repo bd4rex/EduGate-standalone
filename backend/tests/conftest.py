@@ -45,7 +45,7 @@ os.environ["EDUGATE_FRONTEND_DIR"] = str(_PROJECT_ROOT / "frontend")
 os.environ["EDUGATE_MODE"] = "standalone"
 os.environ["EDUGATE_PORTABLE_MODE"] = "false"
 os.environ["PORTABLE_AUTO_LOGIN"] = "false"
-os.environ["SECRET_STORE_MODE"] = "dpapi"
+os.environ["SECRET_STORE_MODE"] = "dpapi" if os.name == "nt" else "portable"
 os.environ["UPSTREAM_BASE_URL"] = ""
 os.environ["UPSTREAM_API_KEY"] = ""
 os.environ["PLATFORM_API_KEY"] = ""

@@ -63,7 +63,7 @@ def test_knowledge_delete_rejects_unsafe_stored_paths(tmp_path, path):
     assert store.get_file(item.id).id == item.id
 
 
-@pytest.mark.parametrize("mode", ["portable", "dpapi"])
+@pytest.mark.parametrize("mode", ["portable", pytest.param("dpapi", marks=pytest.mark.skipif(os.name != "nt", reason="DPAPI is Windows-only"))])
 def test_disabled_secret_override_survives_reload_and_copy(tmp_path, mode):
     store = SecretStore(str(tmp_path / "secrets.json"), mode=mode)
     assert store.get("platform", default="env-key") == "env-key"
