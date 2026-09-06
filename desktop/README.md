@@ -9,7 +9,7 @@
 学生页面    http://教师电脑局域网IP:实际端口/student.html#...
 ```
 
-打包版包含后端依赖和 `runtime\python` 学生代码解释器，不需要预装 Python。运行数据位于 EXE 旁的 `config` 和 `data`。
+打包版包含后端依赖和离线 Pyodide/WASM，不需要预装 Python。学生代码仅在学生浏览器内执行，教师端不再提供学生解释器。运行数据位于 EXE 旁的 `config` 和 `data`。
 
 教师端默认只允许本机访问；学生设备不能使用本机自动登录，也不能调用管理 API。
 
@@ -30,8 +30,8 @@
 dist\EduGate-Standalone\
   EduGate-Standalone.exe
   README.txt
-  runtime\python\python.exe
   _internal\
+    frontend\assets\vendor\pyodide\
 ```
 
 发布和验收步骤见 [开发与测试](../docs/开发与测试.md)。

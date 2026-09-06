@@ -593,8 +593,21 @@
         </div>
       </aside>
     </div>
+    <section class="card" style="margin-top:20px;padding:24px">
+      <h2 style="margin-top:0">浏览器 Python Demo</h2>
+      <p class="hint">代码只在这台学生设备的隔离浏览器环境中运行，不在教师电脑执行。支持 Python 标准库；首次运行从教师电脑加载离线环境。</p>
+      <textarea id="pythonCode" class="thinking-area" aria-label="Python 代码" spellcheck="false">print("你好，Python！")
+for i in range(3):
+    print(i * i)</textarea>
+      <div class="footer-actions">
+        <button id="runPythonBtn" class="btn btn-primary">运行 Python</button>
+        <button id="stopPythonBtn" class="btn" disabled>停止 Python</button>
+      </div>
+      <pre id="pythonOutput" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere;min-height:50px">等待运行。</pre>
+    </section>
   </div>
 
+  <script src="assets/edugate-client.js"></script>
   <script>
     /*
       ============================================
@@ -700,6 +713,38 @@
     const deviceId = loadOrCreateDeviceId();
     let classroomReady = false;
     let activeController = null;
+    let pythonController = null;
+    const pythonOutput = document.querySelector("#pythonOutput");
+    const runPythonButton = document.querySelector("#runPythonBtn");
+    const stopPythonButton = document.querySelector("#stopPythonBtn");
+    runPythonButton.addEventListener("click", async () => {
+      if (!classroomReady || pythonController) return;
+      pythonController = new AbortController();
+      runPythonButton.disabled = true;
+      stopPythonButton.disabled = false;
+      pythonOutput.textContent = "正在加载浏览器 Python……\n";
+      const client = new EduGateClient({baseUrl: BACKEND_BASE_URL, classToken: CLASS_TOKEN, studentToken, deviceId});
+      try {
+        let hasOutput = false;
+        const result = await client.runPython(document.querySelector("#pythonCode").value, {
+          signal: pythonController.signal,
+          onOutput: (_, content) => {
+            if (!hasOutput) { pythonOutput.textContent = ""; hasOutput = true; }
+            pythonOutput.textContent += content;
+          },
+        });
+        pythonOutput.textContent = result.stdout + result.stderr + `\n退出码：${result.exit_code} · ${result.duration_ms} ms`;
+      } catch (error) {
+        pythonOutput.textContent += error.name === "AbortError" ? "\n已停止运行。" : `\n运行失败：${error.message}`;
+      } finally {
+        studentToken = client.studentToken;
+        saveStoredStudentToken(studentToken);
+        pythonController = null;
+        runPythonButton.disabled = false;
+        stopPythonButton.disabled = true;
+      }
+    });
+    stopPythonButton.addEventListener("click", () => pythonController?.abort());
 
     const chatHistoryEl = document.getElementById("chatHistory");
     const chatInputEl = document.getElementById("chatInput");

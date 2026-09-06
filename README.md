@@ -19,6 +19,7 @@ EduGate 在教师的 64 位 Windows 电脑上运行，面向单教师、单节�
 - 默认 `ALLOW_LAN_ADMIN=false`：教师管理页、登录和管理 API 只允许教师本机访问。平板管理需同时启用局域网管理并把设备 IP 加入 `ADMIN_ALLOWED_IPS`。
 - 学生页面可在同一局域网访问；课堂令牌持久保存，开课、下课和程序重启都不改变链接。下课会撤销当前学生会话，主动换链才会淘汰旧链接。
 - 源码要求 Python 3.10+；打包版自带运行环境，不要求教师电脑安装 Python。
+- 学生 Python 在学生浏览器的独立 Worker 中执行，离线运行环境随项目分发；教师服务器只下发策略和接收标明“不可信上报”的结果，不再执行学生代码。
 - 下游后端使用独立平台密钥；浏览器网页只能用课堂令牌换取学生会话，不能接触平台密钥。
 - 教师可在系统页上传 HTML/ZIP 并发布为正式学生入口；内置 IP 学习单仅为 Demo，课堂未开始时两类页面都不能使用课堂服务。
 
@@ -63,6 +64,8 @@ http://教师电脑局域网IP:端口/published.html#class_token=...&page=...
 
 学生无需填写姓名或电脑名。浏览器会生成稳定设备标识，服务据此创建设备标签和独立学生会话。详细流程见 [使用手册](docs/使用手册.md) 和 [架构与安全边界](docs/架构与安全边界.md)。
 
+局域网地址从已连接的非虚拟 IPv4 网卡中自动选择，避免把 VPN/TUN 地址作为入口。多网卡时可在“系统 → 高级设置 → 学生入口 IP”选择或填写 `LAN_ADVERTISE_IP`，保存并重启。该项只决定分发地址，不改变监听地址或教师 IP 白名单。
+
 ## 下游接口与网页嵌入
 
 教师端“系统 → 下游接口与网页嵌入”提供可复制配置和代码：
@@ -70,6 +73,7 @@ http://教师电脑局域网IP:端口/published.html#class_token=...&page=...
 - 后端程序：`GET /v1/models`、`POST /v1/chat/completions`，使用 `Authorization: Bearer <平台密钥>`；Base URL 为 `http://教师IP:端口/v1`，稳定模型名为 `edugate`。
 - 教学网页：加载 `assets/edugate-client.js`，用持久 `class_token` 换取独立 `X-Student-Token`，再调用 `/chat/stream` 获取 SSE 流式回答。
 - 托管教学网页：在系统页上传 HTML/ZIP，EduGate 通过隔离沙箱发布，并向网页提供 `EduGate.ask()` 流式桥接；控制页链接和二维码自动切换到活动网页。
+- Python：外部网页使用 `EduGateClient.runPython()`，托管网页使用 `EduGate.runPython()`；均在学生设备内执行。旧 `/run_python`、`/run_python/stream` 在鉴权后返回 **410 Gone**，接入方需迁移。
 
 `edugate` 会执行教师当前选择的上游模型、提示词和知识库，下游无需在教师调整策略后修改代码。平台密钥只能放在可信后端；网页源码中的课堂令牌只授予学生范围。外部网页跨域调用需要在高级设置填写准确的 `CORS_ORIGINS` 并重启服务。完整示例见 [下游接口与网页嵌入](docs/下游接口与网页嵌入.md)。
 
@@ -86,13 +90,14 @@ flowchart LR
 
     subgraph gateway["EduGate 权限边界"]
         admin_api["教师管理范围<br/>模型与供应商、课堂策略、知识库<br/>网页发布、课堂启停与记录、备份和系统设置"]
-        classroom_api["学生课堂范围<br/>打开活动网页、加入课堂、AI 对话、Python 运行"]
+        classroom_api["学生课堂范围<br/>打开活动网页、加入课堂、AI 对话<br/>获取 Python 策略、上报结果"]
         platform_api["平台接口范围<br/>/v1/models、/v1/chat/completions"]
         public_surface["公共范围<br/>/health、/auth/status、学生静态页"]
     end
 
     teacher -->|"本机或精确 IP 白名单<br/>X-Admin-Token 教师会话"| admin_api
     student -->|"教师 IP + 持久 class_token<br/>换取 X-Student-Token"| classroom_api
+    student --> browser_python["学生设备内<br/>隔离 Worker 执行 Python<br/>无教师文件系统或凭证桥接"]
     platform -->|"Authorization: Bearer PLATFORM_API_KEY"| platform_api
     anonymous -->|"无鉴权；不包含管理能力"| public_surface
 
@@ -105,13 +110,15 @@ flowchart LR
 | 角色 | 权限范围 | 鉴权方式 | 默认网络范围 |
 | --- | --- | --- | --- |
 | 教师管理员 | 模型供应商、课堂策略、知识库、教学网页发布、课堂启停、课堂记录、备份和系统设置 | 登录或本机自动登录后使用 `X-Admin-Token`；管理 API 同时校验来源 IP | 默认仅教师电脑；平板管理需设置 `ALLOW_LAN_ADMIN=true` 和精确 `ADMIN_ALLOWED_IPS` 白名单 |
-| 学生 | 打开当前活动教学网页、加入当前课堂、AI 对话、受控 Python 运行 | 教师 IP 定位服务；活动网页和加入流程校验持久 `class_token`，再换取独立 `X-Student-Token` | 未开课、下课时页面/学生会话不可用；再次开课时原链接恢复；主动换链后旧链接永久失效 |
+| 学生 | 打开当前活动教学网页、加入课堂、AI 对话；浏览器内运行 Python 并上报结果 | 教师 IP 定位服务；持久 `class_token` 换取绑定课次的 `X-Student-Token` | 结束/重开/换链撤销旧会话并取消旧 AI 请求；旧 Python 结果不得写入新课次；浏览器本地计算不代表服务器权限 |
 | 平台集成 | 查询虚拟模型并调用 `/v1/chat/completions`，执行当前教师策略 | `Authorization: Bearer PLATFORM_API_KEY` | 取决于服务监听地址；未配置平台密钥时接口关闭；密钥不得嵌入网页 |
 | 未认证访问者 | 健康状态、初始化状态和允许公开的静态资源 | 无 | 教师管理页、API 文档和管理接口仍受来源与会话保护 |
 
 IP 白名单是局域网准入控制，不是可替代密码的身份认证：设备 IP 可能因 DHCP 变化，也可能在不可信网络中被冒用。因此白名单设备仍需教师账号和 `X-Admin-Token`，建议给管理平板设置 DHCP 地址保留。
 
 `class_token`、`X-Student-Token`、`X-Admin-Token` 和 `PLATFORM_API_KEY` 都属于 Bearer 凭证，应避免写入公开日志、截图或公开二维码服务。持久课堂令牌保存在 `data/secrets.json`，随完整备份和便携目录迁移。
+
+关闭平台接口会持久保存“禁用”状态，即使环境中仍有 `PLATFORM_API_KEY`，重启或迁移后也不会自动恢复；需主动保存或生成新密钥。已发出的上游请求无法追溯撤回，关闭影响后续平台请求。
 
 ## 代码结构
 
@@ -120,12 +127,14 @@ EduGate-standalone/
 ├─ backend/
 │  ├─ app/
 │  │  ├─ main.py                # FastAPI 装配、中间件、路由注册和静态页面挂载
-│  │  ├─ config.py              # 环境变量和 Python 运行配置
+│  │  ├─ config.py              # 环境变量和浏览器 Python 策略配置
 │  │  ├─ state.py               # 应用生命周期及共享服务实例
 │  │  ├─ dependencies.py        # 教师、学生和平台接口鉴权依赖
 │  │  ├─ schemas.py             # Pydantic 请求、响应和持久化模型
 │  │  ├─ runtime_config.py      # 模型目录与唯一 default 课堂策略
 │  │  ├─ chat_service.py        # 模型路由、知识检索、普通及流式对话
+│  │  ├─ classroom_tasks.py     # 课次撤销、排队取消与流式任务生命周期
+│  │  ├─ network.py             # 本机网卡枚举和学生入口 IP 选择
 │  │  ├─ published_pages.py     # 教学网页校验、存储、活动入口和资源约束
 │  │  ├─ api_docs.py            # OpenAPI 标签和接口说明
 │  │  ├─ core.py                # 旧导入路径兼容门面；不承载新业务
@@ -136,12 +145,11 @@ EduGate-standalone/
 │  │  │  ├─ config.py           # 当前课堂模型和策略配置
 │  │  │  ├─ knowledge.py        # 知识库来源、文件和索引管理
 │  │  │  ├─ models.py           # 模型供应商、发现、导入和删除
-│  │  │  ├─ python.py           # 受控 Python 普通及流式执行
+│  │  │  ├─ python.py           # 浏览器执行策略、结果上报及运行环境资源
 │  │  │  ├─ publishing.py       # 教学网页上传、切换、删除和学生读取
 │  │  │  └─ system.py           # 状态、日志、备份、恢复和服务控制
 │  │  ├─ db.py                  # SQLite 管理状态、请求日志和课堂记录
 │  │  ├─ knowledge.py           # 本地资料解析、切片和检索
-│  │  ├─ python_runner.py       # 有界队列与隔离 Python 子进程
 │  │  ├─ litellm_client.py      # OpenAI-compatible 上游 HTTP 客户端
 │  │  ├─ security.py            # 会话、课堂令牌和限流基础设施
 │  │  └─ system_ops.py          # 备份、恢复、目录与高级设置
@@ -152,7 +160,10 @@ EduGate-standalone/
 │  ├─ admin.html                # 教师控制台
 │  ├─ student.html              # 内置 Demo 测试页
 │  ├─ published.html            # 教学网页安全包装页和流式桥接
-│  ├─ assets/edugate-client.js  # 教学网页流式接入 SDK
+│  ├─ assets/edugate-client.js  # AI 流式与浏览器 Python 接入 SDK
+│  ├─ assets/edugate-python.js  # 浏览器执行控制、实时输出、超时和停止
+│  ├─ assets/python-sandbox.js # 无同源权限 iframe 内的 Worker 控制器
+│  ├─ assets/vendor/pyodide/    # 固定版本的离线 Python/WASM 和许可说明
 │  └─ assets/brand/             # EduGate 图标和横向标识
 ├─ desktop/
 │  ├─ edugate_standalone.py     # Windows 后台监督启动器
@@ -167,6 +178,8 @@ EduGate-standalone/
 `app/core.py` 只保留旧导入路径兼容；新增功能应放入对应服务或路由模块。
 
 打包版首次运行后会在 EXE 旁创建 `config/` 和 `data/`。它们包含密码设置、数据库、知识库、教学网页、模型密钥和课堂记录，不属于源码目录，也不应提交到 GitHub。
+
+知识库索引使用相对路径；升级时将可识别的旧绝对路径转换为当前知识库目录内的路径。复制后的程序只操作自己的资料，拒绝越界路径和目录链接。无法安全转换的异常历史索引会报错，不会访问原位置。
 
 ## 开发验证
 

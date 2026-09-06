@@ -842,109 +842,35 @@ def test_removed_multi_teacher_and_legacy_catalog_apis_return_not_found(
     assert client.get("/teacher/classroom-records", headers=admin_headers).status_code == 404
 
 
-def test_python_runner_is_disabled_by_default(
-    client: TestClient,
-    classroom_headers: dict[str, str],
-) -> None:
-    response = client.post(
-        "/run_python",
-        headers=classroom_headers,
-        json={"code": "print(1)"},
-    )
-    assert response.status_code == 503
+@pytest.mark.parametrize("route", ["/run_python", "/run_python/stream"])
+@pytest.mark.parametrize("enabled", [False, True])
+def test_native_python_is_permanently_retired(client, classroom_headers, monkeypatch, route, enabled):
+    monkeypatch.setattr(settings, "python_runner_enabled", enabled)
+    # Both normal and reflection-based input must never reach a host interpreter.
+    for code in ["print(1)", "import os", "def f():\n    yield g.gi_frame.f_back.f_globals\ng=f()"]:
+        assert client.post(route, headers=classroom_headers, json={"code": code}).status_code == 410
+    assert client.post(route, json={"code": "print(1)"}).status_code == 401
 
 
-def test_python_runner_requires_classroom_token(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_browser_python_policy_and_untrusted_records(client, classroom_headers, admin_headers, monkeypatch):
     monkeypatch.setattr(settings, "python_runner_enabled", True)
-    response = client.post("/run_python", json={"code": "print(1)"})
-    assert response.status_code == 401
-
-
-def test_python_runner_blocks_imports(
-    client: TestClient,
-    classroom_headers: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(settings, "python_runner_enabled", True)
-    response = client.post(
-        "/run_python",
-        headers=classroom_headers,
-        json={"code": "import os\nprint(os.listdir('.'))"},
-    )
-    assert response.status_code == 200
-    assert response.json()["exit_code"] == 1
-    assert "Import" in response.json()["stderr"]
-
-
-def test_python_runner_unavailable_is_reported_as_503(
-    client: TestClient,
-    classroom_headers: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from app.python_runner import PythonRunnerUnavailable
-
-    def unavailable(*args, **kwargs):
-        raise PythonRunnerUnavailable("separate interpreter required")
-
-    monkeypatch.setattr(settings, "python_runner_enabled", True)
-    monkeypatch.setattr("app.routers.python.run_python_code", unavailable)
-    response = client.post(
-        "/run_python",
-        headers=classroom_headers,
-        json={"code": "print(1)"},
-    )
-
-    assert response.status_code == 503
-    assert response.json()["detail"] == "separate interpreter required"
-
-
-def test_python_runner_stream_reports_queue_output_and_result(
-    client: TestClient,
-    admin_headers: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from app.python_runner import PythonRunResult
-
-    def fake_runner(code: str, *, on_output=None, **kwargs) -> PythonRunResult:
-        assert on_output is not None
-        on_output("stdout", "2\n")
-        return PythonRunResult("2\n", "", 0, False, 5)
-
-    monkeypatch.setattr(settings, "python_runner_enabled", True)
-    monkeypatch.setattr("app.routers.python.run_python_code", fake_runner)
-    joined = client.post(
-        "/classroom/join",
-        headers={"X-Class-Token": classroom_access.token()},
-    ).json()
-    response = client.post(
-        "/run_python/stream",
-        headers={"X-Student-Token": joined["student_token"]},
-        json={"code": "print(1 + 1)"},
-    )
-
-    assert response.status_code == 200
-    assert "event: queued" in response.text
-    assert "event: running" in response.text
-    assert "event: stdout" in response.text
-    assert '"content": "2\\n"' in response.text
-    assert "event: done" in response.text
-    matching_turns = []
-    deadline = time.monotonic() + 1
-    while time.monotonic() < deadline and not matching_turns:
-        records = client.get("/admin/classroom-records", headers=admin_headers).json()["records"]
-        for record in records:
-            detail = client.get(
-                f"/admin/classroom-records/{record['id']}",
-                headers=admin_headers,
-            ).json()
-            matching_turns.extend(
-                turn for turn in detail["turns"] if turn["input_content"] == "print(1 + 1)"
-            )
-        if not matching_turns:
-            time.sleep(0.01)
-    assert len(matching_turns) == 1
-    assert matching_turns[0]["kind"] == "python"
-    assert matching_turns[0]["output_content"] == "2\n"
+    joined = client.post("/classroom/join", headers=classroom_headers).json()
+    headers = {"X-Student-Token": joined["student_token"]}
+    policy = client.get("/classroom/python-config", headers=headers).json()
+    assert policy["execution"] == "browser"
+    result = {"code": "print(1 + 1)", "classroom_id": policy["classroom_id"], "stdout": "2\n", "stderr": "", "exit_code": 0, "timed_out": False, "duration_ms": 5}
+    assert client.post("/classroom/python-result", headers=headers, json=result).status_code == 200
+    records = client.get("/admin/classroom-records", headers=admin_headers).json()["records"]
+    turns = [turn for record in records for turn in client.get(f"/admin/classroom-records/{record['id']}", headers=admin_headers).json()["turns"]]
+    matching = [turn for turn in turns if turn["input_content"] == result["code"]]
+    assert len(matching) == 1
+    assert "未经服务端验证" in matching[0]["output_content"]
+    assert matching[0]["output_content"].endswith("2\n")
+    result["classroom_id"] = "previous-class"
+    assert client.post("/classroom/python-result", headers=headers, json=result).status_code == 403
+    monkeypatch.setattr(settings, "python_runner_enabled", False)
+    assert client.get("/classroom/python-config", headers=headers).status_code == 403
+    assert client.post("/classroom/python-result", headers=headers, json=result).status_code == 403
 
 
 def test_admin_can_view_identified_classroom_records(

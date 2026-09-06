@@ -19,6 +19,9 @@ It can also act as a classroom AI relay: trusted backend clients use an OpenAI-c
 - `ALLOW_LAN_ADMIN=false` by default: the teacher page, login, API docs, and every management API are limited to the host computer. A management tablet requires LAN administration plus an exact `ADMIN_ALLOWED_IPS` entry.
 - The classroom token persists across classes and restarts. Ending a class revokes current student sessions and pauses the link; starting again reuses the same link. Only an explicit rotation permanently invalidates it.
 - Classroom records, configuration, and knowledge files stay on the teacher computer.
+- Student Python runs in a disposable, opaque-origin browser Worker using bundled offline Pyodide/WASM, never on the teacher's host. Reported results are labelled untrusted.
+- Ending, restarting, or rotating a class cancels its queued/in-flight AI work; late records retain the original class. Disabling a platform key persists across restarts and does not fall back to an environment key.
+- Knowledge indexes use local relative paths and rebase recognized legacy absolute paths without touching the original installation. Unsafe paths and directory links are rejected.
 - Backend integrations use a separate platform key. Browser code exchanges the classroom token for a student session and must never contain the platform key.
 - Teachers can upload an HTML file or a ZIP containing `index.html` and publish it as the student entry. The bundled IP worksheet is now explicitly a Demo page; neither Demo nor published pages can use classroom services before class starts.
 
@@ -31,6 +34,10 @@ The System page exposes copyable integration details:
 - Hosted teaching pages: upload HTML/ZIP in the final System panel. EduGate switches the student link and QR code to the active page and injects a sandboxed `EduGate.ask()` streaming bridge without exposing the classroom token, teacher session, or platform key to the uploaded page.
 
 The stable `edugate` model follows the teacher's current upstream model, prompt, and knowledge-base policy. Cross-origin teaching pages require an exact `CORS_ORIGINS` entry and a service restart. The platform key is server-side only; the classroom token embedded in a page grants student access and is revoked by rotating the classroom link.
+
+Use `EduGateClient.runPython(code, {onOutput, signal})` in external pages, or `EduGate.runPython(code, onOutput)` in hosted pages. The old `/run_python` and `/run_python/stream` routes return **410 Gone** after classroom authentication. The bundled runtime includes the standard library, without pip or interactive input. CPU and memory usage is local to student devices; classroom controls restrict service access and result reporting, not students' independent local computation.
+
+LAN entry addresses are selected from connected non-virtual IPv4 interfaces. Override `LAN_ADVERTISE_IP` in Advanced Settings when needed, then restart. This only changes advertised URLs, not teacher permissions. Unsaved advanced settings are preserved during status polling and manual refresh.
 
 ## Run the packaged edition
 

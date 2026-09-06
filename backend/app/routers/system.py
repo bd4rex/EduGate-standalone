@@ -17,7 +17,6 @@ from app.core import (
     launcher_log_tail,
     model_semaphore,
     open_app_directory,
-    python_pool,
     read_advanced_settings,
     remove_backup_file,
     require_admin,
@@ -30,6 +29,7 @@ from app.core import (
     update_advanced_settings,
 )
 from app.schemas import AdvancedSettingsRequest, PlatformKeyRequest, SystemActionRequest
+from app.dependencies import effective_platform_key
 
 router = APIRouter()
 
@@ -57,7 +57,7 @@ async def admin_system_status() -> dict[str, Any]:
         **system_status(
         supervised=system_control.supervised,
         started_at=system_control.started_at,
-        platform_key_set=secret_store.has("system:platform_api_key") or bool(settings.platform_api_key),
+        platform_key_set=bool(effective_platform_key()),
         ),
         "model_pool": (
             model_semaphore.stats()
@@ -68,7 +68,7 @@ async def admin_system_status() -> dict[str, Any]:
                 "capacity": settings.model_max_concurrency,
             }
         ),
-        "python_runner_pool": python_pool.stats(),
+        "python_execution": {"location": "browser", "enabled": settings.python_runner_enabled, "server_execution": False},
         "database_writer": business_db.writer_stats(),
     }
 
@@ -96,10 +96,7 @@ async def admin_update_system_settings(request: AdvancedSettingsRequest) -> dict
 @router.put("/admin/system/platform-key", dependencies=[Depends(require_admin)])
 async def admin_update_platform_key(request: PlatformKeyRequest) -> dict[str, Any]:
     value = (request.api_key or "").strip()
-    if value:
-        secret_store.set("system:platform_api_key", value)
-    else:
-        secret_store.delete("system:platform_api_key")
+    secret_store.set("system:platform_api_key", value)
     return {"status": "saved", "platform_api_key_set": bool(value)}
 
 
@@ -116,7 +113,7 @@ async def admin_generate_platform_key() -> dict[str, Any]:
 
 @router.delete("/admin/system/platform-key", dependencies=[Depends(require_admin)])
 async def admin_delete_platform_key() -> dict[str, Any]:
-    secret_store.delete("system:platform_api_key")
+    secret_store.set("system:platform_api_key", "")
     return {"status": "disabled", "platform_api_key_set": False}
 
 

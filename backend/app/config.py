@@ -68,6 +68,7 @@ class Settings:
     knowledge_search_limit: int = int(os.getenv("KNOWLEDGE_SEARCH_LIMIT", "5"))
     sqlite_db_path: str = _data_path("EDUGATE_SQLITE_DB_PATH", "edugate.sqlite3")
     platform_api_key: str | None = os.getenv("PLATFORM_API_KEY") or None
+    lan_advertise_ip: str = os.getenv("LAN_ADVERTISE_IP", "").strip()
     admin_username: str = os.getenv("ADMIN_USERNAME", "admin")
     admin_password: str | None = os.getenv("ADMIN_PASSWORD") or (
         "edugate" if _as_bool("EDUGATE_PORTABLE_MODE", False) else None
@@ -103,11 +104,6 @@ class Settings:
     )
     python_runner_timeout_seconds: float = float(os.getenv("PYTHON_RUNNER_TIMEOUT_SECONDS", "3"))
     python_runner_max_code_chars: int = int(os.getenv("PYTHON_RUNNER_MAX_CODE_CHARS", "6000"))
-    python_runner_memory_mb: int = int(os.getenv("PYTHON_RUNNER_MEMORY_MB", "128"))
-    python_runner_executable: str | None = os.getenv("PYTHON_RUNNER_EXECUTABLE") or None
-    python_runner_max_concurrency: int = int(os.getenv("PYTHON_RUNNER_MAX_CONCURRENCY", "4"))
-    python_runner_max_queue: int = int(os.getenv("PYTHON_RUNNER_MAX_QUEUE", "64"))
-    python_runner_queue_timeout_seconds: float = float(os.getenv("PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS", "30"))
     classroom_recording_enabled: bool = _as_bool("CLASSROOM_RECORDING_ENABLED", True)
     classroom_record_retention_days: int = int(os.getenv("CLASSROOM_RECORD_RETENTION_DAYS", "30"))
     classroom_record_max_records: int = int(os.getenv("CLASSROOM_RECORD_MAX_RECORDS", "20000"))

@@ -627,6 +627,7 @@ class BusinessDB:
         latency_ms: int,
         queue_wait_ms: int | None = None,
         timed_out: bool | None = None,
+        classroom_ended: bool = False,
     ) -> str:
         if kind not in {"chat", "python"}:
             raise ValueError(f"unsupported classroom turn kind: {kind}")
@@ -650,6 +651,7 @@ class BusinessDB:
             "latency_ms": latency_ms,
             "queue_wait_ms": queue_wait_ms,
             "timed_out": _optional_bool(timed_out),
+            "classroom_ended": classroom_ended,
             "title": title,
         }
         if self._writer_active():
@@ -673,16 +675,17 @@ class BusinessDB:
             INSERT INTO classroom_runs (
                 id, classroom_instance_id, teacher_username, title, ended_at
             )
-            VALUES (?, ?, ?, ?, NULL)
+            VALUES (?, ?, ?, ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END)
             ON CONFLICT(id) DO UPDATE SET
                 last_activity_at = CURRENT_TIMESTAMP,
-                ended_at = NULL
+                ended_at = COALESCE(classroom_runs.ended_at, excluded.ended_at)
             """,
             (
                 payload["run_id"],
                 payload["classroom_instance_id"],
                 payload["teacher_username"],
                 payload["title"],
+                payload["classroom_ended"],
             ),
         )
         conn.execute(

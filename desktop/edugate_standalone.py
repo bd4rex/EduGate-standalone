@@ -29,7 +29,7 @@ CONFIG_PATH = Path(os.getenv("EDUGATE_CONFIG_PATH") or APP_DIR / "config" / "edu
 LEGACY_DATA_DIR = (
     Path(os.getenv("LOCALAPPDATA") or os.getenv("APPDATA") or Path.home()) / "EduGate"
 ).resolve()
-REQUIRED_BACKEND_MODULES = ("fastapi", "httpx", "uvicorn", "pydantic", "multipart", "pypdf")
+REQUIRED_BACKEND_MODULES = ("fastapi", "httpx", "uvicorn", "pydantic", "multipart", "pypdf", "psutil")
 RESTORE_ARCHIVE = DATA_DIR / "pending-restore.zip"
 RESTORABLE_FILES = {
     ".env",

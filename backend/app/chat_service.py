@@ -5,13 +5,14 @@ import codecs
 import json
 import logging
 import time
-from contextlib import suppress
+from contextlib import aclosing, suppress
 from typing import Any, AsyncIterator, Iterable
 
 import httpx
 from fastapi import HTTPException, status
 
 from app import state
+from app.classroom_tasks import stream_in_classroom
 from app.db import latest_user_preview, now_ms
 from app.schemas import (
     ChatRequest,
@@ -439,19 +440,21 @@ async def _stream_chat_completion(payload: dict[str, Any]):
             yield f"event: error\ndata: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
             return
         async with state.model_semaphore:
-            async for chunk in state.client.stream_openai_chat_completion(
+            async with aclosing(state.client.stream_openai_chat_completion(
                 base_url=direct_model.base_url,
                 api_key=api_key,
                 payload={
                     **payload,
                     "model": direct_model.upstream_model_id or direct_model.id,
                 },
-            ):
-                yield chunk
+            )) as upstream:
+                async for chunk in upstream:
+                    yield chunk
         return
     async with state.model_semaphore:
-        async for chunk in state.client.stream_chat_completion(payload):
-            yield chunk
+        async with aclosing(state.client.stream_chat_completion(payload)) as upstream:
+            async for chunk in upstream:
+                yield chunk
 
 
 def _build_knowledge_context(
@@ -532,7 +535,7 @@ def _record_classroom_turn(
         return
     try:
         state.business_db.record_classroom_turn(
-            classroom_instance_id=state.classroom_access.classroom_id(),
+            classroom_instance_id=student.classroom_id or state.classroom_access.classroom_id(),
             teacher_username=teacher_id,
             student_session_id=student.student_id,
             computer_name=student.computer_name,
@@ -544,6 +547,7 @@ def _record_classroom_turn(
             latency_ms=latency_ms,
             queue_wait_ms=queue_wait_ms,
             timed_out=timed_out,
+            classroom_ended=bool(student.lease and student.lease.revoked),
         )
     except Exception as error:
         state.logger.warning("Failed to write classroom record: %s", error)
@@ -649,9 +653,13 @@ async def _trace_chat_result(
 
 
 async def _stream_with_errors(payload: dict[str, Any]):
+    source = _stream_with_heartbeat(_stream_chat_completion(payload))
     try:
-        async for chunk in _stream_with_heartbeat(_stream_chat_completion(payload)):
+        async for chunk in source:
             yield chunk
+    except HTTPException as error:
+        event = {"status_code": error.status_code, "detail": error.detail}
+        yield f"event: error\ndata: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
     except httpx.HTTPStatusError as error:
         try:
             detail: Any = error.response.json()
@@ -665,6 +673,10 @@ async def _stream_with_errors(payload: dict[str, Any]):
             "detail": f"Upstream provider connection failed: {type(error).__name__}: {error!s}",
         }
         yield f"event: error\ndata: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
+
+
+    finally:
+        await source.aclose()
 
 
 async def _stream_with_heartbeat(source: AsyncIterator[bytes]):
@@ -688,12 +700,18 @@ async def _stream_with_heartbeat(source: AsyncIterator[bytes]):
             pending.cancel()
             with suppress(asyncio.CancelledError, StopAsyncIteration):
                 await pending
+        if hasattr(iterator, "aclose"):
+            await iterator.aclose()
 
 
 async def _iterate_stream_bytes(source: AsyncIterator[bytes] | Iterable[bytes]):
     if hasattr(source, "__aiter__"):
-        async for chunk in source:
-            yield chunk
+        try:
+            async for chunk in source:
+                yield chunk
+        finally:
+            if hasattr(source, "aclose"):
+                await source.aclose()
         return
     for chunk in source:
         yield chunk
@@ -786,12 +804,23 @@ async def _stream_with_completion_log(
                 latency_ms=now_ms(start),
             )
 
+    iterator = _iterate_stream_bytes(source)
+    if student is not None:
+        iterator = stream_in_classroom(student, iterator)
     try:
-        async for chunk in _iterate_stream_bytes(source):
+        async for chunk in iterator:
             stream_chunks += 1
             stream_bytes += len(chunk)
             collect_events(decoder.decode(chunk))
             yield chunk
+    except HTTPException as error:
+        status_code = error.status_code
+        finish_reason = "classroom_revoked" if status_code == 403 else "server_exception"
+        error_text = str(error.detail)
+        flush_pending_events()
+        write_log()
+        event = {"status_code": status_code, "detail": error.detail}
+        yield f"event: error\ndata: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
     except asyncio.CancelledError:
         status_code = 499
         finish_reason = "client_disconnected"
@@ -814,3 +843,5 @@ async def _stream_with_completion_log(
         elif finish_reason == "ended_without_done":
             error_text = "Stream ended before EduGate observed [DONE]."
         write_log()
+    finally:
+        await iterator.aclose()

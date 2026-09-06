@@ -11,7 +11,7 @@ OPENAPI_TAGS = [
     {"name": "Config", "description": "当前课堂策略。"},
     {"name": "Models", "description": "上游供应商与模型。"},
     {"name": "Knowledge", "description": "本地知识库。"},
-    {"name": "Python", "description": "课堂短代码执行。"},
+    {"name": "Python", "description": "浏览器执行策略与结果上报；教师端不执行学生代码。"},
 ]
 
 API_DOCS = {
@@ -31,7 +31,7 @@ API_DOCS = {
     ("POST", "/config/ai"): ("启停课堂 AI", "控制学生是否可以请求 AI。"),
     ("PUT", "/config/scenarios/{scenario_id}"): ("更新课堂策略", "更新指定课堂场景。"),
     ("GET", "/admin/classroom"): ("课堂入口状态", "读取课堂令牌和课堂周期。"),
-    ("POST", "/admin/classroom/start"): ("开始课堂", "创建新的课堂令牌。"),
+    ("POST", "/admin/classroom/start"): ("开始课堂", "保留持久课堂令牌，创建新课次并撤销旧会话与任务。"),
     ("POST", "/admin/classroom/rotate"): ("更换课堂链接", "撤销旧学生会话并创建新令牌。"),
     ("POST", "/admin/classroom/end"): ("结束课堂", "撤销课堂入口和全部学生会话。"),
     ("GET", "/admin/published-pages"): ("教学网页列表", "读取本机已上传网页和当前活动网页。"),
@@ -42,7 +42,7 @@ API_DOCS = {
     ("GET", "/published-pages/{page_id}"): ("读取活动教学网页", "课堂开放时凭课堂令牌读取活动网页文档。"),
     ("GET", "/published-pages/{page_id}/assets/{asset_path}"): ("读取教学网页资源", "读取已上传网页的受限静态资源。"),
     ("POST", "/admin/system/platform-key/generate"): ("生成下游平台密钥", "生成并仅回显一次新的下游 API 密钥。"),
-    ("DELETE", "/admin/system/platform-key"): ("关闭下游平台接口", "删除下游平台密钥并关闭 OpenAI 兼容接口。"),
+    ("DELETE", "/admin/system/platform-key"): ("关闭下游平台接口", "持久禁用平台密钥，不回退到环境变量；后续兼容接口请求被拒绝。"),
     ("GET", "/admin/classroom-records"): ("课堂记录", "读取本机管理员名下的课堂记录。"),
     ("GET", "/admin/classroom-records/{run_id}"): ("课堂详情", "读取一节课堂的互动记录。"),
     ("DELETE", "/admin/classroom-records/{run_id}"): ("删除课堂记录", "永久删除一节课堂的本地记录。"),
@@ -53,8 +53,10 @@ API_DOCS = {
     ("GET", "/knowledge/sources"): ("知识库列表", "读取本机全部知识库。"),
     ("POST", "/knowledge/sources"): ("保存知识库", "新建或更新知识库。"),
     ("POST", "/knowledge/sources/{source_id}/scan"): ("扫描知识库", "同步固定目录中的支持文件。"),
-    ("POST", "/run_python"): ("运行 Python", "运行受限的课堂短代码。"),
-    ("POST", "/run_python/stream"): ("流式运行 Python", "以 SSE 返回排队、输出和完成状态。"),
+    ("POST", "/run_python"): ("已停用：服务端 Python", "始终返回 410；请使用学生浏览器 EduGateClient.runPython()。"),
+    ("POST", "/run_python/stream"): ("已停用：服务端流式 Python", "始终返回 410；教师端不再执行学生代码。"),
+    ("GET", "/classroom/python-config"): ("浏览器 Python 策略", "返回当前课堂 ID、超时和代码长度上限。"),
+    ("POST", "/classroom/python-result"): ("上报浏览器 Python 结果", "结果由学生浏览器提供，不作为可信服务端执行结果。"),
 }
 
 def tag_for_path(path: str) -> str:

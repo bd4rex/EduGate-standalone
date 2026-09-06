@@ -6,10 +6,11 @@ import mimetypes
 import os
 import re
 import shutil
+import stat
 import sqlite3
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from fastapi import HTTPException, UploadFile, status
@@ -77,6 +78,14 @@ class KnowledgeHit(BaseModel):
     text: str
 
 
+def _is_link(path: Path) -> bool:
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return False
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & 0x400)
+
+
 class KnowledgeStore:
     def __init__(
         self,
@@ -87,12 +96,54 @@ class KnowledgeStore:
         max_pdf_pages: int = 200,
     ) -> None:
         self.db_path = Path(db_path)
-        self.storage_dir = Path(storage_dir)
+        self.storage_dir = Path(storage_dir).resolve()
         self.max_upload_bytes = max_upload_bytes
         self.max_pdf_pages = max_pdf_pages
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
+        self._migrate_file_paths()
+
+    def _relative_file_path(self, value: str, source_id: str, *, migrate: bool = False, filename: str = "") -> str:
+        """Rebase legacy absolute paths without ever accessing their old targets."""
+        normalized = value.replace("\\", "/")
+        path = PurePosixPath(normalized)
+        if PureWindowsPath(value).is_absolute() or path.is_absolute():
+            flavor = PureWindowsPath if PureWindowsPath(value).is_absolute() else PurePosixPath
+            try:
+                path = PurePosixPath(*flavor(value).relative_to(flavor(self.storage_dir)).parts)
+            except ValueError:
+                if not migrate:
+                    raise HTTPException(status_code=409, detail="Knowledge path leaves its storage directory") from None
+                parts = path.parts
+                candidates = [PurePosixPath(*parts[index:]) for index, part in enumerate(parts[:-1]) if part == source_id]
+                if len(candidates) > 1:
+                    candidates = [candidate for candidate in candidates if candidate.relative_to(source_id).as_posix() == filename.replace("\\", "/")]
+                if len(candidates) != 1:
+                    raise HTTPException(status_code=409, detail="Legacy knowledge path cannot be safely migrated; restore a valid backup")
+                path = candidates[0]
+        if path.is_absolute() or len(path.parts) < 2 or path.parts[0] != source_id or ".." in path.parts or any(":" in part for part in path.parts):
+            raise HTTPException(status_code=409, detail="Unsafe knowledge file path")
+        return path.as_posix()
+
+    def _file_path(self, value: str, source_id: str) -> Path:
+        relative = self._relative_file_path(value, source_id)
+        candidate = self.storage_dir.joinpath(*PurePosixPath(relative).parts)
+        for part in (candidate, *candidate.parents):
+            if part == self.storage_dir:
+                break
+            if _is_link(part):
+                raise HTTPException(status_code=409, detail="Knowledge paths cannot contain links")
+        if not candidate.resolve().is_relative_to(self.storage_dir):
+            raise HTTPException(status_code=409, detail="Knowledge path leaves its storage directory")
+        return candidate
+
+    def _migrate_file_paths(self) -> None:
+        with self._connect() as conn:
+            for row in conn.execute("SELECT id, source_id, path, filename FROM files").fetchall():
+                relative = self._relative_file_path(row["path"], row["source_id"], migrate=True, filename=row["filename"])
+                if relative != row["path"]:
+                    conn.execute("UPDATE files SET path = ? WHERE id = ?", (relative, row["id"]))
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=10)
@@ -205,17 +256,26 @@ class KnowledgeStore:
         self.get_source(source_id)
         with self._connect() as conn:
             files = conn.execute("SELECT path FROM files WHERE source_id = ?", (source_id,)).fetchall()
+            targets = [self._file_path(row["path"], source_id) for row in files]
+            directory = self.source_directory(source_id)
+            # Inspect all descendants before a recursive operation; do not traverse links.
+            for current, directories, filenames in os.walk(directory, followlinks=False):
+                for name in directories + filenames:
+                    self._file_path(str(Path(current) / name), source_id)
+            for target in targets:
+                target.unlink(missing_ok=True)
+            shutil.rmtree(directory)
             conn.execute("DELETE FROM chunks WHERE source_id = ?", (source_id,))
             conn.execute("DELETE FROM files WHERE source_id = ?", (source_id,))
             conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
-        for row in files:
-            Path(row["path"]).unlink(missing_ok=True)
-        shutil.rmtree(self.storage_dir / source_id, ignore_errors=True)
 
     def source_directory(self, source_id: str) -> Path:
         source = self.get_source(source_id)
         storage_root = self.storage_dir.resolve()
-        directory = (storage_root / source.id).resolve()
+        directory = storage_root / source.id
+        if _is_link(directory):
+            raise HTTPException(status_code=409, detail="Knowledge source cannot be a link")
+        directory = directory.resolve()
         if storage_root not in directory.parents:
             raise HTTPException(status_code=400, detail="Invalid knowledge source directory")
         directory.mkdir(parents=True, exist_ok=True)
@@ -277,7 +337,7 @@ class KnowledgeStore:
                         target_path.name,
                         upload.content_type,
                         size,
-                        str(target_path),
+                        target_path.relative_to(self.storage_dir).as_posix(),
                         content_hash,
                         created_at,
                     ),
@@ -310,10 +370,11 @@ class KnowledgeStore:
                 """,
                 (source_id,),
             ).fetchall()
-        indexed = {_path_key(Path(row["path"])): row for row in indexed_rows}
+        indexed = {_path_key(self._file_path(row["path"], source_id)): row for row in indexed_rows}
         discovered: set[str] = set()
 
-        for path in sorted(source_dir.rglob("*")):
+        for path in self._scan_paths(source_dir, source_id):
+            self._file_path(str(path), source_id)
             if not path.is_file():
                 continue
             if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
@@ -359,7 +420,7 @@ class KnowledgeStore:
                                 filename,
                                 content_type,
                                 size,
-                                str(path),
+                                path.relative_to(self.storage_dir).as_posix(),
                                 content_hash,
                                 _now(),
                             ),
@@ -400,6 +461,15 @@ class KnowledgeStore:
             result.removed = len(missing_ids)
         return result
 
+    def _scan_paths(self, source_dir: Path, source_id: str) -> list[Path]:
+        paths = []
+        for current, directories, filenames in os.walk(source_dir, followlinks=False):
+            for name in directories + filenames:
+                path = self._file_path(str(Path(current) / name), source_id)
+                if name in filenames:
+                    paths.append(path)
+        return sorted(paths)
+
     def list_files(self, source_id: str | None = None) -> list[KnowledgeFile]:
         params: tuple[Any, ...] = ()
         where = ""
@@ -436,12 +506,12 @@ class KnowledgeStore:
 
     def delete_file(self, file_id: str) -> None:
         with self._connect() as conn:
-            row = conn.execute("SELECT path FROM files WHERE id = ?", (file_id,)).fetchone()
+            row = conn.execute("SELECT path, source_id FROM files WHERE id = ?", (file_id,)).fetchone()
             if row is None:
                 raise HTTPException(status_code=404, detail=f"Unknown knowledge file: {file_id}")
+            self._file_path(row["path"], row["source_id"]).unlink(missing_ok=True)
             conn.execute("DELETE FROM chunks WHERE file_id = ?", (file_id,))
             conn.execute("DELETE FROM files WHERE id = ?", (file_id,))
-        Path(row["path"]).unlink(missing_ok=True)
 
     def search(self, source_id: str, query: str, limit: int = 5) -> list[KnowledgeHit]:
         self.get_source(source_id)

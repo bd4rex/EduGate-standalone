@@ -178,23 +178,21 @@ class PythonRunRequest(BaseModel):
     code: str = Field(..., min_length=1, max_length=settings.python_runner_max_code_chars)
 
 
-class PythonRunResponse(BaseModel):
-    job_id: str
-    worker_id: int
-    queue_wait_ms: int
-    stdout: str
-    stderr: str
-    exit_code: int
-    timed_out: bool
-    duration_ms: int
-
-
 class StudentJoinResponse(BaseModel):
     student_token: str
     student_session_id: str
     computer_name: str
     client_ip: str
     expires_in: int
+
+
+class BrowserPythonResult(PythonRunRequest):
+    classroom_id: str = Field(min_length=1, max_length=100)
+    stdout: str = Field(default="", max_length=12000)
+    stderr: str = Field(default="", max_length=12000)
+    exit_code: int = Field(ge=0, le=255)
+    timed_out: bool = False
+    duration_ms: int = Field(ge=0, le=3600000)
 
 
 class StudentJoinRequest(BaseModel):

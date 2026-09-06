@@ -26,16 +26,19 @@ class SecretStore:
             self._data[key] = value if self.mode == "portable" else _protect(value.encode("utf-8"))
             self._save_locked()
 
-    def get(self, key: str | None) -> str | None:
+    def get(self, key: str | None, *, default: str | None = None) -> str | None:
         if not key:
             return None
         with self._lock:
             encoded = self._data.get(key)
+        # An explicit empty entry is a persistent disabled override, not absence.
+        if encoded is None:
+            return default
         if not encoded:
             return None
         if self.mode == "portable":
             return encoded
-        return _unprotect(encoded).decode("utf-8")
+        return _unprotect(encoded).decode("utf-8") or None
 
     def has(self, key: str | None) -> bool:
         with self._lock:

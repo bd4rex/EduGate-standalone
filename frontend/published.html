@@ -93,7 +93,7 @@
       pageFrame.contentWindow?.postMessage({ source: "edugate-host", ...payload }, "*");
     }
 
-    async function handleAsk(id, messages) {
+    async function handleAsk(id, messages, pythonCode = null) {
       const controller = new AbortController();
       activeRequests.set(id, controller);
       try {
@@ -103,6 +103,14 @@
             classToken,
             computerName: "教学网页",
           });
+        }
+        if (pythonCode !== null) {
+          const result = await client.runPython(pythonCode, {
+            signal: controller.signal,
+            onOutput: (stream, content) => sendToPage({type: "python-output", id, stream, content}),
+          });
+          sendToPage({type: "python-done", id, result});
+          return;
         }
         let answer = "";
         for await (const delta of client.streamText(normalizeMessages(messages), { signal: controller.signal })) {
@@ -124,6 +132,8 @@
       if (!id || id.length > 100) return;
       if (event.data.type === "ask" && !activeRequests.has(id)) {
         handleAsk(id, event.data.messages);
+      } else if (event.data.type === "python" && !activeRequests.has(id)) {
+        handleAsk(id, null, String(event.data.code || ""));
       } else if (event.data.type === "cancel") {
         activeRequests.get(id)?.abort();
       }
@@ -141,6 +151,11 @@
             if (!request) return;
             if (data.type === "delta") {
               request.onDelta(data.delta);
+            } else if (data.type === "python-output") {
+              request.onOutput?.(data.stream, data.content);
+            } else if (data.type === "python-done") {
+              pending.delete(data.id);
+              request.resolve(data.result);
             } else if (data.type === "done") {
               pending.delete(data.id);
               request.resolve(data.text || "");
@@ -150,6 +165,15 @@
             }
           });
           window.EduGate = Object.freeze({
+            runPython(code, onOutput) {
+              const id = "python-" + Date.now() + "-" + (++sequence);
+              const promise = new Promise((resolve, reject) => {
+                pending.set(id, {resolve, reject, onOutput: typeof onOutput === "function" ? onOutput : () => {}});
+                parent.postMessage({source: "edugate-page", type: "python", id, code}, "*");
+              });
+              promise.cancel = () => parent.postMessage({source: "edugate-page", type: "cancel", id}, "*");
+              return promise;
+            },
             ask(input, onDelta) {
               const id = "ask-" + Date.now() + "-" + (++sequence);
               const messages = typeof input === "string" ? [{ role: "user", content: input }] : input;

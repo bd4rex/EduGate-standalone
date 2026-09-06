@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Iterator
@@ -30,6 +31,9 @@ from app.state import (
     student_sessions,
 )
 from app.system_control import system_control
+from app.secret_store import SecretStore
+from app.security import StudentIdentity
+from app.state import ModelConcurrencyLimiter
 
 
 ADMIN_PASSWORD = "functional-admin-password"
@@ -159,6 +163,8 @@ def test_route_inventory_openapi_and_root_redirect_are_complete(client: TestClie
         ("DELETE", "/knowledge/files/{file_id}"),
         ("POST", "/run_python"),
         ("POST", "/run_python/stream"),
+        ("GET", "/classroom/python-config"),
+        ("POST", "/classroom/python-result"),
     }
     schema = client.get("/openapi.json").json()
     actual = {
@@ -439,7 +445,7 @@ def test_system_read_endpoints_settings_backup_restore_and_actions(
     assert client.get("/admin/logs", headers=admin_headers, params={"limit": 999}).status_code == 200
     status = client.get("/admin/system/status", headers=admin_headers)
     assert status.status_code == 200
-    assert {"model_pool", "python_runner_pool", "database_writer"} <= status.json().keys()
+    assert {"model_pool", "python_execution", "database_writer"} <= status.json().keys()
 
     monkeypatch.setattr("app.routers.system.launcher_log_tail", lambda limit: [f"limit={limit}"])
     assert client.get(
@@ -517,6 +523,7 @@ def test_platform_key_protects_nonstream_and_stream_openai_compatible_requests(
         "/v1/chat/completions",
         json={"messages": [{"role": "user", "content": "hello"}]},
     )
+
     assert denied.status_code == 401
     assert denied.json()["error"]["type"] == "authentication_error"
     models = client.get("/v1/models", headers=auth)
@@ -559,6 +566,131 @@ def test_platform_key_protects_nonstream_and_stream_openai_compatible_requests(
     assert streamed.headers["cache-control"] == "no-cache, no-transform"
     assert streamed.headers["x-accel-buffering"] == "no"
 
+
+@pytest.mark.parametrize("disable", ["delete", "empty", "null"])
+def test_platform_disable_overrides_env_after_reload(client, admin_headers, monkeypatch, tmp_path, disable):
+    import app.state as state
+    import app.routers.system as system_router
+    store = SecretStore(str(tmp_path / "platform-secrets.json"), mode="portable")
+    monkeypatch.setattr(state, "secret_store", store)
+    monkeypatch.setattr(system_router, "secret_store", store)
+    monkeypatch.setattr(settings, "platform_api_key", "environment-key")
+    auth = {"Authorization": "Bearer environment-key"}
+    assert client.get("/v1/models", headers=auth).status_code == 200
+    if disable == "delete":
+        response = client.delete("/admin/system/platform-key", headers=admin_headers)
+    else:
+        response = client.put("/admin/system/platform-key", headers=admin_headers, json={"api_key": "" if disable == "empty" else None})
+    assert response.status_code == 200
+    for reload in (False, True):
+        if reload:
+            reloaded = SecretStore(str(store.path), mode="portable")
+            monkeypatch.setattr(state, "secret_store", reloaded)
+            monkeypatch.setattr(system_router, "secret_store", reloaded)
+        assert client.get("/v1/models", headers=auth).status_code == 503
+        for stream in (False, True):
+            response = client.post("/v1/chat/completions", headers=auth, json={"stream": stream, "messages": [{"role": "user", "content": "hello"}]})
+            assert response.status_code == 503
+        assert client.get("/admin/system/status", headers=admin_headers).json()["platform_api_key_set"] is False
+    key = client.post("/admin/system/platform-key/generate", headers=admin_headers).json()["api_key"]
+    assert client.get("/v1/models", headers={"Authorization": f"Bearer {key}"}).status_code == 200
+    assert client.get("/v1/models", headers=auth).status_code == 401
+
+
+@pytest.mark.parametrize("action", ["end", "start", "rotate"])
+@pytest.mark.parametrize("route", ["/chat", "/chat/stream"])
+def test_http_classroom_switch_cancels_model_queue(client, admin_headers, monkeypatch, action, route):
+    import app.state as state
+    calls = []
+    async def complete(*args, **kwargs):
+        calls.append("complete")
+        return {"choices": [{"message": {"content": "new classroom answer"}}]}
+    async def stream(*args, **kwargs):
+        calls.append("stream")
+        yield b'data: {"choices":[{"delta":{"content":"new classroom answer"}}]}\n\n'
+        yield b"data: [DONE]\n\n"
+    monkeypatch.setattr(state.client, "chat_completion", complete)
+    monkeypatch.setattr(state.client, "openai_chat_completion", complete)
+    monkeypatch.setattr(state.client, "stream_chat_completion", stream)
+    monkeypatch.setattr(state.client, "stream_openai_chat_completion", stream)
+    async def check():
+        limiter = ModelConcurrencyLimiter(1)
+        monkeypatch.setattr(state, "model_semaphore", limiter)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as http:
+            async with limiter:
+                pending = asyncio.create_task(http.post(route, headers={"X-Class-Token": classroom_access.token()}, json={"messages": [{"role": "user", "content": "old classroom request"}]}))
+                async def wait_queued():
+                    while limiter.stats()["waiting"] != 1:
+                        await asyncio.sleep(0.001)
+                await asyncio.wait_for(wait_queued(), 2)
+                response = await http.post(f"/admin/classroom/{action}", headers=admin_headers)
+                assert response.status_code == 200
+                denied = await asyncio.wait_for(pending, 2)
+                if route.endswith("stream"):
+                    assert '"status_code": 403' in denied.text
+                    assert "[DONE]" not in denied.text
+                else:
+                    assert denied.status_code == 403
+                assert limiter.stats()["waiting"] == 0
+                assert calls == []
+            assert limiter.stats()["running"] == 0
+            if action == "end":
+                await http.post("/admin/classroom/start", headers=admin_headers)
+            valid = await http.post(route, headers={"X-Class-Token": classroom_access.token()}, json={"messages": [{"role": "user", "content": "new classroom request"}]})
+            assert valid.status_code == 200
+            assert "new classroom answer" in valid.text
+            assert len(calls) == 1
+    asyncio.run(check())
+
+
+def test_stream_revocation_closes_upstream_and_records_original_class(client, admin_headers, monkeypatch):
+    import app.state as state
+    old_id = classroom_access.classroom_id()
+    async def check():
+        entered = asyncio.Event()
+        closed = asyncio.Event()
+        limiter = ModelConcurrencyLimiter(1)
+        monkeypatch.setattr(state, "model_semaphore", limiter)
+        async def stream(*args, **kwargs):
+            try:
+                yield b'data: {"choices":[{"delta":{"content":"partial old answer"}}]}\n\n'
+                entered.set()
+                await asyncio.Event().wait()
+            finally:
+                closed.set()
+        monkeypatch.setattr(state.client, "stream_chat_completion", stream)
+        monkeypatch.setattr(state.client, "stream_openai_chat_completion", stream)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as http:
+            pending = asyncio.create_task(http.post("/chat/stream", headers={"X-Class-Token": classroom_access.token()}, json={"messages": [{"role": "user", "content": "original classroom question"}]}))
+            await asyncio.wait_for(entered.wait(), 2)
+            await http.post("/admin/classroom/start", headers=admin_headers)
+            result = await asyncio.wait_for(pending, 2)
+            assert "partial old answer" in result.text
+            assert '"status_code": 403' in result.text
+            assert closed.is_set()
+            assert limiter.stats() == {"running": 0, "waiting": 0, "capacity": 1}
+    asyncio.run(check())
+    records = business_db.list_classroom_records(teacher_username=settings.admin_username)
+    original_id = hashlib.sha256(f"{old_id}:{settings.admin_username}".encode()).hexdigest()[:32]
+    new_id = hashlib.sha256(f"{classroom_access.classroom_id()}:{settings.admin_username}".encode()).hexdigest()[:32]
+    original = next(record for record in records if record["id"] == original_id)
+    assert original["ended_at"] is not None
+    assert not any(record["id"] == new_id for record in records)
+
+
+def test_late_record_does_not_reopen_an_ended_classroom(client):
+    lease = classroom_access.lease()
+    identity = StudentIdentity("late-student", "PC", "127.0.0.1", lease.id, lease)
+    def record():
+        chat_service._record_classroom_turn(teacher_id=settings.admin_username, student=identity, kind="chat", input_content="old question", output_content="late answer", status_code=403, latency_ms=1)
+    record()
+    business_db.end_classroom_instance(lease.id)
+    classroom_access.start()
+    record()
+    records = business_db.list_classroom_records(teacher_username=settings.admin_username)
+    original_id = hashlib.sha256(f"{lease.id}:{settings.admin_username}".encode()).hexdigest()[:32]
+    original = next(item for item in records if item["id"] == original_id)
+    assert original["ended_at"] is not None
 
 @pytest.mark.parametrize("kind", ["status", "connection"])
 def test_chat_translates_upstream_http_failures(

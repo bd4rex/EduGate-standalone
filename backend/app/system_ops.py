@@ -4,7 +4,6 @@ import ipaddress
 import json
 import os
 import shutil
-import socket
 import sqlite3
 import tempfile
 import time
@@ -16,9 +15,11 @@ from dotenv import dotenv_values, set_key
 from fastapi import HTTPException, UploadFile, status
 
 from app.config import settings
+from app.network import advertised_ip, local_interfaces
 
 
 SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
+    "LAN_ADVERTISE_IP": {"type": "str", "default": "", "restart": True},
     "EDUGATE_BACKEND_PORT": {"type": "int", "default": 8000, "min": 1024, "max": 65535, "restart": True},
     "SESSION_TTL_SECONDS": {"type": "int", "default": 28800, "min": 900, "max": 604800, "restart": True},
     "STUDENT_SESSION_TTL_SECONDS": {"type": "int", "default": 28800, "min": 900, "max": 604800, "restart": True},
@@ -42,11 +43,6 @@ SETTINGS_SCHEMA: dict[str, dict[str, Any]] = {
     "PYTHON_RUNNER_ENABLED": {"type": "bool", "default": False, "restart": True},
     "PYTHON_RUNNER_TIMEOUT_SECONDS": {"type": "float", "default": 3, "min": 0.2, "max": 30, "restart": True},
     "PYTHON_RUNNER_MAX_CODE_CHARS": {"type": "int", "default": 6000, "min": 100, "max": 50000, "restart": True},
-    "PYTHON_RUNNER_MEMORY_MB": {"type": "int", "default": 128, "min": 32, "max": 1024, "restart": True},
-    "PYTHON_RUNNER_EXECUTABLE": {"type": "str", "default": "", "restart": True},
-    "PYTHON_RUNNER_MAX_CONCURRENCY": {"type": "int", "default": 4, "min": 1, "max": 8, "restart": True},
-    "PYTHON_RUNNER_MAX_QUEUE": {"type": "int", "default": 64, "min": 1, "max": 256, "restart": True},
-    "PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS": {"type": "float", "default": 30, "min": 1, "max": 300, "restart": True},
     "CLASSROOM_RECORDING_ENABLED": {"type": "bool", "default": True, "restart": True},
     "CLASSROOM_RECORD_RETENTION_DAYS": {"type": "int", "default": 30, "min": 1, "max": 365, "restart": True},
     "CLASSROOM_RECORD_MAX_RECORDS": {"type": "int", "default": 20000, "min": 100, "max": 200000, "restart": True},
@@ -59,15 +55,7 @@ MAX_RESTORE_FILES = 10000
 
 
 def local_ip() -> str:
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.connect(("8.8.8.8", 80))
-            return sock.getsockname()[0]
-    except OSError:
-        try:
-            return socket.gethostbyname(socket.gethostname())
-        except OSError:
-            return "127.0.0.1"
+    return advertised_ip(settings.lan_advertise_ip)
 
 
 def system_status(*, supervised: bool, started_at: float, platform_key_set: bool) -> dict[str, Any]:
@@ -87,6 +75,7 @@ def system_status(*, supervised: bool, started_at: float, platform_key_set: bool
         "frontend_dir": settings.frontend_dir,
         "port": port,
         "local_ip": ip,
+        "lan_interfaces": local_interfaces(),
         "admin_url": f"http://127.0.0.1:{port}/admin.html",
         "lan_base_url": f"http://{ip}:{port}",
         "openai_base_url": f"http://{ip}:{port}/v1",
@@ -286,4 +275,12 @@ def _coerce_value(key: str, raw: Any, schema: dict[str, Any]) -> Any:
                 status_code=400,
                 detail="ADMIN_ALLOWED_IPS must contain exact IPv4 or IPv6 addresses separated by commas",
             ) from error
+    if key == "LAN_ADVERTISE_IP" and value:
+        try:
+            address = ipaddress.IPv4Address(value)
+            if address.is_unspecified or address.is_multicast or address.is_reserved:
+                raise ValueError
+            value = str(address)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="LAN_ADVERTISE_IP must be a usable IPv4 address") from error
     return value

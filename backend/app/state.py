@@ -25,15 +25,6 @@ from app.db import BusinessDB, latest_user_preview, now_ms
 from app.knowledge import KnowledgeFile, KnowledgeScanResult, KnowledgeSource, KnowledgeStore
 from app.litellm_client import LiteLLMClient
 from app.observability import LangfuseClient
-from app.python_runner import (
-    PythonExecutionPool,
-    PythonJob,
-    PythonQueueFull,
-    PythonQueueTimeout,
-    PythonRunnerUnavailable,
-    PythonStudentBusy,
-    run_python_code,
-)
 from app.published_pages import PublishedPageStore
 from app.secret_store import SecretStore
 from app.security import ClassroomAccess, SessionStore, SlidingWindowRateLimiter, StudentIdentity, StudentSessionStore
@@ -126,12 +117,6 @@ class ModelConcurrencyLimiter:
 
 
 model_semaphore = ModelConcurrencyLimiter(settings.model_max_concurrency)
-python_pool = PythonExecutionPool(
-    max_workers=settings.python_runner_max_concurrency,
-    max_queue_size=settings.python_runner_max_queue,
-    queue_timeout_seconds=settings.python_runner_queue_timeout_seconds,
-)
-python_record_tasks: set[asyncio.Task[None]] = set()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -145,13 +130,9 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     business_db.start_writer()
     if settings.portable_mode:
         classroom_access.end()
-    await python_pool.start()
     try:
         yield
     finally:
-        await python_pool.stop()
-        if python_record_tasks:
-            await asyncio.gather(*list(python_record_tasks), return_exceptions=True)
         await asyncio.to_thread(business_db.stop_writer)
         await asyncio.to_thread(business_db.checkpoint)
         await asyncio.to_thread(knowledge_store.checkpoint)

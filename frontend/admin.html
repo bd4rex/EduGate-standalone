@@ -1877,6 +1877,7 @@
       requestLogs: [],
       launcherLogs: [],
       advancedSettings: [],
+      advancedSettingsDirty: false,
       classroomRecords: [],
       classroomRecordConfig: { recording_enabled: false, retention_days: 30 },
       selectedClassroomRecord: null,
@@ -2665,6 +2666,7 @@
     }
 
     const settingLabels = {
+      LAN_ADVERTISE_IP: "学生分发 IP（留空自动选择）",
       EDUGATE_BACKEND_PORT: "服务端口",
       SESSION_TTL_SECONDS: "登录会话有效期（秒）",
       STUDENT_SESSION_TTL_SECONDS: "学生会话有效期（秒）",
@@ -2681,14 +2683,9 @@
       MAX_PDF_PAGES: "PDF 最大页数",
       LOG_MAX_RECORDS: "请求日志保留条数",
       LOG_MESSAGE_PREVIEW: "记录消息预览",
-      PYTHON_RUNNER_ENABLED: "启用 Python 运行器",
+      PYTHON_RUNNER_ENABLED: "允许学生浏览器运行 Python",
       PYTHON_RUNNER_TIMEOUT_SECONDS: "Python 超时（秒）",
       PYTHON_RUNNER_MAX_CODE_CHARS: "Python 代码字符上限",
-      PYTHON_RUNNER_MEMORY_MB: "Python 内存上限（MB）",
-      PYTHON_RUNNER_EXECUTABLE: "独立 Python 解释器路径",
-      PYTHON_RUNNER_MAX_CONCURRENCY: "Python 并发槽位（建议 4–8）",
-      PYTHON_RUNNER_MAX_QUEUE: "Python 最大排队任务数",
-      PYTHON_RUNNER_QUEUE_TIMEOUT_SECONDS: "Python 排队超时（秒）",
       CLASSROOM_RECORDING_ENABLED: "保存课堂内容记录到本机",
       CLASSROOM_RECORD_RETENTION_DAYS: "课堂记录保留天数",
       CLASSROOM_RECORD_MAX_RECORDS: "课堂互动记录总上限",
@@ -2766,7 +2763,6 @@
     function renderSystem() {
       const system = state.systemStatus || {};
       const modelPool = system.model_pool || {};
-      const pool = system.python_runner_pool || {};
       const modelRunning = modelPool.running ?? 0;
       const modelWaiting = modelPool.waiting ?? 0;
       const modelCapacity = modelPool.capacity ?? 0;
@@ -2785,10 +2781,7 @@
           ["模型执行线程", `${modelRunning} / ${modelCapacity}`],
           ["模型等待队列", `${modelWaiting}`],
         ]],
-        ["Python 工作状态（线程｜队列）", null, "runtime", [
-          ["Python 执行线程", `${pool.running ?? 0} / ${pool.workers ?? 0}`],
-          ["Python 等待队列", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`],
-        ]],
+        ["Python 执行位置", system.python_execution?.enabled ? "学生浏览器" : "已关闭", "python-browser"],
       ];
       el.systemMetrics.innerHTML = metrics.map(([label, value, kind, stats]) => `
         <div class="system-metric${kind === "runtime" ? " runtime-metric" : ""}">
@@ -2839,6 +2832,14 @@
       `).join("") : `<div class="row"><div class="row-main"><p class="row-title">暂无请求日志</p></div></div>`;
       el.launcherLogView.textContent = state.launcherLogs.join("\n") || "暂无系统日志";
 
+      el.platformApiKey.placeholder = system.platform_api_key_set
+        ? "平台密钥已设置；输入新值可替换"
+        : "输入自定义密钥，或生成新密钥";
+      renderDownstreamIntegration();
+    }
+
+    function renderAdvancedSettings() {
+      if (state.advancedSettingsDirty) return;
       el.advancedSettingList.innerHTML = state.advancedSettings.map((setting) => {
         const label = settingLabels[setting.key] || setting.key;
         if (setting.type === "bool") {
@@ -2846,12 +2847,12 @@
         }
         const inputType = setting.type === "str" ? "text" : "number";
         const step = setting.type === "float" ? "any" : "1";
+        if (setting.key === "LAN_ADVERTISE_IP") {
+          const options = (state.systemStatus?.lan_interfaces || []).map((item) => `<option value="${escapeHtml(item.ip)}">${escapeHtml(item.name)}${item.recommended ? "（推荐）" : "（虚拟或特殊网络）"}</option>`).join("");
+          return `<label>${escapeHtml(label)}<input type="text" list="lan-interface-options" data-setting-key="LAN_ADVERTISE_IP" value="${escapeHtml(setting.value)}" placeholder="自动选择局域网地址" /><datalist id="lan-interface-options">${options}</datalist></label>`;
+        }
         return `<label>${escapeHtml(label)}<input type="${inputType}" step="${step}" data-setting-key="${escapeHtml(setting.key)}" value="${escapeHtml(setting.value)}" /></label>`;
       }).join("");
-      el.platformApiKey.placeholder = system.platform_api_key_set
-        ? "平台密钥已设置；输入新值可替换"
-        : "输入自定义密钥，或生成新密钥";
-      renderDownstreamIntegration();
     }
 
     function formatRecordTime(value) {
@@ -3123,6 +3124,7 @@
       state.requestLogs = logs || [];
       state.launcherLogs = launcherLogs.lines || [];
       state.advancedSettings = advanced.settings || [];
+      renderAdvancedSettings();
       renderSystem();
       renderClassroomAccess();
     }
@@ -3814,9 +3816,16 @@
         values[input.dataset.settingKey] = input.type === "checkbox" ? input.checked : input.value;
       });
       try {
-        await request("/admin/system/settings", {
+        const saved = await request("/admin/system/settings", {
           method: "PUT",
           body: JSON.stringify({ values }),
+        });
+        state.advancedSettings = state.advancedSettings.map((setting) => ({
+          ...setting, value: saved.values[setting.key] ?? setting.value,
+        }));
+        state.advancedSettingsDirty = Array.from(el.advancedSettingList.querySelectorAll("[data-setting-key]")).some((input) => {
+          const value = input.type === "checkbox" ? input.checked : input.value;
+          return value !== values[input.dataset.settingKey];
         });
         showToast("高级设置已保存，请重启服务使其生效。 ");
       } catch (error) {
@@ -4048,6 +4057,8 @@
       }
     }
 
+    el.advancedSettingList.addEventListener("input", () => { state.advancedSettingsDirty = true; });
+    el.advancedSettingList.addEventListener("change", () => { state.advancedSettingsDirty = true; });
     setInterval(refreshSystemStatus, 2000);
     setInterval(refreshClassroomStatus, 5000);
     boot();

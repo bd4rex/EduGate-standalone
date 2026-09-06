@@ -64,8 +64,8 @@
       this.localStorage = safeStorage("localStorage");
       this.storageKey = `edugate:student:${this.baseUrl}:${this.classToken.slice(0, 12)}`;
       this.deviceKey = `edugate:device:${this.baseUrl}`;
-      this.studentToken = this.sessionStorage?.getItem(this.storageKey) || "";
-      this.deviceId = this.localStorage?.getItem(this.deviceKey) || randomId("browser");
+      this.studentToken = config.studentToken || this.sessionStorage?.getItem(this.storageKey) || "";
+      this.deviceId = config.deviceId || this.localStorage?.getItem(this.deviceKey) || randomId("browser");
       this.localStorage?.setItem(this.deviceKey, this.deviceId);
     }
 
@@ -100,6 +100,39 @@
     async ensureSession(options) {
       if (!this.studentToken) await this.join(options);
       return this.studentToken;
+    }
+
+    async runPython(code, options = {}) {
+      await this.ensureSession(options);
+      const getPolicy = () => fetch(`${this.baseUrl}/classroom/python-config`, {headers: {"X-Student-Token": this.studentToken}, signal: options.signal});
+      let policyResponse = await getPolicy();
+      if (policyResponse.status === 401) {
+        this.clearSession();
+        await this.join(options);
+        policyResponse = await getPolicy();
+      }
+      const token = this.studentToken;
+      const headers = {"X-Student-Token": token, "Content-Type": "application/json"};
+      if (!policyResponse.ok) throw await responseError(policyResponse);
+      const policy = await policyResponse.json();
+      if (typeof code !== "string" || !code.trim() || code.length > policy.max_code_chars) throw new Error(`Python 代码需为 1–${policy.max_code_chars} 个字符。`);
+      if (!global.EduGatePython) {
+        if (!this.pythonLoader) this.pythonLoader = new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = `${this.baseUrl}/assets/edugate-python.js`;
+          script.onload = resolve;
+          script.onerror = () => { this.pythonLoader = null; reject(new Error("Python 客户端加载失败")); };
+          document.head.append(script);
+        });
+        await this.pythonLoader;
+      }
+      const result = await global.EduGatePython.run(code, {...options, baseUrl: this.baseUrl, timeoutSeconds: policy.timeout_seconds});
+      const saved = await fetch(`${this.baseUrl}/classroom/python-result`, {
+        method: "POST", headers, signal: options.signal,
+        body: JSON.stringify({...result, code, classroom_id: policy.classroom_id}),
+      });
+      if (!saved.ok) throw await responseError(saved);
+      return result;
     }
 
     async *stream(messages, options) {

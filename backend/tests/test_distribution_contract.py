@@ -1,9 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_browser_python_runtime_is_complete_and_byte_pinned():
+    root = ROOT / "frontend/assets/vendor/pyodide"
+    entries = (root / "SHA256SUMS").read_text().splitlines()
+    assert len(entries) == 5
+    for line in entries:
+        digest, name = line.split()
+        assert hashlib.sha256((root / name).read_bytes()).hexdigest() == digest
+    for license in ("LICENSE", "LICENSE-CPYTHON", "LICENSE-EMSCRIPTEN"):
+        assert (root / license).is_file()
 
 
 def _read(relative: str) -> str:
@@ -44,8 +56,8 @@ def test_windows_bundle_is_a_copyable_portable_classroom_folder() -> None:
     assert "APP_DIR / \"data\"" in launcher
     assert "APP_DIR / \"config\" / \"edugate.env\"" in launcher
     assert "migrate_legacy_data()" in launcher
-    assert "build_portable_runtime.py" in build
-    assert "runtime\\python" in build
+    assert "build_portable_runtime.py" not in build
+    assert (ROOT / "frontend/assets/vendor/pyodide/pyodide.asm.wasm").is_file()
     assert "ADMIN_PASSWORD=edugate" in example
     assert "PORTABLE_AUTO_LOGIN=true" in example
     assert 'id="end-class"' in page
@@ -415,13 +427,12 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
     assert 'data-tab="records"' in page
     assert 'id="records-view"' in page
     assert "/admin/classroom-records" in page
-    assert "PYTHON_RUNNER_MAX_CONCURRENCY" in page
+    assert "PYTHON_RUNNER_MAX_CONCURRENCY" not in page
     assert "模型执行状态（线程｜队列）" in page
-    assert "Python 工作状态（线程｜队列）" in page
+    assert "Python 执行位置" in page
     assert '["模型执行线程", `${modelRunning} / ${modelCapacity}`]' in page
     assert '["模型等待队列", `${modelWaiting}`]' in page
-    assert '["Python 执行线程", `${pool.running ?? 0} / ${pool.workers ?? 0}`]' in page
-    assert '["Python 等待队列", `${pool.queued ?? 0} / ${pool.queue_capacity ?? 0}`]' in page
+    assert "学生浏览器" in page
     assert 'class="system-metric-value runtime-metric-value"' in page
     assert 'const adminAccessIps = system.lan_admin_enabled && allowedAdminIpCount' in page
     assert ': "127.0.0.1"' in page
@@ -431,8 +442,7 @@ def test_python_pool_and_classroom_record_controls_are_distributed() -> None:
     assert 'copyText(adminAccessIps, "教师端允许访问 IP")' in page
     assert "model_pool" in page
     assert "CLASSROOM_RECORDING_ENABLED" in page
-    assert "PYTHON_RUNNER_MAX_CONCURRENCY=4" in example
-    assert "PYTHON_RUNNER_MAX_QUEUE=64" in example
+    assert "PYTHON_RUNNER_MAX_CONCURRENCY" not in example
     assert "MODEL_MAX_CONCURRENCY=16" in example
     assert "CLASSROOM_RECORDING_ENABLED=true" in example
     assert "DB_WRITE_QUEUE_SIZE=4096" in example

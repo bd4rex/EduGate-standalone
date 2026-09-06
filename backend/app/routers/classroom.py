@@ -43,6 +43,7 @@ async def classroom_join(
     ):
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom join limit exceeded")
     client_ip = _client_ip(request)
+    lease = classroom_access.lease()
     device_id = (join_request.device_id if join_request else "").strip()
     token, record = student_sessions.issue(
         current_classroom_token,
@@ -53,12 +54,15 @@ async def classroom_join(
             device_id,
         ),
         client_ip=client_ip,
+        classroom_id=lease.id,
         student_id=(
             classroom_access.legacy_student_id(f"device:{device_id}")
             if device_id
             else None
         ),
     )
+    if lease.revoked:
+        raise HTTPException(status_code=403, detail="Classroom is not active")
     return StudentJoinResponse(
         student_token=token,
         student_session_id=record.student_id,

@@ -51,9 +51,7 @@ if %errorlevel% neq 0 exit /b 1
 if %errorlevel% neq 0 exit /b 1
 
 echo.
-echo Adding the portable classroom Python runtime...
-"%BUILD_PYTHON%" desktop\build_portable_runtime.py dist\EduGate-Standalone\runtime\python
-if %errorlevel% neq 0 exit /b 1
+echo Browser Python runtime is bundled in the frontend assets.
 
 copy /y desktop\PORTABLE-README.txt dist\EduGate-Standalone\README.txt >nul
 

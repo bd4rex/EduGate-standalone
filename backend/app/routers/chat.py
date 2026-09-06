@@ -31,6 +31,7 @@ from app.core import (
 )
 from app.schemas import ChatRequest, ClientMessage, V1ChatCompletionRequest
 from app.security import StudentIdentity
+from app.classroom_tasks import run_in_classroom
 
 router = APIRouter()
 
@@ -40,6 +41,10 @@ async def chat(
     request: ChatRequest,
     student: StudentIdentity = Depends(require_classroom_access),
 ) -> dict[str, Any]:
+    return await run_in_classroom(student, _chat(request, student))
+
+
+async def _chat(request: ChatRequest, student: StudentIdentity) -> dict[str, Any]:
     effective_scenario_id, scenario, _ = _resolve_chat_context(request)
     teacher_id = settings.admin_username
     start = time.perf_counter()
@@ -131,6 +136,10 @@ async def chat_stream(
     request: ChatRequest,
     student: StudentIdentity = Depends(require_classroom_access),
 ) -> StreamingResponse:
+    return await run_in_classroom(student, _chat_stream(request, student))
+
+
+async def _chat_stream(request: ChatRequest, student: StudentIdentity) -> StreamingResponse:
     effective_scenario_id, scenario, _ = _resolve_chat_context(request)
     teacher_id = settings.admin_username
     should_block, strict_topic_related = await _strict_miss_decision(request, scenario)

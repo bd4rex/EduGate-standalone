@@ -1,0 +1,4 @@
+# Preserve vendored runtime bytes and their checksums on Windows checkouts.
+frontend/assets/vendor/pyodide/* -text
+# Retain upstream license formatting verbatim.
+frontend/assets/vendor/pyodide/LICENSE-EMSCRIPTEN whitespace=-blank-at-eol

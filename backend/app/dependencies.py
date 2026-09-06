@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import secrets
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -80,8 +81,12 @@ def require_admin(
     return teacher
 
 
+def effective_platform_key() -> str | None:
+    return state.secret_store.get("system:platform_api_key", default=state.settings.platform_api_key)
+
+
 def require_platform_key(authorization: str | None = Header(default=None)) -> None:
-    platform_api_key = state.secret_store.get("system:platform_api_key") or state.settings.platform_api_key
+    platform_api_key = effective_platform_key()
     if not platform_api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -99,19 +104,21 @@ def require_classroom_access(
     x_computer_name: str | None = Header(default=None, alias="X-Computer-Name"),
     class_token: str | None = None,
 ) -> StudentIdentity:
-    if not state.classroom_access.active():
+    lease = state.classroom_access.lease()
+    if not state.classroom_access.active() or lease.revoked:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Classroom is not active")
     if x_student_token:
         record = state.student_sessions.resolve(
             x_student_token,
             classroom_token=state.classroom_access.token(),
+            classroom_id=lease.id,
         )
         if record is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired student token")
         key = f"chat:student:{record.student_id}"
         if not state.rate_limiter.allow(key, limit=state.settings.classroom_rate_limit, window_seconds=60):
             raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Classroom request limit exceeded")
-        return state.student_sessions.identity(record)
+        return replace(state.student_sessions.identity(record), lease=lease)
     token = x_class_token or class_token
     if not state.classroom_access.matches(token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid classroom token")
@@ -123,4 +130,6 @@ def require_classroom_access(
         student_id=state.classroom_access.legacy_student_id(client_ip),
         computer_name=_computer_name(x_computer_name, client_ip),
         client_ip=client_ip,
+        classroom_id=lease.id,
+        lease=lease,
     )
