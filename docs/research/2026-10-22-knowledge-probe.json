@@ -1,0 +1,265 @@
+{
+  "captured_at": "2026-10-22T16:43:38.553611+08:00",
+  "environment": {
+    "python": "3.12.10",
+    "system": "Windows",
+    "machine": "AMD64",
+    "sqlite": "3.49.1"
+  },
+  "source": {
+    "files": [
+      {
+        "path": "backend/app/knowledge.py",
+        "sha256_lf": "ab79e5521149a9253a921876a1a65c2b95ba7854bcbbc2b40df549b47dff827f",
+        "matches_head": true
+      },
+      {
+        "path": "backend/app/chat_service.py",
+        "sha256_lf": "262fe6297650b276c2c97c14fcd45a7555565dcdfbaf51248fd6be89f90f9149",
+        "matches_head": false
+      },
+      {
+        "path": "backend/app/routers/chat.py",
+        "sha256_lf": "76589ccfb5203efcd5d6fe16a20062896bce4c4e1ae9a33edb613afcb82eedf5",
+        "matches_head": true
+      },
+      {
+        "path": "samples/ip_teaching_knowledge_base.txt",
+        "sha256_lf": "a7858ba9777824318c52026419f75ea6cde8895f8ec491c88cb3408f2da49f4e",
+        "matches_head": true
+      }
+    ],
+    "head": "ccdbb03555bdc61fefe85944c81010542028f347"
+  },
+  "scope": {
+    "corpus": "repository IP teaching sample and synthetic repeated chunks",
+    "model_api_called": false,
+    "live_application_data_read": false,
+    "concurrency_tested": false,
+    "answer_accuracy_measured": false,
+    "chunk_index_base": 0
+  },
+  "sample": {
+    "file_count": 1,
+    "chunk_count": 3,
+    "normalized_char_count": 1885
+  },
+  "retrieval_probes": [
+    {
+      "kind": "exact_term",
+      "question": "什么是IP地址？",
+      "hit_count": 3,
+      "top_two": [
+        {
+          "chunk_index": 0,
+          "score": 29,
+          "matching_terms": [
+            "什么是",
+            "么是",
+            "ip",
+            "什么",
+            "地址"
+          ]
+        },
+        {
+          "chunk_index": 1,
+          "score": 24,
+          "matching_terms": [
+            "ip",
+            "什么",
+            "地址"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "exact_term",
+      "question": "IPv6是多少位？",
+      "hit_count": 2,
+      "top_two": [
+        {
+          "chunk_index": 1,
+          "score": 3,
+          "matching_terms": [
+            "ipv6"
+          ]
+        },
+        {
+          "chunk_index": 2,
+          "score": 1,
+          "matching_terms": [
+            "ipv6"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "exact_term",
+      "question": "NAT有什么作用？",
+      "hit_count": 3,
+      "top_two": [
+        {
+          "chunk_index": 1,
+          "score": 7,
+          "matching_terms": [
+            "nat",
+            "作用",
+            "什么"
+          ]
+        },
+        {
+          "chunk_index": 0,
+          "score": 4,
+          "matching_terms": [
+            "nat",
+            "作用",
+            "什么"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "semantic_related_not_a_gold_answer",
+      "question": "我家几台电脑怎样共用一个外网号码？",
+      "hit_count": 0,
+      "top_two": []
+    },
+    {
+      "kind": "followup_requires_conversation",
+      "question": "你能再举个例子吗？",
+      "hit_count": 0,
+      "top_two": []
+    },
+    {
+      "kind": "sample_has_no_answer_evidence",
+      "question": "NAT是谁发明的？",
+      "hit_count": 3,
+      "top_two": [
+        {
+          "chunk_index": 1,
+          "score": 4,
+          "matching_terms": [
+            "nat"
+          ]
+        },
+        {
+          "chunk_index": 2,
+          "score": 3,
+          "matching_terms": [
+            "nat"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "off_topic_with_shared_word",
+      "question": "网络游戏充值怎么操作？",
+      "hit_count": 3,
+      "top_two": [
+        {
+          "chunk_index": 0,
+          "score": 8,
+          "matching_terms": [
+            "网络"
+          ]
+        },
+        {
+          "chunk_index": 1,
+          "score": 3,
+          "matching_terms": [
+            "网络"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "exact_term",
+      "question": "子网掩码怎么写成斜杠？",
+      "hit_count": 3,
+      "top_two": [
+        {
+          "chunk_index": 1,
+          "score": 18,
+          "matching_terms": [
+            "子网掩码",
+            "子网掩",
+            "网掩码",
+            "子网",
+            "网掩",
+            "掩码"
+          ]
+        },
+        {
+          "chunk_index": 0,
+          "score": 13,
+          "matching_terms": [
+            "子网掩码",
+            "子网掩",
+            "网掩码",
+            "写成",
+            "子网",
+            "网掩",
+            "掩码"
+          ]
+        }
+      ]
+    }
+  ],
+  "long_query_probe": {
+    "question": "老师您好我是一名刚刚开始学习这门课程的学生最近在复习课堂上讲过的相关内容但是一直没有完全理解所以希望您可以按照教材中的说法用比较容易理解的语言给我详细解释NAT",
+    "retained_term_count": 40,
+    "nat_retained": false,
+    "hit_count": 0
+  },
+  "filename_probe": {
+    "filename": "量化.md",
+    "question": "量化",
+    "hit_count": 0
+  },
+  "benchmark": {
+    "query": "为什么私有IP地址需要经过NAT才能访问公网",
+    "query_term_count": 40,
+    "repeats": 4,
+    "method": "Duplicate normalized sample chunks; measure sequential search() calls including source lookup; no model, no concurrent requests.",
+    "rows": [
+      {
+        "chunks": 1000,
+        "returned_hits": 5,
+        "elapsed_ms": [
+          48.15,
+          51.22,
+          56.35,
+          50.42
+        ],
+        "median_ms": 50.82
+      },
+      {
+        "chunks": 10000,
+        "returned_hits": 5,
+        "elapsed_ms": [
+          491.44,
+          502.14,
+          444.11,
+          443.42
+        ],
+        "median_ms": 467.77
+      },
+      {
+        "chunks": 30000,
+        "returned_hits": 5,
+        "elapsed_ms": [
+          1336.63,
+          1306.66,
+          1316.1,
+          1414.57
+        ],
+        "median_ms": 1326.37
+      }
+    ]
+  },
+  "fts5_default_chinese_probe": {
+    "query": "子网掩码",
+    "hit_count": 0,
+    "interpretation": "Default unicode61 is not a Chinese word segmenter; configure/preprocess Chinese explicitly."
+  }
+}
