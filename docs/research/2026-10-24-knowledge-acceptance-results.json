@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-24",
+  "scope": "Windows local implementation and installed package; authored development corpus, not teacher-reviewed classroom accuracy. Application source and binary are not part of this research publication.",
+  "automated": {
+    "non_browser_passed": 239,
+    "non_browser_skipped_macos": 1,
+    "branch_coverage_percent": 85.51,
+    "source_browser_cases_passed": 7,
+    "packaged_browser_cases_passed": 7,
+    "real_local_embedding_tests_passed": 14
+  },
+  "real_gateway_isolated": {
+    "cases": [
+      {
+        "case": "literal_blacklist",
+        "expected_decision": "blocked_topic",
+        "decision": "blocked_topic",
+        "elapsed_ms": 3.4,
+        "passed": true
+      },
+      {
+        "case": "semantic_blacklist",
+        "expected_decision": "blocked_topic",
+        "decision": "blocked_topic",
+        "elapsed_ms": 7558.81,
+        "passed": true
+      },
+      {
+        "case": "named_blacklist",
+        "expected_decision": "blocked_topic",
+        "decision": "blocked_topic",
+        "elapsed_ms": 8585.97,
+        "passed": true
+      },
+      {
+        "case": "followup_blacklist",
+        "expected_decision": "blocked_topic",
+        "decision": "blocked_topic",
+        "elapsed_ms": 10959.13,
+        "passed": true
+      },
+      {
+        "case": "grounded_answer",
+        "expected_decision": "supported",
+        "decision": "supported",
+        "elapsed_ms": 24300.98,
+        "passed": true,
+        "citation_status": 200
+      },
+      {
+        "case": "missing_evidence",
+        "expected_decision": "insufficient_evidence",
+        "decision": "insufficient_evidence",
+        "elapsed_ms": 11785.94,
+        "passed": true
+      },
+      {
+        "case": "checked_stream_completion",
+        "source_count": 1,
+        "done": true,
+        "elapsed_ms": 21194.91,
+        "passed": true
+      }
+    ],
+    "all_passed": true
+  },
+  "installed": {
+    "version": "2.2.0",
+    "checks": {
+      "supervised_restart": true,
+      "current_version": true,
+      "policy_requires_teacher": true,
+      "games_policy_persisted": true,
+      "bundled_local_model_ready": true,
+      "classroom_remains_paused": true,
+      "closed_student_join_denied": true,
+      "teacher_retrieval_blacklist": true,
+      "existing_platform_api_available": true,
+      "literal_games": true,
+      "related_named_game": true,
+      "normal_answer_completes": true,
+      "classroom_still_paused": true,
+      "advanced_settings_preserved": true,
+      "existing_scenario_values_preserved": true,
+      "existing_models_preserved": true,
+      "existing_credentials_preserved": true,
+      "edugate.sqlite3_integrity": true,
+      "edugate.sqlite3_existing_rows_preserved": true,
+      "knowledge.sqlite3_integrity": true,
+      "knowledge.sqlite3_existing_rows_preserved": true,
+      "knowledge_originals_preserved": true,
+      "accepted_executable_installed": true
+    },
+    "real_model_cases": [
+      {
+        "case": "literal_games",
+        "passed": true,
+        "decision": "blocked_topic",
+        "elapsed_ms": 4.63
+      },
+      {
+        "case": "related_named_game",
+        "passed": true,
+        "decision": "blocked_topic",
+        "elapsed_ms": 7799.86
+      },
+      {
+        "case": "checked_normal_stream",
+        "passed": true,
+        "completed": true,
+        "answer": "IPv6地址的长度是128位。",
+        "elapsed_ms": 13944.25
+      }
+    ],
+    "executable_sha256": "99a604ae14cba9530bb9465524e5fbcbc747a456b34f5ba34482e3161e96f4d9",
+    "knowledge_chunk_count": 0,
+    "preservation_note": "Existing app_settings values verified; startup maintenance may refresh that table's updated_at timestamp. Verification adds three platform API request logs per full run.",
+    "all_passed": true
+  },
+  "limitations": [
+    "No real textbook corpus in the installed instance yet.",
+    "No real macOS run.",
+    "OCR and formula/image retrieval are not implemented.",
+    "Semantic blacklist may miss oblique requests or overblock; failed checks withhold answers.",
+    "Capacity probes cover local search only, not full classroom answer concurrency."
+  ]
+}

@@ -1,0 +1,1682 @@
+{
+  "scope": "Authored development regression cases plus duplicated-chunk local capacity. No answer model, no real student corpus, no OCR load.",
+  "python": "3.12.10",
+  "model_signature": "BAAI/bge-small-zh-v1.5:99f12e113be380bdc60848acf108561ef3157f427b47538378967d7ef47418d7",
+  "summary": {
+    "legacy": {
+      "answerable_cases": 26,
+      "recall_at_5_hits": 23,
+      "top_1_hits": 21
+    },
+    "keyword": {
+      "answerable_cases": 26,
+      "recall_at_5_hits": 25,
+      "top_1_hits": 21
+    },
+    "vector": {
+      "answerable_cases": 26,
+      "recall_at_5_hits": 24,
+      "top_1_hits": 23
+    },
+    "hybrid": {
+      "answerable_cases": 26,
+      "recall_at_5_hits": 26,
+      "top_1_hits": 25
+    }
+  },
+  "cases": {
+    "legacy": [
+      {
+        "id": "nat-exact",
+        "query": "NAT的作用是什么？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 3.05
+      },
+      {
+        "id": "nat-paraphrase",
+        "query": "我家几台电脑怎样共用一个外网号码？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.44
+      },
+      {
+        "id": "ipv6-exact",
+        "query": "IPv6地址有多少位？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "IPv6.md",
+          "NAT.md",
+          "子网.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.19
+      },
+      {
+        "id": "ipv6-paraphrase",
+        "query": "下一代互联网的地址为什么比旧版够用？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "子网.md",
+          "IPv6.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.45
+      },
+      {
+        "id": "subnet-exact",
+        "query": "子网掩码有什么作用？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.27
+      },
+      {
+        "id": "subnet-number",
+        "query": "192.168.10.5与255.255.255.0对应哪个网络地址？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md",
+          "NAT.md",
+          "IPv6.md",
+          "二进制.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.31
+      },
+      {
+        "id": "dns-exact",
+        "query": "DNS是什么？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.09
+      },
+      {
+        "id": "dns-paraphrase",
+        "query": "输入网站的名字以后，电脑怎样找到那台服务器？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.44
+      },
+      {
+        "id": "loop-exact",
+        "query": "for与while循环如何选择？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.23
+      },
+      {
+        "id": "loop-paraphrase",
+        "query": "让电脑不停地重复同一组操作，用什么程序结构？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.69
+      },
+      {
+        "id": "list-exact",
+        "query": "Python列表的append方法做什么？",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md",
+          "主键.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.27
+      },
+      {
+        "id": "list-paraphrase",
+        "query": "我想在保存多个元素的有序容器末尾再放一个元素。",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.44
+      },
+      {
+        "id": "sample-exact",
+        "query": "采样会怎样改变像素数量？",
+        "expected": "采样.md",
+        "retrieved": [
+          "采样.md",
+          "量化.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.32
+      },
+      {
+        "id": "sample-paraphrase",
+        "query": "把照片分成更密的小格子，细节会怎样变化？",
+        "expected": "采样.md",
+        "retrieved": [
+          "量化.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": false,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.44
+      },
+      {
+        "id": "quantize-exact",
+        "query": "图像量化是什么意思？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.26
+      },
+      {
+        "id": "quantize-paraphrase",
+        "query": "把照片只能涂成有限的几种颜色，会丢掉什么？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.45
+      },
+      {
+        "id": "rle-exact",
+        "query": "游程编码为什么适合连续重复内容？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "游程编码.md",
+          "循环.md",
+          "加密.md",
+          "主键.md",
+          "量化.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.44
+      },
+      {
+        "id": "rle-paraphrase",
+        "query": "一大串相同的字母怎样记得更省空间？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "采样.md",
+          "游程编码.md",
+          "IPv6.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.44
+      },
+      {
+        "id": "key-exact",
+        "query": "主键为什么不能重复？",
+        "expected": "主键.md",
+        "retrieved": [
+          "主键.md",
+          "游程编码.md",
+          "循环.md",
+          "加密.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.27
+      },
+      {
+        "id": "key-paraphrase",
+        "query": "同名学生很多，表格里用什么可靠地区分每个人？",
+        "expected": "主键.md",
+        "retrieved": [],
+        "recall_at_5": false,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.45
+      },
+      {
+        "id": "encrypt-exact",
+        "query": "加密和身份认证有什么区别？",
+        "expected": "加密.md",
+        "retrieved": [
+          "加密.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.35
+      },
+      {
+        "id": "encrypt-paraphrase",
+        "query": "怎样让偷听传输的人看不懂消息内容？",
+        "expected": "加密.md",
+        "retrieved": [
+          "加密.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.45
+      },
+      {
+        "id": "binary-exact",
+        "query": "二进制1010是多少？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "二进制.md",
+          "IPv6.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.18
+      },
+      {
+        "id": "binary-paraphrase",
+        "query": "只用两个数字表示数值时，各个位置怎么计算大小？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.44
+      },
+      {
+        "id": "followup",
+        "query": "你能再举个例子吗？",
+        "expected": "NAT.md",
+        "retrieved": [],
+        "recall_at_5": false,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.22
+      },
+      {
+        "id": "version",
+        "query": "项目提交日期是什么时候？",
+        "expected": "2026课程安排.md",
+        "retrieved": [
+          "2026课程安排.md",
+          "2025课程安排.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.32
+      },
+      {
+        "id": "hidden-teacher",
+        "query": "本题标准答案是什么？",
+        "expected": null,
+        "retrieved": [
+          "教师参考答案.md"
+        ],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": false,
+        "elapsed_ms": 0.28
+      },
+      {
+        "id": "unsupported-inventor",
+        "query": "NAT是谁发明的？",
+        "expected": null,
+        "retrieved": [
+          "NAT.md"
+        ],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.16
+      },
+      {
+        "id": "off-topic",
+        "query": "网络游戏充值怎么操作？",
+        "expected": null,
+        "retrieved": [
+          "子网.md",
+          "NAT.md",
+          "IPv6.md"
+        ],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 0.53
+      }
+    ],
+    "keyword": [
+      {
+        "id": "nat-exact",
+        "query": "NAT的作用是什么？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 28.81
+      },
+      {
+        "id": "nat-paraphrase",
+        "query": "我家几台电脑怎样共用一个外网号码？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 18.65
+      },
+      {
+        "id": "ipv6-exact",
+        "query": "IPv6地址有多少位？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "IPv6.md",
+          "NAT.md",
+          "子网.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 32.32
+      },
+      {
+        "id": "ipv6-paraphrase",
+        "query": "下一代互联网的地址为什么比旧版够用？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "IPv6.md",
+          "NAT.md",
+          "子网.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 35.34
+      },
+      {
+        "id": "subnet-exact",
+        "query": "子网掩码有什么作用？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 20.36
+      },
+      {
+        "id": "subnet-number",
+        "query": "192.168.10.5与255.255.255.0对应哪个网络地址？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md",
+          "IPv6.md",
+          "NAT.md",
+          "DNS.md",
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 38.33
+      },
+      {
+        "id": "dns-exact",
+        "query": "DNS是什么？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 18.06
+      },
+      {
+        "id": "dns-paraphrase",
+        "query": "输入网站的名字以后，电脑怎样找到那台服务器？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 17.43
+      },
+      {
+        "id": "loop-exact",
+        "query": "for与while循环如何选择？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 18.71
+      },
+      {
+        "id": "loop-paraphrase",
+        "query": "让电脑不停地重复同一组操作，用什么程序结构？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md",
+          "量化.md",
+          "游程编码.md",
+          "DNS.md",
+          "主键.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 67.53
+      },
+      {
+        "id": "list-exact",
+        "query": "Python列表的append方法做什么？",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 17.61
+      },
+      {
+        "id": "list-paraphrase",
+        "query": "我想在保存多个元素的有序容器末尾再放一个元素。",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 18.36
+      },
+      {
+        "id": "sample-exact",
+        "query": "采样会怎样改变像素数量？",
+        "expected": "采样.md",
+        "retrieved": [
+          "采样.md",
+          "量化.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 22.46
+      },
+      {
+        "id": "sample-paraphrase",
+        "query": "把照片分成更密的小格子，细节会怎样变化？",
+        "expected": "采样.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md",
+          "游程编码.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 33.69
+      },
+      {
+        "id": "quantize-exact",
+        "query": "图像量化是什么意思？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 29.31
+      },
+      {
+        "id": "quantize-paraphrase",
+        "query": "把照片只能涂成有限的几种颜色，会丢掉什么？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md",
+          "游程编码.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 34.44
+      },
+      {
+        "id": "rle-exact",
+        "query": "游程编码为什么适合连续重复内容？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "游程编码.md",
+          "循环.md",
+          "主键.md",
+          "量化.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 36.72
+      },
+      {
+        "id": "rle-paraphrase",
+        "query": "一大串相同的字母怎样记得更省空间？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "采样.md",
+          "游程编码.md",
+          "IPv6.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 25.95
+      },
+      {
+        "id": "key-exact",
+        "query": "主键为什么不能重复？",
+        "expected": "主键.md",
+        "retrieved": [
+          "主键.md",
+          "加密.md",
+          "循环.md",
+          "游程编码.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 38.27
+      },
+      {
+        "id": "key-paraphrase",
+        "query": "同名学生很多，表格里用什么可靠地区分每个人？",
+        "expected": "主键.md",
+        "retrieved": [
+          "量化.md"
+        ],
+        "recall_at_5": false,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 17.18
+      },
+      {
+        "id": "encrypt-exact",
+        "query": "加密和身份认证有什么区别？",
+        "expected": "加密.md",
+        "retrieved": [
+          "加密.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 18.34
+      },
+      {
+        "id": "encrypt-paraphrase",
+        "query": "怎样让偷听传输的人看不懂消息内容？",
+        "expected": "加密.md",
+        "retrieved": [
+          "循环.md",
+          "加密.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 22.32
+      },
+      {
+        "id": "binary-exact",
+        "query": "二进制1010是多少？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "二进制.md",
+          "IPv6.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 23.46
+      },
+      {
+        "id": "binary-paraphrase",
+        "query": "只用两个数字表示数值时，各个位置怎么计算大小？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "量化.md",
+          "二进制.md",
+          "循环.md",
+          "IPv6.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 39.22
+      },
+      {
+        "id": "followup",
+        "query": "你能再举个例子吗？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 19.41
+      },
+      {
+        "id": "version",
+        "query": "项目提交日期是什么时候？",
+        "expected": "2026课程安排.md",
+        "retrieved": [
+          "2026课程安排.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 17.62
+      },
+      {
+        "id": "hidden-teacher",
+        "query": "本题标准答案是什么？",
+        "expected": null,
+        "retrieved": [],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": true,
+        "elapsed_ms": 11.4
+      },
+      {
+        "id": "unsupported-inventor",
+        "query": "NAT是谁发明的？",
+        "expected": null,
+        "retrieved": [
+          "NAT.md"
+        ],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 17.93
+      },
+      {
+        "id": "off-topic",
+        "query": "网络游戏充值怎么操作？",
+        "expected": null,
+        "retrieved": [
+          "子网.md",
+          "IPv6.md",
+          "NAT.md"
+        ],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 27.39
+      }
+    ],
+    "vector": [
+      {
+        "id": "nat-exact",
+        "query": "NAT的作用是什么？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "DNS.md",
+          "列表.md",
+          "IPv6.md",
+          "采样.md",
+          "主键.md"
+        ],
+        "recall_at_5": false,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 47.84
+      },
+      {
+        "id": "nat-paraphrase",
+        "query": "我家几台电脑怎样共用一个外网号码？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md",
+          "IPv6.md",
+          "子网.md",
+          "主键.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 44.12
+      },
+      {
+        "id": "ipv6-exact",
+        "query": "IPv6地址有多少位？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "IPv6.md",
+          "DNS.md",
+          "NAT.md",
+          "子网.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 42.01
+      },
+      {
+        "id": "ipv6-paraphrase",
+        "query": "下一代互联网的地址为什么比旧版够用？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "IPv6.md",
+          "NAT.md",
+          "DNS.md",
+          "子网.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 39.72
+      },
+      {
+        "id": "subnet-exact",
+        "query": "子网掩码有什么作用？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md",
+          "DNS.md",
+          "NAT.md",
+          "IPv6.md",
+          "加密.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 42.81
+      },
+      {
+        "id": "subnet-number",
+        "query": "192.168.10.5与255.255.255.0对应哪个网络地址？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md",
+          "IPv6.md",
+          "NAT.md",
+          "DNS.md",
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 48.97
+      },
+      {
+        "id": "dns-exact",
+        "query": "DNS是什么？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md",
+          "列表.md",
+          "NAT.md",
+          "IPv6.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.85
+      },
+      {
+        "id": "dns-paraphrase",
+        "query": "输入网站的名字以后，电脑怎样找到那台服务器？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md",
+          "NAT.md",
+          "IPv6.md",
+          "子网.md",
+          "主键.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 44.77
+      },
+      {
+        "id": "loop-exact",
+        "query": "for与while循环如何选择？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md",
+          "列表.md",
+          "二进制.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 41.51
+      },
+      {
+        "id": "loop-paraphrase",
+        "query": "让电脑不停地重复同一组操作，用什么程序结构？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md",
+          "列表.md",
+          "游程编码.md",
+          "主键.md",
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 53.08
+      },
+      {
+        "id": "list-exact",
+        "query": "Python列表的append方法做什么？",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md",
+          "DNS.md",
+          "循环.md",
+          "2025课程安排.md",
+          "2026课程安排.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.33
+      },
+      {
+        "id": "list-paraphrase",
+        "query": "我想在保存多个元素的有序容器末尾再放一个元素。",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md",
+          "循环.md",
+          "采样.md",
+          "加密.md",
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.41
+      },
+      {
+        "id": "sample-exact",
+        "query": "采样会怎样改变像素数量？",
+        "expected": "采样.md",
+        "retrieved": [
+          "采样.md",
+          "量化.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 28.77
+      },
+      {
+        "id": "sample-paraphrase",
+        "query": "把照片分成更密的小格子，细节会怎样变化？",
+        "expected": "采样.md",
+        "retrieved": [
+          "采样.md",
+          "量化.md",
+          "加密.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 39.35
+      },
+      {
+        "id": "quantize-exact",
+        "query": "图像量化是什么意思？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 34.36
+      },
+      {
+        "id": "quantize-paraphrase",
+        "query": "把照片只能涂成有限的几种颜色，会丢掉什么？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 29.21
+      },
+      {
+        "id": "rle-exact",
+        "query": "游程编码为什么适合连续重复内容？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "游程编码.md",
+          "循环.md",
+          "列表.md",
+          "主键.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 41.63
+      },
+      {
+        "id": "rle-paraphrase",
+        "query": "一大串相同的字母怎样记得更省空间？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "列表.md",
+          "二进制.md",
+          "采样.md",
+          "游程编码.md",
+          "主键.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 45.11
+      },
+      {
+        "id": "key-exact",
+        "query": "主键为什么不能重复？",
+        "expected": "主键.md",
+        "retrieved": [
+          "主键.md",
+          "循环.md",
+          "DNS.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 36.56
+      },
+      {
+        "id": "key-paraphrase",
+        "query": "同名学生很多，表格里用什么可靠地区分每个人？",
+        "expected": "主键.md",
+        "retrieved": [
+          "主键.md",
+          "二进制.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 33.48
+      },
+      {
+        "id": "encrypt-exact",
+        "query": "加密和身份认证有什么区别？",
+        "expected": "加密.md",
+        "retrieved": [
+          "加密.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 28.79
+      },
+      {
+        "id": "encrypt-paraphrase",
+        "query": "怎样让偷听传输的人看不懂消息内容？",
+        "expected": "加密.md",
+        "retrieved": [
+          "加密.md",
+          "列表.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 35.64
+      },
+      {
+        "id": "binary-exact",
+        "query": "二进制1010是多少？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "二进制.md",
+          "IPv6.md",
+          "主键.md",
+          "子网.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 41.04
+      },
+      {
+        "id": "binary-paraphrase",
+        "query": "只用两个数字表示数值时，各个位置怎么计算大小？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "二进制.md",
+          "主键.md",
+          "量化.md",
+          "列表.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.44
+      },
+      {
+        "id": "followup",
+        "query": "你能再举个例子吗？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "列表.md",
+          "DNS.md",
+          "循环.md",
+          "采样.md",
+          "主键.md"
+        ],
+        "recall_at_5": false,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.35
+      },
+      {
+        "id": "version",
+        "query": "项目提交日期是什么时候？",
+        "expected": "2026课程安排.md",
+        "retrieved": [
+          "2026课程安排.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 23.94
+      },
+      {
+        "id": "hidden-teacher",
+        "query": "本题标准答案是什么？",
+        "expected": null,
+        "retrieved": [],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": true,
+        "elapsed_ms": 18.65
+      },
+      {
+        "id": "unsupported-inventor",
+        "query": "NAT是谁发明的？",
+        "expected": null,
+        "retrieved": [],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 17.31
+      },
+      {
+        "id": "off-topic",
+        "query": "网络游戏充值怎么操作？",
+        "expected": null,
+        "retrieved": [],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 19.51
+      }
+    ],
+    "hybrid": [
+      {
+        "id": "nat-exact",
+        "query": "NAT的作用是什么？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md",
+          "DNS.md",
+          "列表.md",
+          "IPv6.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 55.71
+      },
+      {
+        "id": "nat-paraphrase",
+        "query": "我家几台电脑怎样共用一个外网号码？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md",
+          "IPv6.md",
+          "子网.md",
+          "主键.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 45.46
+      },
+      {
+        "id": "ipv6-exact",
+        "query": "IPv6地址有多少位？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "IPv6.md",
+          "NAT.md",
+          "DNS.md",
+          "子网.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 46.24
+      },
+      {
+        "id": "ipv6-paraphrase",
+        "query": "下一代互联网的地址为什么比旧版够用？",
+        "expected": "IPv6.md",
+        "retrieved": [
+          "IPv6.md",
+          "NAT.md",
+          "DNS.md",
+          "子网.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 42.8
+      },
+      {
+        "id": "subnet-exact",
+        "query": "子网掩码有什么作用？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md",
+          "DNS.md",
+          "NAT.md",
+          "IPv6.md",
+          "加密.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 45.05
+      },
+      {
+        "id": "subnet-number",
+        "query": "192.168.10.5与255.255.255.0对应哪个网络地址？",
+        "expected": "子网.md",
+        "retrieved": [
+          "子网.md",
+          "IPv6.md",
+          "NAT.md",
+          "DNS.md",
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 49.77
+      },
+      {
+        "id": "dns-exact",
+        "query": "DNS是什么？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md",
+          "列表.md",
+          "NAT.md",
+          "IPv6.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 44.33
+      },
+      {
+        "id": "dns-paraphrase",
+        "query": "输入网站的名字以后，电脑怎样找到那台服务器？",
+        "expected": "DNS.md",
+        "retrieved": [
+          "DNS.md",
+          "NAT.md",
+          "IPv6.md",
+          "子网.md",
+          "主键.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 44.02
+      },
+      {
+        "id": "loop-exact",
+        "query": "for与while循环如何选择？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md",
+          "列表.md",
+          "二进制.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 45.9
+      },
+      {
+        "id": "loop-paraphrase",
+        "query": "让电脑不停地重复同一组操作，用什么程序结构？",
+        "expected": "循环.md",
+        "retrieved": [
+          "循环.md",
+          "游程编码.md",
+          "主键.md",
+          "DNS.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 45.43
+      },
+      {
+        "id": "list-exact",
+        "query": "Python列表的append方法做什么？",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md",
+          "DNS.md",
+          "循环.md",
+          "2025课程安排.md",
+          "2026课程安排.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.87
+      },
+      {
+        "id": "list-paraphrase",
+        "query": "我想在保存多个元素的有序容器末尾再放一个元素。",
+        "expected": "列表.md",
+        "retrieved": [
+          "列表.md",
+          "循环.md",
+          "采样.md",
+          "加密.md",
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 44.88
+      },
+      {
+        "id": "sample-exact",
+        "query": "采样会怎样改变像素数量？",
+        "expected": "采样.md",
+        "retrieved": [
+          "采样.md",
+          "量化.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 30.94
+      },
+      {
+        "id": "sample-paraphrase",
+        "query": "把照片分成更密的小格子，细节会怎样变化？",
+        "expected": "采样.md",
+        "retrieved": [
+          "采样.md",
+          "量化.md",
+          "游程编码.md",
+          "加密.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 45.61
+      },
+      {
+        "id": "quantize-exact",
+        "query": "图像量化是什么意思？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md",
+          "游程编码.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 36.02
+      },
+      {
+        "id": "quantize-paraphrase",
+        "query": "把照片只能涂成有限的几种颜色，会丢掉什么？",
+        "expected": "量化.md",
+        "retrieved": [
+          "量化.md",
+          "采样.md",
+          "游程编码.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 40.71
+      },
+      {
+        "id": "rle-exact",
+        "query": "游程编码为什么适合连续重复内容？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "游程编码.md",
+          "循环.md",
+          "主键.md",
+          "采样.md",
+          "量化.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 44.48
+      },
+      {
+        "id": "rle-paraphrase",
+        "query": "一大串相同的字母怎样记得更省空间？",
+        "expected": "游程编码.md",
+        "retrieved": [
+          "采样.md",
+          "游程编码.md",
+          "IPv6.md",
+          "列表.md",
+          "二进制.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": false,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.61
+      },
+      {
+        "id": "key-exact",
+        "query": "主键为什么不能重复？",
+        "expected": "主键.md",
+        "retrieved": [
+          "主键.md",
+          "循环.md",
+          "DNS.md",
+          "游程编码.md",
+          "加密.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 43.64
+      },
+      {
+        "id": "key-paraphrase",
+        "query": "同名学生很多，表格里用什么可靠地区分每个人？",
+        "expected": "主键.md",
+        "retrieved": [
+          "主键.md",
+          "量化.md",
+          "二进制.md",
+          "列表.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 41.74
+      },
+      {
+        "id": "encrypt-exact",
+        "query": "加密和身份认证有什么区别？",
+        "expected": "加密.md",
+        "retrieved": [
+          "加密.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 32.45
+      },
+      {
+        "id": "encrypt-paraphrase",
+        "query": "怎样让偷听传输的人看不懂消息内容？",
+        "expected": "加密.md",
+        "retrieved": [
+          "加密.md",
+          "循环.md",
+          "列表.md",
+          "DNS.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 46.13
+      },
+      {
+        "id": "binary-exact",
+        "query": "二进制1010是多少？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "二进制.md",
+          "IPv6.md",
+          "主键.md",
+          "子网.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 40.76
+      },
+      {
+        "id": "binary-paraphrase",
+        "query": "只用两个数字表示数值时，各个位置怎么计算大小？",
+        "expected": "二进制.md",
+        "retrieved": [
+          "二进制.md",
+          "量化.md",
+          "IPv6.md",
+          "主键.md",
+          "循环.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 44.37
+      },
+      {
+        "id": "followup",
+        "query": "你能再举个例子吗？",
+        "expected": "NAT.md",
+        "retrieved": [
+          "NAT.md",
+          "列表.md",
+          "DNS.md",
+          "循环.md",
+          "采样.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 45.99
+      },
+      {
+        "id": "version",
+        "query": "项目提交日期是什么时候？",
+        "expected": "2026课程安排.md",
+        "retrieved": [
+          "2026课程安排.md"
+        ],
+        "recall_at_5": true,
+        "correct_first": true,
+        "exclusion_passed": null,
+        "elapsed_ms": 25.71
+      },
+      {
+        "id": "hidden-teacher",
+        "query": "本题标准答案是什么？",
+        "expected": null,
+        "retrieved": [],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": true,
+        "elapsed_ms": 18.13
+      },
+      {
+        "id": "unsupported-inventor",
+        "query": "NAT是谁发明的？",
+        "expected": null,
+        "retrieved": [
+          "NAT.md"
+        ],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 24.49
+      },
+      {
+        "id": "off-topic",
+        "query": "网络游戏充值怎么操作？",
+        "expected": null,
+        "retrieved": [
+          "子网.md",
+          "IPv6.md",
+          "NAT.md"
+        ],
+        "recall_at_5": null,
+        "correct_first": null,
+        "exclusion_passed": null,
+        "elapsed_ms": 34.52
+      }
+    ]
+  },
+  "capacity": [
+    {
+      "chunks": 1000,
+      "derived_index_build_ms": 131.42,
+      "sequential_median_ms": 50.65,
+      "concurrent_requests": 40,
+      "burst_p50_ms": 1255.03,
+      "burst_p95_ms": 1538.42,
+      "process_rss_mib_after_run": 357.0
+    },
+    {
+      "chunks": 10000,
+      "derived_index_build_ms": 808.94,
+      "sequential_median_ms": 72.69,
+      "concurrent_requests": 40,
+      "burst_p50_ms": 1538.39,
+      "burst_p95_ms": 1800.77,
+      "process_rss_mib_after_run": 469.4
+    },
+    {
+      "chunks": 30000,
+      "derived_index_build_ms": 2153.06,
+      "sequential_median_ms": 125.82,
+      "concurrent_requests": 40,
+      "burst_p50_ms": 2830.37,
+      "burst_p95_ms": 2930.5,
+      "process_rss_mib_after_run": 610.1
+    }
+  ]
+}
