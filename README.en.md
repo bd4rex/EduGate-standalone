@@ -20,6 +20,8 @@ Under Resources → Blacklist and trial, teachers can generate the final answer 
 
 Download the [Windows x64 release](https://github.com/bd4rex/EduGate-standalone/releases/tag/v2.4.0). This release does not include a new macOS binary; macOS source support remains available.
 
+The [2.3 → 2.4 process archive](docs/history/releases-2.3-to-2.4.md) preserves the original Windows packages and a separate runtime-source history. Reconstructed historical sources are verified against release bytecode and explicitly labelled with their archival date and scope.
+
 ## Security model
 
 - There is one teacher administrator; multi-teacher account and policy APIs are not part of the standalone edition.

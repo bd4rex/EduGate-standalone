@@ -1,0 +1,114 @@
+{
+  "recorded_on": "2026-10-25",
+  "branch": "codex/archive-2.3-to-2.4",
+  "commits": [
+    {
+      "version": "2.3.0",
+      "commit": "46c05e57d8118ad1c2b33ed971c0de758a6df62d",
+      "tree": "d0c365e0c5bf169a16714b116378f41389bb48d1",
+      "files": 106,
+      "verification": {
+        "version": "2.3.0",
+        "application_modules": 35,
+        "launcher_verified": true,
+        "exact_release_files": 65,
+        "status": "verified"
+      }
+    },
+    {
+      "version": "2.3.1",
+      "commit": "afc8b621e2e633241aea2dd69f024097a0b68a62",
+      "tree": "ed03624f1253c7d21e057de7f3355c15e0785d46",
+      "files": 108,
+      "verification": {
+        "version": "2.3.1",
+        "application_modules": 35,
+        "launcher_verified": true,
+        "exact_release_files": 67,
+        "status": "verified"
+      }
+    },
+    {
+      "version": "2.3.2",
+      "commit": "5af6488b705b50cf41ca447194037b242dc00b06",
+      "tree": "78794b61d35613becdb61062fcc5854d32fe81cd",
+      "files": 108,
+      "verification": {
+        "version": "2.3.2",
+        "application_modules": 35,
+        "launcher_verified": true,
+        "exact_release_files": 67,
+        "status": "verified"
+      }
+    },
+    {
+      "version": "2.4.0",
+      "commit": "ebb43cb0b3fa05c4b966e5811e87ded08976dc57",
+      "tree": "f9fd09dbcb94c3e4aa76e3612d184d57ada185f1",
+      "files": 108,
+      "verification": {
+        "version": "2.4.0",
+        "application_modules": 35,
+        "launcher_verified": true,
+        "exact_release_files": 67,
+        "status": "verified"
+      }
+    }
+  ],
+  "changes": {
+    "2.3.0..2.3.1": {
+      "frontend": [
+        "frontend/admin.html",
+        "frontend/assets/admin-settings.css",
+        "frontend/assets/admin-theme.css",
+        "frontend/assets/admin-workspaces.js",
+        "frontend/assets/knowledge-admin.js"
+      ],
+      "application_modules": []
+    },
+    "2.3.1..2.3.2": {
+      "frontend": [
+        "frontend/admin.html",
+        "frontend/assets/admin-theme.css",
+        "frontend/assets/admin-workspaces.js",
+        "frontend/assets/knowledge-admin.js"
+      ],
+      "application_modules": []
+    },
+    "2.3.2..2.4.0": {
+      "frontend": [
+        "frontend/admin.html",
+        "frontend/assets/admin-theme.css",
+        "frontend/assets/knowledge-admin.js"
+      ],
+      "application_modules": [
+        "app.api_docs",
+        "app.chat_service",
+        "app.main",
+        "app.routers.chat"
+      ]
+    }
+  },
+  "packages": {
+    "2.3.0": {
+      "sha256": "4b75c6216f2dc58fbf5ebe08d6c5edea22cb2743e55c97a2f3593ca203ed1944",
+      "bytes": 261181017,
+      "file_count": 1861
+    },
+    "2.3.1": {
+      "sha256": "15dbf6a974c73dace7e44c509232d7b1cfd71445b7a7f8237bd8f1e685bc9d0e",
+      "bytes": 261188849,
+      "file_count": 1863
+    },
+    "2.3.2": {
+      "sha256": "0c178386cf550034c346ed83098dcb37011fe1455551d21e3ab1503f36821873",
+      "bytes": 261193227,
+      "file_count": 1863
+    },
+    "2.4.0": {
+      "sha256": "03b21c9c6ab0b5c07faa88bb3a3882a0497be7be06ff009f651c15ad4db2d928",
+      "bytes": 261195135,
+      "file_count": 1863
+    }
+  }
+}

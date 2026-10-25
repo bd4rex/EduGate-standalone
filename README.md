@@ -19,6 +19,8 @@ EduGate 在教师的 64 位 Windows 电脑或 Apple 芯片 Mac 上运行，面�
 - “资源 → 黑名单与试问”可直接生成学生会收到的最终回答，沿用已保存的模型、教学策略、资料范围及黑名单，并展示检查结果和引用。支持连续追问及新一轮试问，不写入学生课堂记录，课前也能使用。
 - 本次提供 [Windows x64 Release](https://github.com/bd4rex/EduGate-standalone/releases/tag/v2.4.0)。macOS 源码继续维护，本次不提供新的 macOS 二进制包。
 
+历史发行包与代码演进见 [2.3 → 2.4 过程归档](docs/history/releases-2.3-to-2.4.md)。历史运行源码按发行包核验还原，并明确标注补录日期和范围。
+
 ## 现在的边界
 
 - 只有一个教师管理员账号，不提供多教师账号和策略 API。
