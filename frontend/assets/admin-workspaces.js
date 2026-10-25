@@ -1,6 +1,13 @@
 /* Secondary navigation keeps related settings together without discarding forms. */
 (() => {
   "use strict";
+  const mainTabs = document.getElementById("main-tabs");
+  if (mainTabs) {
+    const syncNavigationHeight = () => document.documentElement.style.setProperty("--main-navigation-height", `${mainTabs.getBoundingClientRect().height}px`);
+    syncNavigationHeight();
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(syncNavigationHeight).observe(mainTabs);
+    window.addEventListener("resize", syncNavigationHeight, { passive: true });
+  }
   function workspace(rootId, label, groups) {
     const root = document.getElementById(rootId);
     if (!root) return;
@@ -30,6 +37,10 @@
             const h2 = document.createElement("h2");
             h2.textContent = summary.textContent;
             heading.append(h2);
+            if (details.id === "backup-panel") {
+              const download = details.querySelector("#download-backup");
+              if (download) heading.append(download);
+            }
             node.prepend(heading);
             summary.hidden = true;
           }

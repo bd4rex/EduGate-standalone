@@ -1091,9 +1091,9 @@
     }
   </style>
   <link rel="stylesheet" href="assets/edugate-select.css" />
-  <link rel="stylesheet" href="assets/admin-settings.css?v=20261025-trial1" />
+  <link rel="stylesheet" href="assets/admin-settings.css?v=20261025-align2" />
   <link rel="stylesheet" href="assets/knowledge.css" />
-  <link rel="stylesheet" href="assets/admin-theme.css?v=20261025-trial1" />
+  <link rel="stylesheet" href="assets/admin-theme.css?v=20261025-align2" />
 </head>
 <body>
   <div class="shell">
@@ -1194,18 +1194,22 @@
                   <span class="ui-icon icon-brain" aria-hidden="true"></span>
                   <div class="compact-setting-body">
                     <span class="field-caption">AI 模型</span>
-                    <div class="model-list-compact" id="model-list"></div>
+                    <div class="compact-control-line">
+                      <div class="model-list-compact" id="model-list"></div>
+                      <button class="text-action" id="reload-models" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新模型</span></button>
+                    </div>
                   </div>
-                  <button class="text-action" id="reload-models" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新模型</span></button>
                 </div>
 
                 <div class="compact-setting-row source-setting-row">
                   <span class="ui-icon icon-book" aria-hidden="true"></span>
                   <div class="compact-setting-body">
                     <span class="field-caption">课堂知识库</span>
-                    <select id="source-select" aria-label="选择知识库"></select>
+                    <div class="compact-control-line">
+                      <select id="source-select" aria-label="选择知识库"></select>
+                      <button class="text-action" id="reload-sources" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新知识库</span></button>
+                    </div>
                   </div>
-                  <button class="text-action" id="reload-sources" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新知识库</span></button>
                 </div>
 
                 <details class="compact-setting-row advanced-policy-link">
@@ -1647,11 +1651,8 @@
           <details class="collapsible-panel" id="backup-panel">
             <summary>备份与恢复</summary>
             <div class="list-card panel-body">
+              <button class="button soft" id="download-backup" type="button">下载完整备份</button>
               <div class="stack">
-                <div class="actions" style="justify-content:flex-start">
-                  <button class="button soft" id="download-backup" type="button">下载完整备份</button>
-                  <button class="button danger" id="restore-backup" type="button">恢复并重启</button>
-                </div>
                 <div>
                   <span class="field-label">恢复备份 ZIP</span>
                   <div class="file-picker">
@@ -1660,6 +1661,7 @@
                     <span class="file-picker-name" id="restore-backup-file-name">未选择文件</span>
                   </div>
                 </div>
+                <button class="button danger" id="restore-backup" type="button">恢复并重启</button>
                 <p class="hint">备份包含账号、策略、模型密钥和知识库，可恢复到另一台 EduGate 电脑。恢复会重启服务并替换当前数据。</p>
               </div>
             </div>
@@ -1670,7 +1672,7 @@
       <section class="section" id="portable-operation" role="status" aria-live="polite" tabindex="-1" hidden></section>
       <div class="footer-note">
         <span>教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
-        <span>v2.4.0 · 单教师便携课堂版 · 2026.10.25</span>
+        <span>v2.4.1 · 单教师便携课堂版 · 2026.10.25</span>
       </div>
     </main>
   </div>
@@ -2540,6 +2542,10 @@
       MAX_PDF_PAGES: "PDF 最大页数",
       LOG_MAX_RECORDS: "请求日志保留条数",
       LOG_MESSAGE_PREVIEW: "记录消息预览",
+      DB_WRITE_QUEUE_SIZE: "数据库写入队列上限（项）",
+      DB_WRITE_BATCH_SIZE: "每批写入上限（项）",
+      DB_WRITE_FLUSH_INTERVAL_MS: "写入批次刷新间隔（毫秒）",
+      DB_CLEANUP_INTERVAL_SECONDS: "历史数据清理检查间隔（秒）",
       PYTHON_RUNNER_ENABLED: "允许学生浏览器运行 Python",
       PYTHON_RUNNER_TIMEOUT_SECONDS: "Python 超时（秒）",
       PYTHON_RUNNER_MAX_CODE_CHARS: "Python 代码字符上限",
@@ -4126,6 +4132,7 @@
     setInterval(refreshClassroomStatus, 5000);
     window.EduGateKnowledgeAdmin = {
       request, toast: showToast, scenario: currentScenario,
+      modelName: (id) => modelDisplayName(state.config?.model_catalog?.[id] || { id }),
       strategyDirty: () => state.strategyDirty,
       files: () => state.files, sources: () => state.sources,
       authenticated: () => Boolean(state.adminToken),
@@ -4139,7 +4146,7 @@
     window.addEventListener("DOMContentLoaded", boot, { once: true });
   </script>
   <script src="assets/edugate-select.js"></script>
-  <script src="assets/admin-workspaces.js?v=20261025-trial1"></script>
-  <script src="assets/knowledge-admin.js?v=20261025-trial1"></script>
+  <script src="assets/admin-workspaces.js?v=20261025-align2"></script>
+  <script src="assets/knowledge-admin.js?v=20261025-align2"></script>
 </body>
 </html>

@@ -19,7 +19,7 @@ from app.portable import package_manifest, write_json
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", default="2.4.0")
+    parser.add_argument("--version", default="2.4.1")
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9._-]{1,60}", args.version):
         raise SystemExit("Invalid version")

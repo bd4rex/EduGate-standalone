@@ -52,7 +52,7 @@
     byId("knowledge-trial-reset").disabled = searching;
     byId("knowledge-question").disabled = searching;
     byId("knowledge-trial-round").textContent = trialHistory.length ? `已完成 ${trialHistory.length / 2} 轮 / 最多 10 轮` : "新一轮试问";
-    byId("knowledge-trial-model").textContent = `当前模型：${scenario?.model || "未配置"} · ${scenario?.knowledge_strict ? "仅依据课堂资料" : "可使用通用知识"} · 使用已保存的教学策略`;
+    byId("knowledge-trial-model").textContent = `当前模型：${scenario?.model ? (host.modelName?.(scenario.model) || scenario.model) : "未配置"} · ${scenario?.knowledge_strict ? "仅依据课堂资料" : "可使用通用知识"} · 使用已保存的教学策略`;
   }
 
   function renderScopeState() {
@@ -220,7 +220,7 @@
     const answerLabel = !info.generation_requested ? "课堂提示 / 拒答" : info.answer_policy === "blocked" ? "回答已被拦截" : info.answer_policy === "unavailable" ? "回答检查未通过" : info.answer_policy_checked ? "回答与引用已通过" : "回答已生成";
     const article = document.createElement("details");
     article.className = "trial-conversation-turn"; article.open = true;
-    article.innerHTML = `<summary>第 ${trialHistory.length / 2 + 1} 轮 · ${escape(query)}</summary><div class="trial-stage-row trial-answer-stages">${stage("1 · 提问黑名单",questionLabel,policy === "allowed" ? "pass" : ["blocked","unavailable"].includes(policy) ? "warning" : "idle")}${stage("2 · 课堂资料依据",decisions[info.retrieval_decision] || "未检索",["supported","assisted"].includes(info.retrieval_decision) ? "pass" : "warning")}${stage("3 · 最终回答",answerLabel,info.generation_requested && !["blocked","unavailable"].includes(info.answer_policy) ? "pass" : "warning")}</div><h3>学生会收到的回答</h3><div class="trial-answer-text">${escape(info.answer)}</div><p class="trial-result-note">${escape(info.model)} · ${escape(info.elapsed_ms)} ms · 教师试问，不计入学生记录</p><div class="trial-answer-sources"></div>`;
+    article.innerHTML = `<summary>第 ${trialHistory.length / 2 + 1} 轮 · ${escape(query)}</summary><div class="trial-stage-row trial-answer-stages">${stage("1 · 提问黑名单",questionLabel,policy === "allowed" ? "pass" : ["blocked","unavailable"].includes(policy) ? "warning" : "idle")}${stage("2 · 课堂资料依据",decisions[info.retrieval_decision] || "未检索",["supported","assisted"].includes(info.retrieval_decision) ? "pass" : "warning")}${stage("3 · 最终回答",answerLabel,info.generation_requested && !["blocked","unavailable"].includes(info.answer_policy) ? "pass" : "warning")}</div><h3>学生会收到的回答</h3><div class="trial-answer-text">${escape(info.answer)}</div><p class="trial-result-note">${escape(host.modelName?.(info.model) || info.model)} · ${escape(info.elapsed_ms)} ms · 教师试问，不计入学生记录</p><div class="trial-answer-sources"></div>`;
     for (const source of sources) {
       const detail = document.createElement("details"); detail.className = "knowledge-result";
       detail.innerHTML = `<summary><strong>[${escape(source.id)}] ${escape(source.filename)}</strong></summary><p class="hint">${escape(source.chapter || "正文")}${source.page ? ` · 第 ${source.page} 页/张` : ""}</p><pre>${escape(source.text)}</pre>`;

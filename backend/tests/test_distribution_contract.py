@@ -286,11 +286,9 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">' in page
     assert '<details class="collapsible-panel" id="backup-panel">' in page
     backup = page.split('id="backup-panel"', 1)[1].split("</details>", 1)[0]
-    backup_actions = backup.split('<div class="actions" style="justify-content:flex-start">', 1)[1].split(
-        "</div>", 1
-    )[0]
-    assert 'id="download-backup"' in backup_actions
-    assert 'id="restore-backup"' in backup_actions
+    assert backup.count('id="download-backup"') == 1
+    assert backup.count('id="restore-backup"') == 1
+    assert backup.index('id="restore-backup-file"') < backup.index('id="restore-backup"')
 
 
 def test_browser_embed_sdk_is_distributed_and_uses_scoped_student_sessions() -> None:

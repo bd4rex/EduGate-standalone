@@ -50,7 +50,7 @@ if %errorlevel% neq 0 exit /b 1
 "%BUILD_PYTHON%" desktop\prepare_knowledge_model.py --directory build\knowledge-model-cache --export build\knowledge-model
 if %errorlevel% neq 0 exit /b 1
 
-if not defined EDUGATE_VERSION set "EDUGATE_VERSION=2.4.0"
+if not defined EDUGATE_VERSION set "EDUGATE_VERSION=2.4.1"
 "%BUILD_PYTHON%" desktop\build_portable_release.py --version "%EDUGATE_VERSION%"
 if %errorlevel% neq 0 exit /b 1
 

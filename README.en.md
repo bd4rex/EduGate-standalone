@@ -12,13 +12,15 @@ EduGate runs on a teacher's 64-bit Windows computer or Apple Silicon Mac for a s
 
 It can also act as a classroom AI relay: trusted backend clients use an OpenAI-compatible API, while teaching webpages use a scoped student-session streaming API.
 
-## v2.4.0: portable classrooms and full teacher previews
+## v2.4.1: portable classrooms, full teacher previews, and UI alignment
 
 The Windows release uses a portable folder, one EXE launcher, and a browser interface. Keep the complete folder when moving between computers. Directory isolation, confirmed safe exit, and data-preserving program upgrades are included.
 
 Under Resources → Blacklist and trial, teachers can generate the final answer a student would receive, using the saved model, teaching policy, lesson scope, and global blacklist. The preview shows question checks, evidence decisions, final-answer checks, and references. Follow-up questions are supported; a new-round button clears the preview context. Previews work before class starts, have a separate request-log route, and never enter student classroom records.
 
-Download the [Windows x64 release](https://github.com/bd4rex/EduGate-standalone/releases/tag/v2.4.0). This release does not include a new macOS binary; macOS source support remains available.
+Version 2.4.1 aligns card headings, form controls, refresh actions, and the backup/upgrade columns. Sticky primary and secondary tabs stay together while scrolling. Teacher previews show the model's display name, keep action widths stable, and collapse long question headings without discarding their text. See the [visual verification report](docs/ui/2026-10-26-visual-alignment.md).
+
+Download the [Windows x64 release](https://github.com/bd4rex/EduGate-standalone/releases/tag/v2.4.1). This release does not include a new macOS binary; macOS source support remains available.
 
 The [2.3 → 2.4 process archive](docs/history/releases-2.3-to-2.4.md) preserves the original Windows packages and a separate runtime-source history. Reconstructed historical sources are verified against release bytecode and explicitly labelled with their archival date and scope.
 
@@ -93,7 +95,7 @@ python -m compileall -q backend\app
 
 The backend is split into application composition (`main.py`), shared state, dependencies, chat services, a published-page store, schemas, runtime configuration, and domain routers. See the [Chinese documentation index](docs/README.md) and the [teaching page publishing guide](docs/教学网页发布.md) for the maintained operations, security, and development guides.
 
-Build the Windows folder with `desktop\build_windows.bat`. On Apple Silicon, use Python 3.10–3.12 and run `EDUGATE_VERSION=2.4.0 desktop/build_macos.sh` to retain the macOS 11 target and produce the signed `.app` and release ZIP. The build scripts prepare and bundle the pinned embedding model.
+Build the Windows folder with `desktop\build_windows.bat`. On Apple Silicon, use Python 3.10–3.12 and run `EDUGATE_VERSION=2.4.1 desktop/build_macos.sh` to retain the macOS 11 target and produce the signed `.app` and release ZIP. The build scripts prepare and bundle the pinned embedding model.
 
 
 ## Portable folders and data-preserving upgrades

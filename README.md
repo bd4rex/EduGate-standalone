@@ -12,12 +12,13 @@ EduGate 在教师的 64 位 Windows 电脑或 Apple 芯片 Mac 上运行，面�
 
 它也可以作为教室内的 AI 中转站：为后端应用提供 OpenAI-compatible API，为学习单和网页课件提供带学生会话隔离的流式接口。
 
-## v2.4.0：便携课堂与完整 AI 试问
+## v2.4.1：便携课堂、完整 AI 试问与界面对齐
 
 - Windows 使用“便携文件夹＋一个 EXE＋网页操作”，换电脑携带完整文件夹；支持目录隔离、安全退出和保留资料的程序升级。
 - 教师端统一为“控制、记录、资源、系统”；资源与系统按任务分组选项卡。
 - “资源 → 黑名单与试问”可直接生成学生会收到的最终回答，沿用已保存的模型、教学策略、资料范围及黑名单，并展示检查结果和引用。支持连续追问及新一轮试问，不写入学生课堂记录，课前也能使用。
-- 本次提供 [Windows x64 Release](https://github.com/bd4rex/EduGate-standalone/releases/tag/v2.4.0)。macOS 源码继续维护，本次不提供新的 macOS 二进制包。
+- 2.4.1 补齐卡片标题、选择框、按钮及备份/升级双栏的对齐；两级导航随滚动贴合，试问显示模型名称，长提问可折叠展开。见[视觉检查记录](docs/ui/2026-10-26-visual-alignment.md)。
+- 本次提供 [Windows x64 Release](https://github.com/bd4rex/EduGate-standalone/releases/tag/v2.4.1)。macOS 源码继续维护，本次不提供新的 macOS 二进制包。
 
 历史发行包与代码演进见 [2.3 → 2.4 过程归档](docs/history/releases-2.3-to-2.4.md)。历史运行源码按发行包核验还原，并明确标注补录日期和范围。
 
@@ -213,7 +214,7 @@ python -m pytest -q -p no:cacheprovider -m "not e2e" --basetemp=.pytest-tmp --co
 python -m compileall -q backend\app
 ```
 
-Windows 打包运行 `desktop\build_windows.bat`，输出位于新的 `dist/releases/版本-时间/` 目录，并生成可用于网页升级的 ZIP。Apple Silicon Mac 使用 Python 3.10–3.12 运行 `EDUGATE_VERSION=2.4.0 desktop/build_macos.sh`，保持 macOS 11 兼容目标。打包脚本会准备并包含本地语义模型。
+Windows 打包运行 `desktop\build_windows.bat`，输出位于新的 `dist/releases/版本-时间/` 目录，并生成可用于网页升级的 ZIP。Apple Silicon Mac 使用 Python 3.10–3.12 运行 `EDUGATE_VERSION=2.4.1 desktop/build_macos.sh`，保持 macOS 11 兼容目标。打包脚本会准备并包含本地语义模型。
 
 ## 文档
 
