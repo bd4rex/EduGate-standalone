@@ -1091,9 +1091,9 @@
     }
   </style>
   <link rel="stylesheet" href="assets/edugate-select.css" />
-  <link rel="stylesheet" href="assets/admin-settings.css?v=20261024-ui1" />
+  <link rel="stylesheet" href="assets/admin-settings.css?v=20261025-resources1" />
   <link rel="stylesheet" href="assets/knowledge.css" />
-  <link rel="stylesheet" href="assets/admin-theme.css?v=20261024-ui1" />
+  <link rel="stylesheet" href="assets/admin-theme.css?v=20261025-resources1" />
 </head>
 <body>
   <div class="shell">
@@ -1350,34 +1350,57 @@
           </div>
         </section>
 
-        <section class="section knowledge-policy" id="knowledge-policy">
-          <div class="section-title"><h2>课堂黑名单</h2><button class="button ghost" id="knowledge-policy-reload" type="button">重新读取</button></div>
-          <label class="radio-row"><input id="knowledge-blacklist-enabled" type="checkbox" checked disabled /><span>启用禁答话题</span></label>
-          <label>禁答话题<textarea id="knowledge-blacklist-topics" rows="4" maxlength="20000" placeholder="每行一个话题，例如：游戏&#10;可用 | 添加别名，例如：游戏攻略|原神配装|王者荣耀" disabled></textarea></label>
-          <label>禁答提示<input id="knowledge-blacklist-message" maxlength="400" disabled /></label>
-          <p class="hint">规则对所有课堂资料范围和兼容接口生效。直接命中词条会立即拒答；换一种说法或连续追问也会检查话题。启用后，回答通过完整检查才会显示，等待时间会增加；检查不可用时暂不作答。</p>
-          <div class="actions"><button class="button primary" id="knowledge-policy-save" type="button" disabled>保存黑名单</button><span class="hint" id="knowledge-policy-status" role="status">正在读取规则…</span></div>
+        <div class="knowledge-tools resource-task-grid" id="knowledge-tools">
+          <section class="section resource-form-card">
+            <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-book" aria-hidden="true"></span><span>本课资料</span></h2><span class="save-state" id="knowledge-scope-state" role="status">已应用</span></div>
+            <p class="hint resource-card-intro">选择这节课允许 AI 参考的知识库和文件。</p>
+            <label>资料知识库<select id="knowledge-scope-source"></select></label>
+            <div class="resource-field-heading"><span class="field-label" id="knowledge-files-label">本课文件</span><button class="text-action" id="knowledge-clear-files" type="button">不限文件</button></div>
+            <div class="knowledge-files" id="knowledge-scope-files" role="group" aria-labelledby="knowledge-files-label"></div>
+            <p class="hint" id="knowledge-file-selection" role="status"></p>
+            <p class="hint resource-inline-note">未勾选时使用本库中符合右侧筛选的全部学生资料。教师参考资料不进入学生问答。</p>
+          </section>
+          <div class="resource-task-stack">
+            <section class="section resource-form-card">
+              <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-control" aria-hidden="true"></span><span>范围筛选</span></h2><span class="badge">可选</span></div>
+              <p class="hint resource-card-intro">按教材信息缩小范围；留空表示不限制该项。</p>
+              <label>章节包含<input id="knowledge-scope-chapter" placeholder="例如：子网掩码" maxlength="200" /></label>
+              <div class="knowledge-grid"><label>学科<input id="knowledge-scope-subject" maxlength="100" placeholder="例如：信息科技" /></label><label>年级<input id="knowledge-scope-grade" maxlength="100" placeholder="例如：七年级" /></label><label>教材版本<input id="knowledge-scope-edition" maxlength="100" placeholder="与资料属性中的版本一致" /></label><label>学期<input id="knowledge-scope-term" maxlength="100" placeholder="例如：上学期" /></label></div>
+              <div class="resource-save-bar"><p class="hint" id="knowledge-scope-note" role="status">范围设置保存后生效。</p><div class="actions"><button class="button ghost" id="knowledge-open-trial" type="button">前往统一试问</button><button class="button primary" id="knowledge-save-scope" type="button">应用到当前课堂</button></div></div>
+            </section>
+            <section class="section resource-form-card resource-engine-card">
+              <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-database" aria-hidden="true"></span><span>资料检索状态</span></h2><button class="button ghost mini" id="knowledge-refresh" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新状态</span></button></div>
+              <div class="knowledge-state"><strong id="knowledge-status" role="status">正在读取检索状态…</strong><p class="hint" id="knowledge-status-detail"></p></div>
+              <p class="hint" id="knowledge-job" role="status"></p>
+              <details class="resource-help"><summary>检索维护</summary><p class="hint">资料未完成索引或语义模型异常时使用，正常上课无需操作。</p><div class="actions"><button class="button soft" id="knowledge-prepare" type="button">准备语义模型</button><button class="button ghost" id="knowledge-reindex" type="button">重建资料索引</button></div></details>
+            </section>
+          </div>
+        </div>
+
+        <section class="section knowledge-policy resource-form-card" id="knowledge-policy">
+          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-info" aria-hidden="true"></span><span>课堂黑名单</span></h2><button class="button ghost mini" id="knowledge-policy-reload" type="button">重新读取</button></div>
+          <p class="hint resource-card-intro">设置不允许讨论的话题，保存后用于所有课堂提问。</p>
+          <label class="checkbox-row resource-toggle-row"><input id="knowledge-blacklist-enabled" type="checkbox" aria-label="启用禁答话题" checked disabled /><span>启用禁答话题</span><span class="save-state" id="knowledge-policy-state">读取中</span></label>
+          <label>禁答话题<textarea id="knowledge-blacklist-topics" rows="4" maxlength="20000" placeholder="每行一个话题，例如：&#10;游戏&#10;游戏攻略|原神配装|王者荣耀" aria-describedby="knowledge-topics-help" disabled></textarea></label>
+          <p class="hint" id="knowledge-topics-help">每行一个话题，用 | 添加同一话题的别名。</p>
+          <label>拦截后给学生的提示<textarea id="knowledge-blacklist-message" rows="2" maxlength="400" disabled></textarea></label>
+          <details class="resource-help"><summary>黑名单如何生效</summary><p class="hint">最多 64 个话题，每项最多 12 个别名。规则也适用于兼容接口。直接命中词条会拒答，换一种说法和追问也会检查。启用后，回答与来源检查完成才会显示，等待时间会增加；检查不可用时暂不作答。</p></details>
+          <div class="resource-save-bar"><p class="hint" id="knowledge-policy-status" role="status">正在读取规则…</p><button class="button primary" id="knowledge-policy-save" type="button" disabled>保存黑名单</button></div>
         </section>
 
-        <section class="section knowledge-tools" id="knowledge-tools">
-          <div class="section-title"><h2>课堂资料范围与试问</h2><button class="button soft" id="knowledge-refresh" type="button">刷新状态</button></div>
-          <div class="knowledge-state">
-            <div><strong id="knowledge-status" role="status">正在读取检索状态…</strong><p class="hint" id="knowledge-status-detail"></p></div>
-            <div class="actions"><button class="button soft" id="knowledge-prepare" type="button">准备语义模型</button><button class="button ghost" id="knowledge-reindex" type="button">重建资料索引</button></div>
+        <section class="section knowledge-trial resource-form-card" id="knowledge-trial">
+          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-circle-check" aria-hidden="true"></span><span>课堂规则试问</span></h2><span class="badge">统一验证</span></div>
+          <p class="hint resource-card-intro">模拟学生提问，先检查黑名单，再查找本课范围内的资料。</p>
+          <div class="trial-context">
+            <div><div class="resource-field-heading"><span class="field-label">已应用的资料范围</span><button class="text-action" id="knowledge-edit-scope" type="button">调整范围</button></div><strong id="knowledge-trial-source">正在读取…</strong><p class="hint" id="knowledge-trial-scope"></p></div>
+            <div><span class="field-label">已保存的黑名单</span><strong id="knowledge-trial-policy">正在读取…</strong><p class="hint">与学生新提问使用相同规则</p></div>
           </div>
-          <p class="hint" id="knowledge-job" role="status"></p>
-          <label>选择资料知识库<select id="knowledge-scope-source"></select></label>
-          <div class="knowledge-grid">
-            <div><label>选择本课资料</label><div class="knowledge-files" id="knowledge-scope-files"></div><p class="hint">未勾选文件时，使用当前知识库内符合筛选条件的学生资料。教师参考资料不会进入学生问答。</p></div>
-            <div class="stack"><label>章节包含<input id="knowledge-scope-chapter" placeholder="例如 子网掩码；留空使用全部章节" maxlength="200" /></label>
-              <div class="knowledge-grid"><label>学科<input id="knowledge-scope-subject" maxlength="100" placeholder="可选" /></label><label>年级<input id="knowledge-scope-grade" maxlength="100" placeholder="可选" /></label><label>教材版本<input id="knowledge-scope-edition" maxlength="100" placeholder="可选" /></label><label>学期<input id="knowledge-scope-term" maxlength="100" placeholder="可选" /></label></div>
-            </div>
-          </div>
-          <div class="actions knowledge-scope-actions"><button class="button primary" id="knowledge-save-scope" type="button">应用到当前课堂</button><span class="hint" id="knowledge-scope-note">范围设置保存后生效。</span></div>
-          <label>试问资料<input id="knowledge-question" placeholder="输入学生可能提出的问题，检查能否找对资料" maxlength="4000" /></label>
-          <div class="actions"><button class="button soft" id="knowledge-search" type="button">查看检索依据</button><label>检索方式<select id="knowledge-search-mode"><option value="hybrid">混合检索</option><option value="keyword">仅关键词（对照）</option><option value="vector">仅语义（对照）</option></select></label></div>
-          <p class="hint">试问使用上方当前填写的范围，并先检查课堂黑名单；不会自动保存范围，也不会生成回答。检索命中不等于证据足以回答。</p>
-          <div id="knowledge-search-results" aria-live="polite"></div>
+          <div class="trial-notice" id="knowledge-trial-notice" role="status" hidden></div>
+          <label>模拟学生提问<textarea id="knowledge-question" rows="3" placeholder="例如：为什么教室里的电脑有不同的 IP 地址？" maxlength="4000" aria-describedby="knowledge-trial-help"></textarea></label>
+          <div class="trial-actions"><span class="hint">Ctrl / ⌘ + Enter 快速试问</span><button class="button primary" id="knowledge-search" type="button" disabled>开始试问</button></div>
+          <details class="resource-help trial-advanced"><summary>检索对照选项</summary><label>检索方式<select id="knowledge-search-mode"><option value="hybrid">混合检索（默认）</option><option value="keyword">仅关键词（对照）</option><option value="vector">仅语义（对照）</option></select></label></details>
+          <p class="hint" id="knowledge-trial-help">使用已保存的课堂范围和黑名单，不会自动保存修改，也不生成 AI 回答。找到片段不代表足以回答问题。</p>
+          <div class="trial-results" id="knowledge-search-results" role="region" aria-label="课堂规则试问结果" aria-live="polite" aria-busy="false"><div class="trial-empty"><span class="ui-icon icon-circle-check" aria-hidden="true"></span><strong>准备好后，试问一个课堂问题</strong><p>这里会分别显示黑名单检查与资料检索结果。</p></div></div>
         </section>
 
         <section class="section resource-files-section">
@@ -1645,7 +1668,7 @@
       <section class="section" id="portable-operation" role="status" aria-live="polite" tabindex="-1" hidden></section>
       <div class="footer-note">
         <span>教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
-        <span>v2.3.1 · 单教师便携课堂版 · 2026.10.24</span>
+        <span>v2.3.2 · 单教师便携课堂版 · 2026.10.25</span>
       </div>
     </main>
   </div>
@@ -4112,7 +4135,7 @@
     window.addEventListener("DOMContentLoaded", boot, { once: true });
   </script>
   <script src="assets/edugate-select.js"></script>
-  <script src="assets/admin-workspaces.js?v=20261024-ui1"></script>
-  <script src="assets/knowledge-admin.js?v=20261024-ui1"></script>
+  <script src="assets/admin-workspaces.js?v=20261025-resources1"></script>
+  <script src="assets/knowledge-admin.js?v=20261025-resources1"></script>
 </body>
 </html>

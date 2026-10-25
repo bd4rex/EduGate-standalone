@@ -100,8 +100,8 @@
   }
   workspace("settings-view", "资源分类", [
     { key: "library", title: "资料管理", grid: "resource-management-grid", nodes: [".resource-knowledge-section", ".resource-upload-section", ".resource-files-section"] },
-    { key: "scope", title: "课堂范围与试问", nodes: ["#knowledge-tools"] },
-    { key: "policy", title: "课堂黑名单", nodes: ["#knowledge-policy"] },
+    { key: "scope", title: "课堂范围", nodes: ["#knowledge-tools"] },
+    { key: "policy", title: "黑名单与试问", grid: "resource-policy-grid", nodes: ["#knowledge-policy", "#knowledge-trial"] },
   ]);
   workspace("system-view", "系统设置分类", [
     { key: "overview", title: "运行状态", nodes: [".system-overview-section"] },
