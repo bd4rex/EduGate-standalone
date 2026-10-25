@@ -93,7 +93,7 @@ def test_source_folder_scan_skips_unsupported_files(tmp_path: Path) -> None:
         str(tmp_path / "files"),
     )
     source_dir = store.source_directory("general")
-    (source_dir / "notes.docx").write_bytes(b"not indexed")
+    (source_dir / "notes.exe").write_bytes(b"not indexed")
 
     result = store.scan_source("general")
 

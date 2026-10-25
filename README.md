@@ -12,6 +12,13 @@ EduGate 在教师的 64 位 Windows 电脑或 Apple 芯片 Mac 上运行，面�
 
 它也可以作为教室内的 AI 中转站：为后端应用提供 OpenAI-compatible API，为学习单和网页课件提供带学生会话隔离的流式接口。
 
+## v2.4.0：便携课堂与完整 AI 试问
+
+- Windows 使用“便携文件夹＋一个 EXE＋网页操作”，换电脑携带完整文件夹；支持目录隔离、安全退出和保留资料的程序升级。
+- 教师端统一为“控制、记录、资源、系统”；资源与系统按任务分组选项卡。
+- “资源 → 黑名单与试问”可直接生成学生会收到的最终回答，沿用已保存的模型、教学策略、资料范围及黑名单，并展示检查结果和引用。支持连续追问及新一轮试问，不写入学生课堂记录，课前也能使用。
+- 本次提供 [Windows x64 Release](https://github.com/bd4rex/EduGate-standalone/releases/tag/v2.4.0)。macOS 源码继续维护，本次不提供新的 macOS 二进制包。
+
 ## 现在的边界
 
 - 只有一个教师管理员账号，不提供多教师账号和策略 API。
@@ -29,11 +36,12 @@ EduGate 在教师的 64 位 Windows 电脑或 Apple 芯片 Mac 上运行，面�
 
 1. Windows：解压完整 `EduGate-Standalone` 文件夹，不要只复制 EXE；双击 `EduGate-Standalone.exe`。
 2. Apple 芯片 Mac：解压 ZIP，可把 `EduGate.app` 拖入“应用程序”；首次启动时按住 Control 点击应用并选择“打开”。
-3. 在“系统”中添加模型供应商并导入模型。
-4. 正式教学可在“系统 → 教学网页发布”上传 HTML/ZIP；不上传时入口使用内置 Demo 测试页。
-5. 在“控制”中配置课堂并点击“开始课堂”，再复制链接或二维码发给学生；下课点击“结束课堂”。
+3. 在“系统 → 模型服务”添加供应商并保存接口配置，再获取并导入模型；配置和密钥会保存在本机文件中，下次打开自动恢复。
+4. 正式教学可在“系统 → 网页发布”上传 HTML/ZIP；不上传时入口使用内置 Demo 测试页。
+5. 保存教学策略、课堂范围与黑名单后，先在“资源 → 黑名单与试问”生成回答并核对引用；确认后点击“开始课堂”，再把链接或二维码发给学生。
+6. 下课点击“结束课堂”；携带 U 盘离开时使用“结束课堂并退出”，等待保存完成确认。
 
-打包版初始账号为 `admin`、密码为 `edugate`。本机默认自动进入，首次使用后仍建议修改密码。Windows 数据位于程序同目录的 `config` 和 `data`；macOS 数据位于 `~/Library/Application Support/EduGate`。迁移前先在“系统”页停止服务并创建备份。
+打包版初始账号为 `admin`、密码为 `edugate`。本机默认自动进入，首次使用后仍建议修改密码。Windows 数据位于程序同目录的 `config` 和 `data`；macOS 数据位于 `~/Library/Application Support/EduGate`。迁移前先创建备份，再点击“结束课堂并退出”，等待退出确认后安全弹出 U 盘。
 
 macOS 为支持本机备份和迁移，模型密钥使用可迁移的便携格式保存；目录权限限制为当前用户访问。不要共享整个 EduGate 数据目录，也不要把它上传到公开网盘或代码仓库。
 
@@ -80,14 +88,14 @@ http://教师电脑局域网IP:端口/published.html#class_token=...&page=...
 
 ## 下游接口与网页嵌入
 
-教师端“系统 → 下游接口与网页嵌入”提供可复制配置和代码：
+教师端“系统 → 接入配置”提供可复制配置和代码：
 
 - 后端程序：`GET /v1/models`、`POST /v1/chat/completions`，使用 `Authorization: Bearer <平台密钥>`；Base URL 为 `http://教师IP:端口/v1`，稳定模型名为 `edugate`。
 - 教学网页：加载 `assets/edugate-client.js`，用持久 `class_token` 换取独立 `X-Student-Token`，再调用 `/chat/stream` 获取 SSE 流式回答。
 - 托管教学网页：在系统页上传 HTML/ZIP，EduGate 通过隔离沙箱发布，并向网页提供 `EduGate.ask()` 流式桥接；控制页链接和二维码自动切换到活动网页。
 - Python：外部网页使用 `EduGateClient.runPython()`，托管网页使用 `EduGate.runPython()`；均在学生设备内执行。旧 `/run_python`、`/run_python/stream` 在鉴权后返回 **410 Gone**，接入方需迁移。
 
-`edugate` 会执行教师当前选择的上游模型、提示词和知识库，下游无需在教师调整策略后修改代码。平台密钥只能放在可信后端；网页源码中的课堂令牌只授予学生范围。外部网页跨域调用需要在高级设置填写准确的 `CORS_ORIGINS` 并重启服务。完整示例见 [下游接口与网页嵌入](docs/下游接口与网页嵌入.md)。
+`edugate` 会执行教师当前选择的上游模型、提示词和知识库，下游无需在教师调整策略后修改代码。固定平台密钥保存在 `data/secrets.json`，可在教师端显示或复制，重启不更换；新生成的密钥共 25 字符，已有密钥保持原样。平台密钥只能放在可信后端。教学网页默认推荐通过 EduGate 发布，复制嵌入代码即可接入，无需额外 SDK 或跨域设置；只有放在其他网站时才需配置 `CORS_ORIGINS` 并重启。完整示例见 [下游接口与网页嵌入](docs/下游接口与网页嵌入.md)。
 
 ## 角色、权限与鉴权
 
@@ -123,7 +131,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | 教师管理员 | 模型供应商、课堂策略、知识库、教学网页发布、课堂启停、课堂记录、备份和系统设置 | 登录或本机自动登录后使用 `X-Admin-Token`；管理 API 同时校验来源 IP | 默认仅教师电脑；平板管理需设置 `ALLOW_LAN_ADMIN=true` 和精确 `ADMIN_ALLOWED_IPS` 白名单 |
 | 学生 | 打开当前活动教学网页、加入课堂、AI 对话；浏览器内运行 Python 并上报结果 | 教师 IP 定位服务；持久 `class_token` 换取绑定课次的 `X-Student-Token` | 结束/重开/换链撤销旧会话并取消旧 AI 请求；旧 Python 结果不得写入新课次；浏览器本地计算不代表服务器权限 |
-| 平台集成 | 查询虚拟模型并调用 `/v1/chat/completions`，执行当前教师策略 | `Authorization: Bearer PLATFORM_API_KEY` | 取决于服务监听地址；未配置平台密钥时接口关闭；密钥不得嵌入网页 |
+| 平台集成 | 查询虚拟模型并调用 `/v1/chat/completions`，执行当前教师策略 | `Authorization: Bearer PLATFORM_API_KEY` | 取决于服务监听地址；单机首次自动初始化固定密钥，可在系统页关闭；密钥不得嵌入网页 |
 | 未认证访问者 | 健康状态、初始化状态和允许公开的静态资源 | 无 | 教师管理页、API 文档和管理接口仍受来源与会话保护 |
 
 IP 白名单是局域网准入控制，不是可替代密码的身份认证：设备 IP 可能因 DHCP 变化，也可能在不可信网络中被冒用。因此白名单设备仍需教师账号和 `X-Admin-Token`，建议给管理平板设置 DHCP 地址保留。
@@ -196,16 +204,19 @@ Windows 打包版首次运行后会在 EXE 旁创建 `config/` 和 `data/`；mac
 
 ## 开发验证
 
+知识库使用本地 LanceDB + FastEmbed 中文混合检索，保留教材章节/页码，并支持课堂文件、版本和章节范围。教师可在“资源 → 黑名单与试问”设置禁答话题；规则同时覆盖普通、流式和兼容接口，检查失败时暂不作答。详见[知识库与课堂黑名单](docs/知识库与课堂黑名单.md)及[升级验收记录](docs/research/2026-10-24-knowledge-implementation.md)。
+
 ```powershell
 python -m pytest -q -p no:cacheprovider -m "not e2e" --basetemp=.pytest-tmp --cov=backend/app --cov-branch --cov-report=term --cov-fail-under=85
 python -m compileall -q backend\app
 ```
 
-Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-Standalone`。Apple Silicon Mac 打包运行 `EDUGATE_VERSION=2.1.0 desktop/build_macos.sh`，输出 `.app` 和可发布 ZIP。
+Windows 打包运行 `desktop\build_windows.bat`，输出位于新的 `dist/releases/版本-时间/` 目录，并生成可用于网页升级的 ZIP。Apple Silicon Mac 使用 Python 3.10–3.12 运行 `EDUGATE_VERSION=2.4.0 desktop/build_macos.sh`，保持 macOS 11 兼容目标。打包脚本会准备并包含本地语义模型。
 
 ## 文档
 
 - [使用手册](docs/使用手册.md)
+- [知识库与课堂黑名单](docs/知识库与课堂黑名单.md)
 - [安装与故障排查](docs/安装与故障排查.md)
 - [架构与安全边界](docs/架构与安全边界.md)
 - [下游接口与网页嵌入](docs/下游接口与网页嵌入.md)
@@ -215,3 +226,8 @@ Windows 打包运行 `desktop\build_windows.bat`，输出位于 `dist\EduGate-St
 - [文档索引](docs/README.md)
 
 英文概览见 [README.en.md](README.en.md)。
+
+
+## U 盘运行与保留数据升级
+
+日常只需双击完整便携目录内的 EXE。换电脑时携带整个文件夹；“结束课堂并退出”会保存并关闭后台，Windows 在进程完全退出后给出确认。程序升级在“系统 → 备份与升级”选择发布 ZIP，保留 config、data，并保存原程序副本。详细流程、目录隔离和验证边界见 [便携运行与升级](docs/便携运行与升级.md)。

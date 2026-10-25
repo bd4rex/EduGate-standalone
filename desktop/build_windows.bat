@@ -47,14 +47,17 @@ if %errorlevel% neq 0 exit /b 1
 "%BUILD_PYTHON%" -m pip install -i %PYPI_INDEX% --trusted-host pypi.tuna.tsinghua.edu.cn -r backend\requirements.txt
 if %errorlevel% neq 0 exit /b 1
 
-"%BUILD_PYTHON%" -m PyInstaller --noconfirm --clean desktop\edugate_standalone.spec
+"%BUILD_PYTHON%" desktop\prepare_knowledge_model.py --directory build\knowledge-model-cache --export build\knowledge-model
+if %errorlevel% neq 0 exit /b 1
+
+if not defined EDUGATE_VERSION set "EDUGATE_VERSION=2.4.0"
+"%BUILD_PYTHON%" desktop\build_portable_release.py --version "%EDUGATE_VERSION%"
 if %errorlevel% neq 0 exit /b 1
 
 echo.
 echo Browser Python runtime is bundled in the frontend assets.
 
-copy /y desktop\PORTABLE-README.txt dist\EduGate-Standalone\README.txt >nul
-
 echo.
-echo [OK] Windows bundle created at:
-echo   %CD%\dist\EduGate-Standalone
+echo [OK] A fresh portable folder and upgrade ZIP were created under:
+echo   %CD%\dist\releases
+echo Existing portable folders and their config/data were not overwritten.

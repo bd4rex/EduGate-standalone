@@ -1018,271 +1018,7 @@
       .temperature-control #temperature-value { grid-column: 1 / -1; }
     }
 
-    /* Reference-matched secondary workspaces */
-    .section-icon-title { display: flex; align-items: center; gap: 12px; }
-    .section-icon-title .ui-icon { width: 25px; height: 25px; flex-basis: 25px; color: var(--brand); }
 
-    .records-overview-card { min-height: 313px; padding: 26px !important; }
-    .records-overview-card .section-title { margin-bottom: 18px !important; }
-    .records-overview-card .section-title .button { min-width: 134px; }
-    #recording-note.recording-note {
-      display: flex;
-      min-height: 56px;
-      align-items: center;
-      gap: 13px;
-      padding: 13px 17px;
-      border-color: #cbdcff;
-      border-radius: 8px;
-      background: #f7faff;
-      color: #435370;
-    }
-    #recording-note .ui-icon { width: 24px; height: 24px; flex-basis: 24px; color: var(--brand); }
-    #record-summary { margin-top: 24px !important; }
-    #record-summary .record-summary-card {
-      min-height: 98px;
-      flex-direction: row;
-      align-items: center;
-      gap: 18px;
-      padding: 16px 18px;
-      background: #fff;
-    }
-    .record-summary-icon {
-      display: grid !important;
-      width: 58px;
-      height: 58px;
-      min-height: 58px !important;
-      flex: 0 0 58px;
-      place-items: center;
-      border-radius: 50%;
-      background: #eaf2ff;
-      color: var(--brand);
-    }
-    .record-summary-card.green .record-summary-icon { background: #e9f9f0; color: #14a768; }
-    .record-summary-card.violet .record-summary-icon { background: #eeeeff; color: #5d5ee8; }
-    .record-summary-card.orange .record-summary-icon { background: #fff1e5; color: #ed7823; }
-    .record-summary-icon .ui-icon { width: 29px; height: 29px; flex-basis: 29px; }
-    .record-summary-copy { min-height: 0 !important; }
-    #record-summary .record-summary-copy > span { min-height: 0; font-size: 14px; }
-    #record-summary .record-summary-copy strong { margin-top: 4px; font-size: 25px; line-height: 1.1; }
-    .record-layout { grid-template-columns: minmax(360px, .52fr) minmax(0, 1fr); }
-    .records-list-card,
-    .records-detail-card { min-height: 344px; padding: 24px 26px !important; }
-    .record-session-list { min-height: 238px; max-height: 680px; }
-    .record-empty-state {
-      display: grid;
-      min-height: 238px;
-      place-items: center;
-      align-content: center;
-      gap: 10px;
-      padding: 24px;
-      border: 1px dashed var(--line-strong);
-      border-radius: 9px;
-      color: var(--muted);
-      text-align: center;
-    }
-    .record-empty-state .ui-icon { width: 48px; height: 48px; color: #c8cfda; }
-    .record-empty-state p { margin: 0; }
-    .record-empty-state .row-title { color: var(--ink); font-size: 18px; }
-    .record-toolbar { gap: 18px; margin-bottom: 24px; }
-    .record-toolbar select { min-height: 54px; }
-    .record-detail-empty {
-      display: flex;
-      min-height: 98px;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      color: #8b96a8;
-      font-size: 16px;
-    }
-    .record-detail-empty .ui-icon { width: 30px; height: 30px; color: #c7ced9; }
-
-    #settings-view { gap: 18px; }
-    #settings-view { padding-top: 10px; }
-    #records-view { padding-top: 20px; }
-    .resource-knowledge-section,
-    .resource-upload-section,
-    .resource-files-section { padding: 22px 26px 26px !important; }
-    .knowledge-source-frame { overflow: hidden; border: 1px solid var(--line); border-radius: 10px; }
-    .knowledge-source-frame > .list-card { border: 0 !important; border-radius: 0 !important; }
-    .resource-source-row { min-height: 132px; padding: 20px 22px; }
-    .resource-source-row .row-main { flex: 1 1 auto; }
-    .resource-source-row .row-title { font-size: 18px; }
-    .resource-icon-tile {
-      display: grid;
-      width: 64px;
-      height: 64px;
-      flex: 0 0 64px;
-      place-items: center;
-      border-radius: 16px;
-      background: #f2f6fc;
-      color: var(--brand);
-    }
-    .resource-icon-tile .ui-icon { width: 32px; height: 32px; flex-basis: 32px; }
-    .resource-icon-tile.neutral { color: #7a879b; }
-    .resource-description { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
-    .resource-source-row .row-actions { gap: 14px; }
-    .resource-source-row .row-actions > .button { min-width: 150px; }
-    .resource-source-row .action-menu { min-width: 152px; }
-    .resource-source-row .action-menu > summary { gap: 9px; border: 1px solid var(--line); background: var(--soft); }
-    .resource-source-row .action-menu .ui-icon { width: 18px; height: 18px; }
-    .knowledge-source-frame > .compact-panel { border-top: 1px solid var(--line); border-radius: 0; }
-    .knowledge-source-frame > .compact-panel > summary { min-height: 58px; padding: 12px 24px; font-size: 16px; }
-    .source-editor-body { padding: 0 24px 20px; }
-    .resource-upload-section .section-title { margin-bottom: 16px !important; }
-    .resource-upload-section { min-height: 241px; }
-    .resource-upload-section .upload-card { padding: 0; border: 0; }
-    .resource-upload-section .upload-layout {
-      grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.35fr) auto;
-      column-gap: 30px;
-      row-gap: 14px;
-    }
-    .resource-upload-section .file-picker { min-height: 54px; }
-    .resource-upload-section select { min-height: 54px; }
-    .resource-upload-section #upload-file { min-width: 166px; min-height: 54px; }
-    .resource-upload-section .hint { margin-top: 0; }
-    .resource-files-section { min-height: 214px; }
-    .resource-files-section .list-card { min-height: 92px; }
-    .resource-file-empty,
-    .resource-file-row { display: flex; min-height: 92px; align-items: center; gap: 22px; padding: 16px 22px; }
-    .resource-file-empty .resource-icon-tile,
-    .resource-file-row .resource-icon-tile { width: 54px; height: 54px; flex-basis: 54px; border-radius: 14px; }
-    .resource-file-empty .resource-icon-tile .ui-icon,
-    .resource-file-row .resource-icon-tile .ui-icon { width: 27px; height: 27px; }
-
-    .system-request-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
-    .system-request-block > .section-title { margin-bottom: 10px !important; }
-    .system-request-block #request-log-list { margin-top: 12px; }
-    .system-request-block #request-log-list .row { min-height: 48px; }
-
-    @media (max-width: 1100px) and (min-width: 761px) {
-      .topbar { min-height: 68px; padding: 9px 20px; }
-      .brand-lockup { gap: 12px; }
-      .brand-mark { width: 44px; height: 44px; flex-basis: 44px; }
-      .brand-copy h1 { font-size: 20px; }
-      .brand-copy > p { margin-top: 2px; font-size: 12px; }
-      .status-pill { min-height: 36px; padding: 0 14px; font-size: 13px; }
-      .tabs { min-height: 44px; padding: 0 22px; }
-      .tab { min-width: 112px; min-height: 44px; padding: 0 16px; gap: 8px; font-size: 13px; }
-      .tab .ui-icon { width: 17px; height: 17px; flex-basis: 17px; }
-      .content { padding: 9px 20px 16px; }
-      #system-view { gap: 5px; }
-      #system-view > .section { padding: 9px 13px; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 51, 78, .04); }
-      #system-view .section-title { margin-bottom: 8px; }
-      #system-view h2 { font-size: 15px; }
-      #system-view .button { min-height: 30px; padding: 0 13px; border-radius: 6px; font-size: 12px; }
-      #system-view .button.mini { min-height: 26px; padding: 0 9px; font-size: 10px; }
-      #system-view .system-actions { gap: 8px; }
-      #system-view .system-action-group { gap: 8px; }
-      #system-view .system-action-group.critical { padding-left: 8px; }
-      #system-view .system-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-      #system-view .system-metric { min-height: 54px; padding: 7px 10px; border-radius: 7px; }
-      #system-view .system-metric span { min-height: 13px; font-size: 10px; line-height: 13px; }
-      #system-view .system-metric strong { font-size: 14px; line-height: 18px; }
-      #system-view .system-metric-value { min-height: 24px; margin-top: 1px; }
-      #system-view .system-metric-value .button { min-height: 25px; }
-      #system-view .runtime-stat + .runtime-stat { padding-left: 8px; }
-      #system-view .system-request-block { margin-top: 8px; padding-top: 8px; }
-      #system-view .system-request-block > .section-title { margin-bottom: 6px !important; }
-      #system-view .system-request-block #request-log-list { margin-top: 8px; }
-      #system-view .system-request-block #request-log-list .row { min-height: 34px; padding: 7px 10px; }
-      #system-view .collapsible-panel > summary { min-height: 28px; padding: 2px 0; font-size: 15px; }
-      #system-view .collapsible-panel[open] > summary { margin-bottom: 3px; }
-      #system-view .list-card { border-radius: 7px; }
-      #system-view .list-card[style] { padding: 10px !important; }
-      #system-view .stack { gap: 8px; }
-      #system-view .hint { font-size: 10px; line-height: 1.45; }
-      #system-view .field-label,
-      #system-view label { gap: 3px; font-size: 10px; }
-      #system-view input,
-      #system-view select { min-height: 28px; padding: 0 9px; border-radius: 5px; font-size: 11px; }
-      #system-view .file-picker { min-height: 30px; border-radius: 5px; }
-      #system-view .file-picker-button { min-height: 28px; padding: 0 10px; font-size: 11px; }
-      #system-view .provider-picker { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 7px; }
-      #system-view .upstream-provider-heading { min-height: 34px; padding: 6px 11px; }
-      #system-view .upstream-provider-heading h3,
-      #system-view .imported-model-heading h3 { font-size: 12px; }
-      #system-view .upstream-provider-body { padding: 9px 11px; }
-      #system-view .provider-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
-      #system-view .provider-form-grid .full { grid-column: auto; }
-      #system-view .api-endpoint-preview { grid-column: 1 / -1; margin: -2px 0 0; font-size: 9px; }
-      #system-view .provider-actions { margin-top: 7px; }
-      #system-view .provider-actions + .hint { margin: 6px 0 0; }
-      #system-view .imported-models { margin-top: 8px; }
-      #system-view .imported-model-heading { margin-bottom: 5px; }
-      #system-view .catalog-provider-heading { min-height: 28px; padding: 4px 9px; }
-      #system-view .catalog-model-row { min-height: 42px; grid-template-columns: minmax(150px, 1fr) minmax(220px, .9fr) auto; gap: 8px; padding: 5px 9px; }
-      #system-view .catalog-display-name input { min-height: 27px; }
-      #system-view .catalog-model-id { font-size: 11px; }
-      #system-view .catalog-model-key,
-      #system-view .row-meta { font-size: 9px; }
-      #system-view .badge { min-height: 17px; padding: 0 6px; border-radius: 5px; font-size: 9px; }
-      #system-view .log-view { max-height: 180px; padding: 8px 10px; font-size: 8px; line-height: 1.35; }
-      #system-view .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 18px; }
-      #system-view .setting-list label { grid-template-columns: minmax(95px, .7fr) minmax(0, 1.6fr); align-items: center; }
-      #system-view .setting-list .checkbox-row { display: flex; min-height: 28px; }
-      #system-view .setting-list input[type="checkbox"] { width: 15px; height: 15px; min-height: 15px; }
-      #system-view #advanced-setting-list + .stack { margin-top: 8px !important; }
-      #system-view .advanced-settings-panel .actions { gap: 8px; }
-      #system-view .footer-note { font-size: 10px; }
-
-      #system-view .system-overview-section { padding-top: 7px; padding-bottom: 7px; }
-      #system-view .system-overview-section .system-metric { min-height: 46px; padding-top: 5px; padding-bottom: 5px; }
-      #system-view #system-metrics .system-metric strong { font-size: 12px; }
-      #system-view #system-metrics .system-metric-value .button { min-height: 22px; padding: 0 6px; font-size: 9px; }
-      #system-view .system-overview-section .system-request-block #request-log-list .row { min-height: 28px; padding-top: 4px; padding-bottom: 4px; }
-      #system-view > .section:has(#backup-panel) { padding-top: 5px; padding-bottom: 6px; }
-      #system-view #backup-panel > summary { min-height: 24px; }
-      #system-view #backup-panel > .list-card { padding: 4px 6px !important; }
-      #system-view #backup-panel .stack { gap: 2px; }
-      #system-view #backup-panel .button { min-height: 24px; }
-      #system-view #backup-panel .file-picker { min-height: 24px; }
-      #system-view #backup-panel .file-picker-button { min-height: 22px; }
-      #system-view #backup-panel .hint { margin: 1px 0 0; line-height: 1.15; }
-
-      #system-view > .section:has(#model-api-panel) { padding-top: 5px; padding-bottom: 7px; }
-      #system-view #model-api-panel > summary { min-height: 24px; }
-      #system-view #model-api-panel > .hint { margin: 0 0 6px !important; line-height: 1.25; }
-      #system-view #model-api-panel .provider-picker { margin-bottom: 3px; }
-      #system-view #model-api-panel .upstream-provider-heading { min-height: 25px; padding: 3px 8px; }
-      #system-view #model-api-panel .upstream-provider-body { padding: 4px 8px; }
-      #system-view #model-api-panel .provider-form-grid { gap: 1px 9px; }
-      #system-view #model-api-panel input,
-      #system-view #model-api-panel select { min-height: 20px; height: 20px; padding-top: 0; padding-bottom: 0; }
-      #system-view #model-api-panel .api-endpoint-preview { line-height: 1.2; }
-      #system-view #model-api-panel .provider-actions { margin-top: 1px; }
-      #system-view #model-api-panel .provider-actions .button { min-height: 22px; }
-      #system-view #model-api-panel .provider-actions + .hint { margin: 1px 0 0; line-height: 1.1; }
-      #system-view #model-api-panel .imported-models { margin-top: 3px; }
-      #system-view #model-api-panel .imported-model-heading { margin-bottom: 2px; }
-      #system-view #model-api-panel .catalog-provider-heading { min-height: 21px; padding: 2px 7px; }
-      #system-view #model-api-panel .catalog-model-row { min-height: 30px; padding: 2px 7px; line-height: 1.15; }
-      #system-view #model-api-panel .catalog-display-name input { min-height: 20px; height: 20px; }
-
-      #system-view #system-log-panel > summary { min-height: 24px; }
-
-      #system-view > .section:has(#advanced-settings-panel) { padding-top: 5px; padding-bottom: 7px; }
-      #system-view #advanced-settings-panel > summary { min-height: 24px; }
-      #system-view #advanced-settings-panel > .list-card { padding: 7px 10px !important; }
-      #system-view #advanced-settings-panel .setting-list { gap: 1px 18px; }
-      #system-view #advanced-settings-panel .setting-list label { min-height: 21px; gap: 5px; line-height: 1.1; }
-      #system-view #advanced-settings-panel .setting-list input:not([type="checkbox"]) { min-height: 21px; height: 21px; padding: 0 7px; }
-      #system-view #advanced-settings-panel .setting-list .checkbox-row { min-height: 21px; }
-      #system-view #advanced-settings-panel #advanced-setting-list + .stack { gap: 5px; margin-top: 5px !important; }
-      #system-view #advanced-settings-panel #platform-api-key { min-height: 23px; }
-      #system-view #advanced-settings-panel .actions .button { min-height: 27px; }
-      #system-view #advanced-settings-panel .hint { margin: 0; }
-      #system-view #downstream-api-panel > summary { min-height: 24px; }
-      #system-view #downstream-api-panel .integration-grid { gap: 8px; }
-      #system-view #downstream-api-panel .integration-card { padding: 8px 10px; }
-      #system-view #downstream-api-panel .integration-card-head { margin-bottom: 6px; }
-      #system-view #downstream-api-panel .integration-card h3 { font-size: 12px; }
-      #system-view #downstream-api-panel .integration-code { min-height: 88px; max-height: 130px; margin-top: 6px; padding: 6px 8px; font-size: 8px; line-height: 1.35; }
-      #system-view #downstream-api-panel .integration-note { margin-top: 5px; font-size: 9px; line-height: 1.35; }
-      #system-view #downstream-api-panel .integration-fields,
-      #system-view #downstream-api-panel .integration-key-row { gap: 5px; }
-    }
 
     @media (max-width: 900px) and (min-width: 761px) {
       .record-layout { grid-template-columns: minmax(280px, .62fr) minmax(0, 1fr); }
@@ -1354,6 +1090,10 @@
       .published-page-actions .button { flex: 1; }
     }
   </style>
+  <link rel="stylesheet" href="assets/edugate-select.css" />
+  <link rel="stylesheet" href="assets/admin-settings.css?v=20261025-trial1" />
+  <link rel="stylesheet" href="assets/knowledge.css" />
+  <link rel="stylesheet" href="assets/admin-theme.css?v=20261025-trial1" />
 </head>
 <body>
   <div class="shell">
@@ -1407,11 +1147,12 @@
                 <div class="summary-item"><span class="ui-icon icon-brain" aria-hidden="true"></span><span>AI：<strong id="current-ai-state">-</strong></span></div>
                 <div class="summary-item"><span class="ui-icon icon-cube" aria-hidden="true"></span><span>模型：<strong id="current-model">-</strong></span></div>
                 <div class="summary-item"><span class="ui-icon icon-book" aria-hidden="true"></span><span>知识库：<strong id="current-source">general</strong></span></div>
-                <div class="summary-item"><span class="ui-icon icon-users" aria-hidden="true"></span><span>在线学生：<strong id="current-student-count">0</strong> 人</span></div>
+                <div class="summary-item"><span class="ui-icon icon-users" aria-hidden="true"></span><span>已加入：<strong id="current-student-count">0</strong> 台设备</span></div>
               </div>
               <div class="class-controls" id="class-controls" hidden>
                 <button class="button primary" id="start-class" type="button"><span class="ui-icon icon-play" aria-hidden="true"></span><span>开始课堂</span></button>
                 <button class="button ghost" id="end-class" type="button"><span class="ui-icon icon-stop" aria-hidden="true"></span><span>结束课堂</span></button>
+                <button class="button ghost" id="exit-classroom" type="button">结束课堂并退出</button>
               </div>
             </section>
 
@@ -1424,7 +1165,7 @@
                   <strong>扫码进入课堂</strong>
                 </div>
                 <div class="classroom-link-panel">
-                  <span class="field-caption">课堂访问地址（简洁链接）</span>
+                  <span class="field-caption">课堂地址摘要 · 请复制链接或扫码</span>
                   <strong class="classroom-url-display" id="classroom-url-display">登录后显示课堂地址</strong>
                   <input class="visually-hidden" id="classroom-url" readonly tabindex="-1" aria-hidden="true" />
                   <div class="classroom-link-actions">
@@ -1439,6 +1180,7 @@
 
             <section class="dashboard-card classroom-ai-settings">
               <div class="card-heading-row"><h2>课堂 AI 设置</h2></div>
+              <p class="hint immediate-note">AI 开关、模型与知识库选择会立即生效。</p>
               <div class="compact-setting-list">
                 <div class="compact-setting-row">
                   <div class="row-main">
@@ -1481,7 +1223,7 @@
           </div>
 
           <aside class="side-panel strategy-panel">
-            <div class="strategy-heading"><span class="ui-icon icon-sparkles" aria-hidden="true"></span><h2>AI 教学策略</h2></div>
+            <div class="strategy-heading"><span class="ui-icon icon-sparkles" aria-hidden="true"></span><h2>AI 教学策略</h2><span class="save-state" id="strategy-save-state" role="status">已保存</span></div>
             <div class="form-grid strategy-form">
               <label>教学要求
                 <textarea id="system-prompt" maxlength="500" placeholder="教师控制的教学提示词，学生端不可见。"></textarea>
@@ -1515,7 +1257,7 @@
               </fieldset>
 
               <button class="button primary strategy-save" id="save-scenario"><span class="ui-icon icon-save" aria-hidden="true"></span><span>保存当前 AI 策略</span></button>
-              <p class="hint">保存后，模型、提示词、知识库和参数会立即应用到当前课堂。</p>
+              <p class="hint">教学要求、回答风格、长度与回答依据在保存后生效。</p>
             </div>
           </aside>
         </div>
@@ -1559,7 +1301,7 @@
               </label>
               <label>学生电脑<select id="record-student-filter"><option value="all">全部电脑</option></select></label>
             </div>
-            <div id="record-turn-list"></div>
+            <div id="record-turn-list" role="region" aria-label="课堂记录内容" tabindex="0"></div>
           </section>
         </div>
       </section>
@@ -1597,15 +1339,70 @@
               <div class="upload-file-field">
                 <span class="field-label">选择文件</span>
                 <div class="file-picker">
-                  <input class="file-input-hidden" id="knowledge-file" type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.xml,.log,.pdf" aria-hidden="true" tabindex="-1" hidden />
+                  <input class="file-input-hidden" id="knowledge-file" type="file" accept=".txt,.md,.markdown,.csv,.json,.html,.htm,.xml,.log,.pdf,.docx,.pptx" aria-hidden="true" tabindex="-1" hidden />
                   <button class="file-picker-button" id="knowledge-file-trigger" type="button">选择文件</button>
                   <span class="file-picker-name" id="knowledge-file-name">未选择文件</span>
                 </div>
               </div>
               <button class="button primary" id="upload-file"><span class="ui-icon icon-cloud-upload" aria-hidden="true"></span><span>上传并索引</span></button>
-              <p class="hint">支持 txt、md、csv、json、html、xml、log、pdf。PDF 会抽取文本，扫描版图片 PDF 可能无法识别。</p>
+              <p class="hint">支持文本、Markdown、PDF、Word（docx）、PowerPoint（pptx）等资料，保留章节与页码。扫描页和图片内容需要先进行 OCR；导入后请检查解析预览。</p>
             </div>
           </div>
+        </section>
+
+        <div class="knowledge-tools resource-task-grid" id="knowledge-tools">
+          <section class="section resource-form-card">
+            <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-book" aria-hidden="true"></span><span>本课资料</span></h2><span class="save-state" id="knowledge-scope-state" role="status">已应用</span></div>
+            <p class="hint resource-card-intro">选择这节课允许 AI 参考的知识库和文件。</p>
+            <label>资料知识库<select id="knowledge-scope-source"></select></label>
+            <div class="resource-field-heading"><span class="field-label" id="knowledge-files-label">本课文件</span><button class="text-action" id="knowledge-clear-files" type="button">不限文件</button></div>
+            <div class="knowledge-files" id="knowledge-scope-files" role="group" aria-labelledby="knowledge-files-label"></div>
+            <p class="hint" id="knowledge-file-selection" role="status"></p>
+            <p class="hint resource-inline-note">未勾选时使用本库中符合右侧筛选的全部学生资料。教师参考资料不进入学生问答。</p>
+          </section>
+          <div class="resource-task-stack">
+            <section class="section resource-form-card">
+              <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-control" aria-hidden="true"></span><span>范围筛选</span></h2><span class="badge">可选</span></div>
+              <p class="hint resource-card-intro">按教材信息缩小范围；留空表示不限制该项。</p>
+              <label>章节包含<input id="knowledge-scope-chapter" placeholder="例如：子网掩码" maxlength="200" /></label>
+              <div class="knowledge-grid"><label>学科<input id="knowledge-scope-subject" maxlength="100" placeholder="例如：信息科技" /></label><label>年级<input id="knowledge-scope-grade" maxlength="100" placeholder="例如：七年级" /></label><label>教材版本<input id="knowledge-scope-edition" maxlength="100" placeholder="与资料属性中的版本一致" /></label><label>学期<input id="knowledge-scope-term" maxlength="100" placeholder="例如：上学期" /></label></div>
+              <div class="resource-save-bar"><p class="hint" id="knowledge-scope-note" role="status">范围设置保存后生效。</p><div class="actions"><button class="button ghost" id="knowledge-open-trial" type="button">前往统一试问</button><button class="button primary" id="knowledge-save-scope" type="button">应用到当前课堂</button></div></div>
+            </section>
+            <section class="section resource-form-card resource-engine-card">
+              <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-database" aria-hidden="true"></span><span>资料检索状态</span></h2><button class="button ghost mini" id="knowledge-refresh" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span><span>刷新状态</span></button></div>
+              <div class="knowledge-state"><strong id="knowledge-status" role="status">正在读取检索状态…</strong><p class="hint" id="knowledge-status-detail"></p></div>
+              <p class="hint" id="knowledge-job" role="status"></p>
+              <details class="resource-help"><summary>检索维护</summary><p class="hint">资料未完成索引或语义模型异常时使用，正常上课无需操作。</p><div class="actions"><button class="button soft" id="knowledge-prepare" type="button">准备语义模型</button><button class="button ghost" id="knowledge-reindex" type="button">重建资料索引</button></div></details>
+            </section>
+          </div>
+        </div>
+
+        <section class="section knowledge-policy resource-form-card" id="knowledge-policy">
+          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-info" aria-hidden="true"></span><span>课堂黑名单</span></h2><button class="button ghost mini" id="knowledge-policy-reload" type="button">重新读取</button></div>
+          <p class="hint resource-card-intro">设置不允许讨论的话题，保存后用于所有课堂提问。</p>
+          <label class="checkbox-row resource-toggle-row"><input id="knowledge-blacklist-enabled" type="checkbox" aria-label="启用禁答话题" checked disabled /><span>启用禁答话题</span><span class="save-state" id="knowledge-policy-state">读取中</span></label>
+          <label>禁答话题<textarea id="knowledge-blacklist-topics" rows="4" maxlength="20000" placeholder="每行一个话题，例如：&#10;游戏&#10;游戏攻略|原神配装|王者荣耀" aria-describedby="knowledge-topics-help" disabled></textarea></label>
+          <p class="hint" id="knowledge-topics-help">每行一个话题，用 | 添加同一话题的别名。</p>
+          <label>拦截后给学生的提示<textarea id="knowledge-blacklist-message" rows="2" maxlength="400" disabled></textarea></label>
+          <details class="resource-help"><summary>黑名单如何生效</summary><p class="hint">最多 64 个话题，每项最多 12 个别名。规则也适用于兼容接口。直接命中词条会拒答，换一种说法和追问也会检查。启用后，回答与来源检查完成才会显示，等待时间会增加；检查不可用时暂不作答。</p></details>
+          <div class="resource-save-bar"><p class="hint" id="knowledge-policy-status" role="status">正在读取规则…</p><button class="button primary" id="knowledge-policy-save" type="button" disabled>保存黑名单</button></div>
+        </section>
+
+        <section class="section knowledge-trial resource-form-card" id="knowledge-trial">
+          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-message" aria-hidden="true"></span><span>课堂 AI 试问</span></h2><span class="badge">完整回答</span></div>
+          <p class="hint resource-card-intro">按学生回答流程生成回复，同时检查资料范围、黑名单和最终引用。</p>
+          <div class="trial-context">
+            <div><div class="resource-field-heading"><span class="field-label">已应用的资料范围</span><button class="text-action" id="knowledge-edit-scope" type="button">调整范围</button></div><strong id="knowledge-trial-source">正在读取…</strong><p class="hint" id="knowledge-trial-scope"></p></div>
+            <div><span class="field-label">已保存的黑名单</span><strong id="knowledge-trial-policy">正在读取…</strong><p class="hint">与学生新提问使用相同规则</p></div>
+          </div>
+          <div class="trial-notice" id="knowledge-trial-notice" role="status" hidden></div>
+          <label>模拟学生提问<textarea id="knowledge-question" rows="3" placeholder="例如：为什么教室里的电脑有不同的 IP 地址？" maxlength="4000" aria-describedby="knowledge-trial-help"></textarea></label>
+          <div class="trial-actions"><span class="hint" id="knowledge-trial-round">新一轮试问</span><div class="actions"><button class="button ghost" id="knowledge-trial-reset" type="button">新一轮试问</button><button class="button primary" id="knowledge-search" type="button" disabled>生成试问回答</button></div></div>
+          <p class="hint" id="knowledge-trial-model"></p>
+          <p class="hint" id="knowledge-trial-help">使用已保存的模型与教学策略，可连续追问；Ctrl / ⌘ + Enter 发送。无需开启学生课堂，不计入学生记录。修改设置会清空本页试问上下文。</p>
+          <p class="hint" id="knowledge-trial-status" role="status"></p>
+          <div class="trial-results" id="knowledge-search-results" role="region" aria-label="课堂 AI 试问结果" aria-live="polite" aria-busy="false"><div class="trial-empty"><span class="ui-icon icon-message" aria-hidden="true"></span><strong>试问一个课堂问题，查看学生会收到的回答</strong><p>回答、检查结果和引用依据会显示在这里。</p></div></div>
+          <details class="resource-help trial-advanced"><summary>仅检查资料检索（对照）</summary><p class="hint">此处不生成回答，也不影响上方对话。完整试问始终使用学生端的正常检索流程。</p><div class="trial-evidence-controls"><label>检索方式<select id="knowledge-search-mode"><option value="hybrid">混合检索（默认）</option><option value="keyword">仅关键词（对照）</option><option value="vector">仅语义（对照）</option></select></label><button class="button ghost" id="knowledge-search-evidence" type="button">仅检索资料</button></div><div id="knowledge-evidence-results" role="region" aria-label="资料检索对照结果" aria-live="polite"></div></details>
         </section>
 
         <section class="section resource-files-section">
@@ -1632,7 +1429,7 @@
               </div>
               <div class="system-action-group critical">
                 <button class="button ghost" id="restart-system" type="button">重启服务</button>
-                <button class="button danger" id="shutdown-system" type="button">停止服务</button>
+                <button class="button danger" id="shutdown-system" type="button">保存并退出</button>
               </div>
             </div>
           </div>
@@ -1640,12 +1437,11 @@
           <div class="system-request-block">
             <div class="section-title"><h2>请求统计</h2></div>
             <div class="system-grid" id="dashboard-metrics"></div>
-            <div class="list-card" id="request-log-list"></div>
           </div>
         </section>
 
         <section class="section">
-          <details class="collapsible-panel" id="downstream-api-panel" open>
+          <details class="collapsible-panel" id="downstream-api-panel">
             <summary>下游接口与网页嵌入</summary>
             <div class="integration-grid">
               <article class="integration-card">
@@ -1657,9 +1453,11 @@
                   <label>API Base URL<input id="openai-base-url" readonly /></label>
                   <label>模型<input id="openai-model-id" readonly /></label>
                   <div class="integration-key-row full">
-                    <label>下游 API 密钥<input id="platform-api-key" type="password" autocomplete="new-password" placeholder="输入自定义密钥，或生成新密钥" /></label>
+                    <label>固定 API Key
+                      <span class="key-input-wrap"><input id="platform-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="正在读取已保存的密钥" /><button class="button ghost" id="toggle-platform-key" type="button" aria-pressed="false">显示</button></span>
+                    </label>
                     <div class="integration-key-actions">
-                      <button class="button ghost" id="generate-platform-key" type="button">生成</button>
+                      <button class="button ghost" id="generate-platform-key" type="button">生成新密钥</button>
                       <button class="button soft" id="save-platform-key" type="button">保存</button>
                       <button class="button danger" id="disable-platform-key" type="button">关闭</button>
                     </div>
@@ -1667,57 +1465,48 @@
                 </div>
                 <div class="actions" style="justify-content:flex-start;margin-top:8px">
                   <button class="button ghost" id="copy-openai-base" type="button">复制接口地址</button>
-                  <button class="button ghost" id="copy-platform-key" type="button" disabled>复制新密钥</button>
-                  <button class="button primary" id="copy-openai-example" type="button">复制调用示例</button>
+                  <button class="button ghost" id="copy-platform-key" type="button" disabled>复制密钥</button>
                 </div>
-                <pre class="integration-code" id="openai-example"></pre>
-                <p class="integration-note"><span class="ui-icon icon-info" aria-hidden="true"></span><span>平台密钥用于后端程序，不要写进浏览器网页。生成的密钥只在当前页面回显一次。</span></p>
+                <p class="integration-note"><span class="ui-icon icon-info" aria-hidden="true"></span><span id="platform-key-note">密钥保存在本机，重启后不变。只有保存替换值或生成新密钥才会更换；新生成的密钥共 25 个字符。</span></p>
+                <details class="integration-help" id="openai-example-panel">
+                  <summary>开发者调用示例（可选）</summary>
+                  <p class="hint">使用已有客户端时，只需填写上面的地址、模型和 Key。自行编写后端程序时可参考以下代码；密钥请放在后端。</p>
+                  <button class="button ghost" id="copy-openai-example" type="button">复制调用示例</button>
+                  <pre class="integration-code" id="openai-example"></pre>
+                </details>
               </article>
 
               <article class="integration-card">
                 <div class="integration-card-head">
                   <h3>教学网页流式接口</h3>
-                  <span class="badge" id="browser-cors-status">同源可用</span>
+                  <span class="badge" id="browser-cors-status">开始课堂后可用</span>
                 </div>
                 <div class="integration-fields">
-                  <label class="full">浏览器 SDK<input id="browser-sdk-url" readonly /></label>
+                  <label class="full">默认课堂分发地址<input id="browser-distribution-url" readonly /></label>
+                  <label class="full">网页放在哪里
+                    <select id="browser-embed-mode"><option value="published">通过 EduGate 发布（推荐）</option><option value="external">放在其他网站</option></select>
+                  </label>
                 </div>
                 <div class="actions" style="justify-content:flex-start;margin-top:8px">
-                  <button class="button ghost" id="copy-browser-sdk" type="button">复制 SDK 地址</button>
+                  <button class="button ghost" id="copy-browser-distribution" type="button">复制分发地址</button>
                   <button class="button primary" id="copy-browser-example" type="button">复制嵌入代码</button>
                 </div>
                 <pre class="integration-code" id="browser-embed-example"></pre>
-                <p class="integration-note"><span class="ui-icon icon-info" aria-hidden="true"></span><span id="browser-integration-note">外部网页需在高级设置的“额外允许的跨域来源”中填写网页 Origin。</span></p>
+                <p class="integration-note"><span class="ui-icon icon-info" aria-hidden="true"></span><span id="browser-integration-note">复制代码到教学网页，再到“教学网页发布”上传，通过上面的地址分发。开始课堂后即可使用，无需配置跨域来源。</span></p>
+                <details class="integration-help" id="browser-external-help" hidden>
+                  <summary>外部网站接入说明与工具脚本（SDK）</summary>
+                  <p class="hint">嵌入代码已包含工具脚本，无需另外安装。SDK 只是帮网页处理学生会话和逐字回答，也可以自行按接口协议编写。</p>
+                  <label>工具脚本地址（嵌入代码已包含）<input id="browser-sdk-url" readonly /></label>
+                  <button class="button ghost" id="copy-browser-sdk" type="button">复制脚本地址</button>
+                  <p class="hint">只有网页放在其他网站时才需填写跨域来源：例如网页地址为 http://192.168.1.20:8080/lesson.html，就在“高级设置 → 允许接入的外部网站地址”填写 http://192.168.1.20:8080（协议、主机和端口，不带页面路径），保存后重启服务。HTTPS 网站还需使用 HTTPS 的 EduGate 地址。</p>
+                </details>
               </article>
             </div>
           </details>
         </section>
 
         <section class="section">
-          <details class="collapsible-panel" id="backup-panel" open>
-            <summary>备份与恢复</summary>
-            <div class="list-card" style="padding:18px">
-              <div class="stack">
-                <div class="actions" style="justify-content:flex-start">
-                  <button class="button soft" id="download-backup" type="button">下载完整备份</button>
-                  <button class="button danger" id="restore-backup" type="button">恢复并重启</button>
-                </div>
-                <div>
-                  <span class="field-label">恢复备份 ZIP</span>
-                  <div class="file-picker">
-                    <input class="file-input-hidden" id="restore-backup-file" type="file" accept=".zip,application/zip" aria-hidden="true" tabindex="-1" hidden />
-                    <button class="file-picker-button" id="restore-backup-file-trigger" type="button">选择备份</button>
-                    <span class="file-picker-name" id="restore-backup-file-name">未选择文件</span>
-                  </div>
-                </div>
-                <p class="hint">备份包含账号、策略、模型密钥和知识库，可恢复到另一台 EduGate 电脑。恢复会重启服务并替换当前数据。</p>
-              </div>
-            </div>
-          </details>
-        </section>
-
-        <section class="section">
-          <details class="collapsible-panel model-api-panel" id="model-api-panel" open>
+          <details class="collapsible-panel model-api-panel" id="model-api-panel">
             <summary>上游模型 API 管理</summary>
             <p class="hint" style="margin:4px 0 14px">可配置多个上游供应商；同名模型会按“供应商 + 上游模型 ID”分别管理。</p>
             <div class="provider-picker">
@@ -1746,9 +1535,11 @@
                 </div>
                 <div class="actions provider-actions">
                   <button class="button ghost" id="reset-model-provider" type="button">重置</button>
+                  <button class="button soft" id="save-model-provider" type="button">保存接口配置</button>
                   <button class="button primary" id="discover-models" type="button">获取模型</button>
                 </div>
-                <p class="hint">获取会同时检查连接并读取上游模型列表。API Key 只保存在程序目录中，不会回显。</p>
+                <p class="hint" id="provider-save-status" role="status">保存接口配置后，下次打开自动恢复；获取模型时也会先保存。上游 Key 留空可复用已保存的密钥。</p>
+                <p class="hint" id="config-storage-note"></p>
               </div>
             </div>
             <div class="imported-models">
@@ -1779,29 +1570,7 @@
         </section>
 
         <section class="section">
-          <details class="collapsible-panel system-log-panel" id="system-log-panel" open>
-            <summary>系统日志</summary>
-            <pre class="log-view" id="launcher-log-view">暂无系统日志</pre>
-          </details>
-        </section>
-
-        <section class="section">
-          <details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel" open>
-            <summary>高级设置</summary>
-            <div class="list-card" style="padding:18px">
-              <div class="setting-list" id="advanced-setting-list"></div>
-              <div class="stack" style="margin-top:16px">
-                <div class="actions">
-                  <button class="button primary" id="save-advanced-settings" type="button">保存高级设置</button>
-                </div>
-                <p class="hint">高级设置保存后需要重启服务才会生效。修改端口后，EduGate 会在新地址重新打开教师控制台。</p>
-              </div>
-            </div>
-          </details>
-        </section>
-
-        <section class="section">
-          <details class="collapsible-panel teaching-page-panel" id="teaching-page-panel" open>
+          <details class="collapsible-panel teaching-page-panel" id="teaching-page-panel">
             <summary>教学网页发布</summary>
             <div class="page-publish-body">
               <p class="hint">上传教师制作的单个 HTML，或上传含 <code>index.html</code> 和资源文件的 ZIP。发布后，控制页的学生课堂入口会自动切换到该网页。</p>
@@ -1824,11 +1593,84 @@
             </div>
           </details>
         </section>
+
+        <section class="section">
+          <details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">
+            <summary>高级设置</summary>
+            <div class="list-card panel-body">
+              <div class="setting-list" id="advanced-setting-list"></div>
+              <div class="stack" style="margin-top:16px">
+                <div class="actions">
+                  <button class="button primary" id="save-advanced-settings" type="button">保存高级设置</button>
+                </div>
+                <p class="hint">高级设置保存后需要重启服务才会生效。修改端口后，EduGate 会在新地址重新打开教师控制台。</p>
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="collapsible-panel system-log-panel" id="system-log-panel">
+            <summary>系统日志</summary>
+            <section class="system-log-group" aria-labelledby="request-log-title">
+              <div class="section-title">
+                <h3 id="request-log-title">最近请求记录</h3>
+                <span class="hint">最多显示最近 50 条，每次 API 调用对应一条记录</span>
+              </div>
+              <div class="list-card" id="request-log-list" role="region" aria-labelledby="request-log-title" tabindex="0"></div>
+            </section>
+            <section class="system-log-group" aria-labelledby="launcher-log-title">
+              <div class="section-title"><h3 id="launcher-log-title">服务运行日志</h3></div>
+              <pre class="log-view" id="launcher-log-view">暂无系统日志</pre>
+            </section>
+          </details>
+        </section>
+
+        <section class="section">
+          <details class="collapsible-panel" id="program-upgrade-panel">
+            <summary>程序升级 · 保留课堂资料</summary>
+            <div class="stack panel-body">
+              <div>
+                <span class="field-label">新版程序升级 ZIP</span>
+                <div class="file-picker">
+                  <input class="file-input-hidden" id="upgrade-package" type="file" accept=".zip,application/zip" aria-hidden="true" tabindex="-1" hidden />
+                  <button class="file-picker-button" id="upgrade-package-trigger" type="button">选择升级包</button>
+                  <span class="file-picker-name" id="upgrade-package-name">未选择文件</span>
+                </div>
+              </div>
+              <button class="button soft" id="upgrade-program" type="button">校验并升级程序</button>
+              <p class="hint">仅适用于 Windows EXE 便携版。升级只替换程序和运行环境，保留当前文件夹中的配置、模型密钥、教材和课堂记录；原程序另存于 data/updates。请勿选择数据备份 ZIP。</p>
+            </div>
+          </details>
+        </section>
+        <section class="section">
+          <details class="collapsible-panel" id="backup-panel">
+            <summary>备份与恢复</summary>
+            <div class="list-card panel-body">
+              <div class="stack">
+                <div class="actions" style="justify-content:flex-start">
+                  <button class="button soft" id="download-backup" type="button">下载完整备份</button>
+                  <button class="button danger" id="restore-backup" type="button">恢复并重启</button>
+                </div>
+                <div>
+                  <span class="field-label">恢复备份 ZIP</span>
+                  <div class="file-picker">
+                    <input class="file-input-hidden" id="restore-backup-file" type="file" accept=".zip,application/zip" aria-hidden="true" tabindex="-1" hidden />
+                    <button class="file-picker-button" id="restore-backup-file-trigger" type="button">选择备份</button>
+                    <span class="file-picker-name" id="restore-backup-file-name">未选择文件</span>
+                  </div>
+                </div>
+                <p class="hint">备份包含账号、策略、模型密钥和知识库，可恢复到另一台 EduGate 电脑。恢复会重启服务并替换当前数据。</p>
+              </div>
+            </div>
+          </details>
+        </section>
       </section>
 
+      <section class="section" id="portable-operation" role="status" aria-live="polite" tabindex="-1" hidden></section>
       <div class="footer-note">
         <span>教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
-        <span>v2.1 · 单教师课堂版</span>
+        <span>v2.4.0 · 单教师便携课堂版 · 2026.10.25</span>
       </div>
     </main>
   </div>
@@ -1846,6 +1688,11 @@
 
     const state = {
       baseUrl: defaultBackendBaseUrl(),
+      instanceId: "",
+      runId: "",
+      systemActionPending: false,
+      strategyDirty: false,
+      strategySaving: false,
       adminToken: "",
       username: "admin",
       currentTeacher: null,
@@ -1861,6 +1708,7 @@
       config: null,
       models: [],
       catalog: [],
+      providers: [],
       discoveredModels: [],
       selectedDiscoveredModelIds: new Set(),
       discoveredModelNames: {},
@@ -1870,7 +1718,9 @@
       files: [],
       systemStatus: null,
       systemStatusRefreshing: false,
-      generatedPlatformKey: "",
+      savedPlatformKey: "",
+      platformKeyLoaded: false,
+      platformKeyDirty: false,
       publishedPages: [],
       activePublishedPageId: "",
       dashboard: null,
@@ -1963,11 +1813,14 @@
       launcherLogView: document.querySelector("#launcher-log-view"),
       advancedSettingList: document.querySelector("#advanced-setting-list"),
       platformApiKey: document.querySelector("#platform-api-key"),
+      togglePlatformKey: document.querySelector("#toggle-platform-key"),
       platformKeyStatus: document.querySelector("#platform-key-status"),
       openaiBaseUrl: document.querySelector("#openai-base-url"),
       openaiModelId: document.querySelector("#openai-model-id"),
       openaiExample: document.querySelector("#openai-example"),
       browserSdkUrl: document.querySelector("#browser-sdk-url"),
+      browserDistributionUrl: document.querySelector("#browser-distribution-url"),
+      browserEmbedMode: document.querySelector("#browser-embed-mode"),
       browserCorsStatus: document.querySelector("#browser-cors-status"),
       browserEmbedExample: document.querySelector("#browser-embed-example"),
       browserIntegrationNote: document.querySelector("#browser-integration-note"),
@@ -2048,6 +1901,7 @@
 
     function clearSession() {
       state.adminToken = "";
+      state.strategyDirty = false;
       state.currentTeacher = null;
       state.sessionExpiresAt = 0;
       state.classroomActive = false;
@@ -2056,13 +1910,19 @@
       state.classroomUrlExpanded = false;
       state.classroomRecords = [];
       state.selectedClassroomRecord = null;
-      state.generatedPlatformKey = "";
+      state.savedPlatformKey = "";
+      state.platformKeyLoaded = false;
+      state.platformKeyDirty = false;
+      state.providers = [];
       state.publishedPages = [];
       state.activePublishedPageId = "";
-      sessionStorage.removeItem("edugate-admin-session");
+      sessionStorage.removeItem(adminSessionStorageKey());
       localStorage.removeItem("edugate-admin-session");
       el.classroomUrl.value = "";
       el.platformApiKey.value = "";
+      el.platformApiKey.type = "password";
+      el.togglePlatformKey.textContent = "显示";
+      el.togglePlatformKey.setAttribute("aria-pressed", "false");
       renderClassroomAccess();
       updateLoginState();
       applyRoleUI();
@@ -2098,6 +1958,8 @@
         const response = await fetch(api("/auth/status"));
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || response.statusText);
+        state.instanceId = data.instance_id || "unmanaged";
+        state.runId = data.run_id || "";
         state.needsSetup = !data.initialized;
         state.portableMode = Boolean(data.portable_mode);
         state.localAutoLogin = Boolean(data.local_auto_login);
@@ -2128,8 +1990,14 @@
       return true;
     }
 
+    function adminSessionStorageKey() {
+      return `edugate-admin-session:${state.instanceId}:${state.baseUrl}`;
+    }
+
     function saveLoginSession() {
-      sessionStorage.setItem("edugate-admin-session", JSON.stringify({
+      sessionStorage.setItem(adminSessionStorageKey(), JSON.stringify({
+        instanceId: state.instanceId,
+        runId: state.runId,
         baseUrl: state.baseUrl,
         username: state.username,
         currentTeacher: state.currentTeacher,
@@ -2140,8 +2008,8 @@
 
     function loadSession() {
       try {
-        const saved = JSON.parse(sessionStorage.getItem("edugate-admin-session") || "{}");
-        if (saved.baseUrl) state.baseUrl = saved.baseUrl;
+        const saved = JSON.parse(sessionStorage.getItem(adminSessionStorageKey()) || "{}");
+        if (saved.instanceId !== state.instanceId || saved.runId !== state.runId) throw new Error("Stored session belongs to another classroom.");
         if (saved.username) state.username = saved.username;
         if (saved.adminToken && Number(saved.sessionExpiresAt) > Date.now()) {
           state.adminToken = saved.adminToken;
@@ -2180,7 +2048,7 @@
       if (!fullUrl || state.classroomUrlExpanded) return fullUrl;
       try {
         const parsed = new URL(fullUrl);
-        return `${parsed.host}/classroom`;
+        return `${parsed.host}${parsed.pathname}`;
       } catch {
         return fullUrl;
       }
@@ -2302,20 +2170,6 @@
       }
     }
 
-    function mountedSourceStorageKey() {
-      const username = (state.currentTeacher?.username || state.username || "default").trim().toLowerCase();
-      return `edugate-mounted-source:${username}`;
-    }
-
-    function rememberMountedSource(sourceId) {
-      if (!sourceId) return;
-      localStorage.setItem(mountedSourceStorageKey(), sourceId);
-    }
-
-    function rememberedMountedSource() {
-      return localStorage.getItem(mountedSourceStorageKey()) || "";
-    }
-
     function existingSource(sourceId) {
       return state.sources.some((source) => source.id === sourceId);
     }
@@ -2363,8 +2217,7 @@
       const scenario = currentScenario();
       const model = scenario?.model || "-";
       const activeModel = state.catalog.find((item) => item.id === model);
-      const rememberedSource = rememberedMountedSource();
-      const source = existingSource(rememberedSource) ? rememberedSource : (scenario?.knowledge_source_id || "general");
+      const source = scenario?.knowledge_source_id || "general";
       const aiEnabled = scenario?.ai_enabled !== false;
       el.currentAiState.textContent = aiEnabled ? "开启" : "关闭";
       el.currentAiState.style.color = aiEnabled ? "" : "var(--red)";
@@ -2375,7 +2228,7 @@
         : model;
       el.currentSource.textContent = sourceDisplayName(source);
 
-      if (scenario) {
+      if (scenario && !state.strategyDirty) {
         el.systemPrompt.value = scenario.system_prompt || "";
         el.temperature.value = scenario.temperature ?? 0.4;
         el.temperatureValue.value = scenario.temperature ?? 0.4;
@@ -2386,6 +2239,7 @@
       }
       updatePromptCharacterCount();
       renderTokenPreset(el.maxTokens.value);
+      renderStrategySaveState();
 
       renderSources(source);
       renderModels(model);
@@ -2396,27 +2250,17 @@
 
     async function persistMountedSource(sourceId, { reload = false } = {}) {
       if (!sourceId) return;
-      rememberMountedSource(sourceId);
       el.currentSource.textContent = sourceDisplayName(sourceId);
       try {
-        await request("/config/scenarios/default", {
+        const updated = await request("/config/scenarios/default", {
           method: "PUT",
           body: JSON.stringify({ knowledge_source_id: sourceId }),
         });
+        if (state.config) state.config.scenarios.default = updated;
+        window.dispatchEvent(new Event("edugate:knowledge-data"));
         if (reload) await loadConfig();
       } catch (error) {
         showToast(`挂载知识库失败：${error.message}`, true);
-      }
-    }
-
-    async function restoreRememberedMountedSource() {
-      const sourceId = rememberedMountedSource();
-      if (!sourceId || !existingSource(sourceId)) return;
-      el.sourceSelect.value = sourceId;
-      el.currentSource.textContent = sourceDisplayName(sourceId);
-      const scenario = currentScenario();
-      if (scenario?.knowledge_source_id !== sourceId) {
-        await persistMountedSource(sourceId, { reload: true });
       }
     }
 
@@ -2518,6 +2362,12 @@
           current.modelCount += 1;
           providers.set(id, current);
         });
+      state.providers.filter((provider) => provider.id && provider.id !== "langfuse").forEach((provider) => {
+        providers.set(provider.id, {
+          id: provider.id, name: provider.name, baseUrl: provider.base_url || "",
+          modelCount: provider.model_count || 0, apiKeySet: provider.status === "configured",
+        });
+      });
       return Array.from(providers.values()).sort((left, right) =>
         left.name.localeCompare(right.name, "zh-CN") || left.id.localeCompare(right.id)
       );
@@ -2655,14 +2505,21 @@
               <span class="badge green">${escapeHtml(file.source_id)}</span>
               <span>${file.chunk_count} 片段</span>
               <span>${Math.ceil(file.size_bytes / 1024)} KB</span>
+              <span>${escapeHtml([file.metadata?.subject, file.metadata?.grade, file.metadata?.edition, file.metadata?.term].filter(Boolean).join(" · "))}</span>
+              ${file.metadata?.audience === "teacher" ? '<span class="badge">仅教师参考</span>' : ""}
             </div>
+            ${file.index_error ? `<p class="knowledge-warning">索引暂停：${escapeHtml(file.index_error)}</p>` : ""}
+            ${file.warnings?.length ? `<p class="knowledge-warning">${escapeHtml(file.warnings.join("；"))}</p>` : ""}
           </div>
+          <button class="button soft" type="button" data-knowledge-preview="${escapeHtml(file.id)}">解析预览</button>
+          <button class="button ghost" type="button" data-knowledge-metadata="${escapeHtml(file.id)}">资料属性</button>
           <button class="button danger" type="button" data-file-id="${escapeHtml(file.id)}">删除</button>
         </div>
       `).join("");
       el.fileList.querySelectorAll("[data-file-id]").forEach((button) => {
         button.addEventListener("click", () => deleteFile(button.dataset.fileId));
       });
+      window.dispatchEvent(new Event("edugate:knowledge-data"));
     }
 
     const settingLabels = {
@@ -2690,7 +2547,7 @@
       CLASSROOM_RECORD_RETENTION_DAYS: "课堂记录保留天数",
       CLASSROOM_RECORD_MAX_RECORDS: "课堂互动记录总上限",
       CLASSROOM_RECORD_MAX_CONTENT_CHARS: "单条课堂内容字符上限",
-      CORS_ORIGINS: "额外允许的跨域来源",
+      CORS_ORIGINS: "允许接入的外部网站地址",
     };
 
     function formatDuration(seconds) {
@@ -2707,7 +2564,7 @@
       const openaiBaseUrl = system.openai_base_url || `${baseUrl.replace(/\/+$/, "")}/v1`;
       const modelId = system.openai_model || "edugate";
       const sdkUrl = system.browser_sdk_url || `${baseUrl.replace(/\/+$/, "")}/assets/edugate-client.js`;
-      const visibleKey = state.generatedPlatformKey || "<YOUR_EDUGATE_API_KEY>";
+      const visibleKey = "<YOUR_EDUGATE_API_KEY>";
       const corsOrigins = Array.isArray(system.cors_origins) ? system.cors_origins.filter(Boolean) : [];
       const classToken = state.classroomToken || "<YOUR_CLASSROOM_TOKEN>";
 
@@ -2716,9 +2573,10 @@
       el.browserSdkUrl.value = sdkUrl;
       el.platformKeyStatus.textContent = system.platform_api_key_set ? "已启用" : "未启用";
       el.platformKeyStatus.className = `badge${system.platform_api_key_set ? " green" : ""}`;
-      el.copyPlatformKey.disabled = !state.generatedPlatformKey;
-      el.browserCorsStatus.textContent = corsOrigins.length ? `已允许 ${corsOrigins.length} 个跨域` : "仅同源";
-      el.browserCorsStatus.className = `badge${corsOrigins.length ? " green" : ""}`;
+      el.copyPlatformKey.disabled = !system.platform_api_key_set;
+      el.browserCorsStatus.textContent = state.classroomActive ? "课堂已开放 · 可使用" : "开始课堂后可用";
+      el.browserCorsStatus.className = `badge${state.classroomActive ? " green" : ""}`;
+      el.browserDistributionUrl.value = classroomUrl();
 
       el.openaiExample.textContent = [
         "from openai import OpenAI",
@@ -2734,7 +2592,9 @@
       ].join("\n");
 
       const closeScript = "<" + "/script>";
-      el.browserEmbedExample.textContent = [
+      const external = el.browserEmbedMode.value === "external";
+      document.querySelector("#browser-external-help").hidden = !external;
+      el.browserEmbedExample.textContent = external ? [
         `<script src=${JSON.stringify(sdkUrl)}>${closeScript}`,
         "<script>",
         "const edugate = new EduGateClient({",
@@ -2747,16 +2607,26 @@
         "  for await (const text of edugate.streamText(messages)) appendText(text);",
         "}",
         closeScript,
+      ].join("\n") : [
+        "<!-- 将此代码放入教学网页，然后在 EduGate 中上传发布 -->",
+        "<script>",
+        "async function askEduGate(question, appendText) {",
+        "  return EduGate.ask(question, appendText);",
+        "}",
+        closeScript,
+        "<!-- 在网页的提问按钮中调用 askEduGate(问题, 追加回答文字的函数) -->",
       ].join("\n");
 
-      if (!state.classroomToken) {
+      if (!external) {
+        el.browserIntegrationNote.textContent = "默认使用 EduGate 分发：复制代码到教学网页并上传发布，网页内置 AI 接入能力，无需另装 SDK 或设置跨域。开始课堂后可用，结束课堂后暂停。";
+      } else if (!state.classroomToken) {
         el.browserIntegrationNote.textContent = "课堂令牌尚未加载，嵌入代码中的令牌是占位符。";
       } else if (!state.classroomActive) {
-        el.browserIntegrationNote.textContent = "课堂当前暂停；代码可先嵌入，开始课堂后生效。外部网页还需配置准确的 Origin。";
+        el.browserIntegrationNote.textContent = "课堂当前暂停；嵌入代码已包含工具脚本，可先加入网页。请设置该网页所在的网站地址，开始课堂后生效；详见下方接入说明。";
       } else if (corsOrigins.length) {
         el.browserIntegrationNote.textContent = `课堂已开放；允许跨域来源：${corsOrigins.join(", ")}。课堂令牌会出现在网页源码中，只授予学生权限。`;
       } else {
-        el.browserIntegrationNote.textContent = "课堂已开放；同源网页可直接使用。外部网页需在高级设置填写准确的 Origin 并重启服务。";
+        el.browserIntegrationNote.textContent = "课堂已开放；外部网站需先在高级设置填写其网站地址并重启服务。嵌入代码已包含工具脚本，无需单独安装，详见下方说明。";
       }
     }
 
@@ -2826,6 +2696,7 @@
           <div class="row-main">
             <p class="row-title">${escapeHtml(log.route)} · ${escapeHtml(log.model || "-")}</p>
             <div class="row-meta"><span>${escapeHtml(log.created_at)}</span><span>${log.status_code}</span><span>${log.latency_ms} ms</span><span>${log.total_tokens ?? 0} tokens</span></div>
+            ${log.retrieval ? `<div class="row-meta"><span>资料：${escapeHtml(({supported:"有依据", assisted:"允许辅助说明", no_evidence:"未检索到依据", insufficient_evidence:"依据不足", evidence_check_unavailable:"依据检查暂不可用", local_reply:"本地说明",blocked_topic:"黑名单禁答",policy_check_unavailable:"话题检查暂不可用"})[log.retrieval.decision] || log.retrieval.decision)}</span><span>${log.retrieval.hit_count} 个片段</span><span>检索 ${log.retrieval.elapsed_ms} ms</span></div>` : ""}
             ${log.error ? `<div class="row-meta" style="color:var(--red)">${escapeHtml(log.error)}</div>` : ""}
           </div>
         </div>
@@ -2833,8 +2704,9 @@
       el.launcherLogView.textContent = state.launcherLogs.join("\n") || "暂无系统日志";
 
       el.platformApiKey.placeholder = system.platform_api_key_set
-        ? "平台密钥已设置；输入新值可替换"
+        ? "密钥已保存，展开后可显示或复制"
         : "输入自定义密钥，或生成新密钥";
+      document.querySelector("#config-storage-note").textContent = "配置和密钥保存在当前便携文件夹中，下次启动自动恢复。换电脑时请携带整个文件夹，可在系统页点击“打开目录”查看位置。";
       renderDownstreamIntegration();
     }
 
@@ -2947,7 +2819,7 @@
           ? `${turn.latency_ms} ms（排队 ${turn.queue_wait_ms} ms）`
           : `${turn.latency_ms} ms`;
         return `
-          <article class="record-turn">
+          <article class="record-turn" data-kind="${escapeHtml(turn.kind)}">
             <div class="record-turn-heading">
               <span class="badge">${escapeHtml(`${turnComputerName} · ${turnClientIp}`)}</span>
               <span class="badge ${statusClass}">${escapeHtml(typeLabel)}</span>
@@ -3080,7 +2952,6 @@
         setStatus("已登录，部分数据加载失败");
         showToast(`部分数据加载失败：${failures.join("；")}`, true);
       } else {
-        await restoreRememberedMountedSource();
         setStatus("运行中", true);
       }
     }
@@ -3092,10 +2963,27 @@
       renderAll();
     }
 
+    async function withButtonBusy(button, action) {
+      if (button.disabled) return;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      try {
+        await action();
+      } catch (error) {
+        showToast(`刷新失败：${error.message}`, true);
+      } finally {
+        button.disabled = false;
+        button.setAttribute("aria-busy", "false");
+      }
+    }
+
     async function loadModels() {
-      const catalog = await request("/admin/models");
+      const [catalog, providers] = await Promise.all([request("/admin/models"), request("/admin/providers")]);
       state.catalog = catalog || [];
-      state.models = state.catalog;
+      state.providers = providers || [];
+      state.models = state.catalog.map((model) => ({
+        ...model, available: model.source !== "openai_compatible" || Boolean(model.base_url && model.api_key_set),
+      }));
       initializeProviderForm();
       renderCatalog();
       renderAll();
@@ -3130,10 +3018,12 @@
     }
 
     async function refreshSystemStatus() {
-      if (!state.adminToken || el.systemView.hidden || state.systemStatusRefreshing) return;
+      if (state.systemActionPending || !state.adminToken || el.systemView.hidden || state.systemStatusRefreshing) return;
+      if (el.systemView.dataset.activePanel && !["overview", "logs"].includes(el.systemView.dataset.activePanel)) return;
       state.systemStatusRefreshing = true;
       try {
         state.systemStatus = await request("/admin/system/status");
+        await loadClassroom();
         renderSystem();
       } catch (error) {
         console.debug("System status refresh skipped", error);
@@ -3318,24 +3208,62 @@
       }
     }
 
-    async function saveScenario() {
-      const payload = {
+    function strategyDraft() {
+      return {
         system_prompt: el.systemPrompt.value.trim(),
         temperature: Number(el.temperature.value),
-        knowledge_source_id: el.sourceSelect.value || "general",
         knowledge_strict: el.knowledgeStrict.checked,
+        max_tokens: el.maxTokens.value.trim() ? Number(el.maxTokens.value) : null,
       };
-      if (el.maxTokens.value.trim()) payload.max_tokens = Number(el.maxTokens.value.trim());
+    }
+
+    function renderStrategySaveState() {
+      const note = document.querySelector("#strategy-save-state");
+      note.dataset.dirty = String(state.strategyDirty);
+      note.textContent = state.strategySaving ? "正在保存…" : state.strategyDirty ? "有未保存的修改" : "已保存";
+      const button = document.querySelector("#save-scenario");
+      button.disabled = state.strategySaving || !state.adminToken;
+      button.setAttribute("aria-busy", String(state.strategySaving));
+      window.dispatchEvent(new CustomEvent("edugate:strategy-draft-change"));
+    }
+
+    function markStrategyDraft() {
+      const scenario = currentScenario();
+      if (!scenario) return;
+      const original = {
+        system_prompt: scenario.system_prompt || "",
+        temperature: scenario.temperature ?? 0.4,
+        knowledge_strict: Boolean(scenario.knowledge_strict),
+        max_tokens: scenario.max_tokens ?? null,
+      };
+      state.strategyDirty = JSON.stringify(strategyDraft()) !== JSON.stringify(original);
+      renderStrategySaveState();
+    }
+
+    async function saveScenario() {
+      if (state.strategySaving) return;
+      const draft = strategyDraft();
+      const payload = { ...draft, knowledge_source_id: el.sourceSelect.value || "general" };
+      if (payload.max_tokens === null) delete payload.max_tokens;
+      state.strategySaving = true;
+      renderStrategySaveState();
       try {
-        await request("/config/scenarios/default", {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        rememberMountedSource(payload.knowledge_source_id);
-        await loadConfig();
-        showToast("已保存当前 AI 策略。");
+        const saved = await request("/config/scenarios/default", { method: "PUT", body: JSON.stringify(payload) });
+        if (state.config) state.config.scenarios.default = saved;
+        // Inputs remain editable while saving; preserve any newer edits.
+        state.strategyDirty = JSON.stringify(strategyDraft()) !== JSON.stringify(draft);
+        try {
+          await loadConfig();
+        } catch (error) {
+          showToast(`策略已保存，但页面刷新未完成：${error.message}`, true);
+          return;
+        }
+        showToast(state.strategyDirty ? "已保存上次提交的策略；新修改还未保存。" : "已保存当前 AI 策略。");
       } catch (error) {
         showToast(`保存失败：${error.message}`, true);
+      } finally {
+        state.strategySaving = false;
+        renderStrategySaveState();
       }
     }
 
@@ -3418,7 +3346,6 @@
       if (!confirm(`确定删除知识库 ${sourceId} 及其中所有文件吗？`)) return;
       try {
         await request(`/knowledge/sources/${encodeURIComponent(sourceId)}`, { method: "DELETE" });
-        if (rememberedMountedSource() === sourceId) localStorage.removeItem(mountedSourceStorageKey());
         if (state.editingSourceId === sourceId) resetSourceEditor({ close: true });
         await Promise.all([loadSources(), loadFiles()]);
         showToast("知识库已删除。");
@@ -3485,23 +3412,23 @@
         el.modelApiUrl.value = parts.apiUrl;
         el.modelApiPath.value = parts.apiPath;
       } else {
-        el.modelApiPath.value = "/v1";
+        const provider = configuredProviders()[0];
+        if (provider) selectProvider(provider.id);
+        else el.modelApiPath.value = "/v1";
       }
       state.providerFormInitialized = true;
       updateProviderPreview();
     }
 
     function selectProvider(providerId) {
-      const model = state.catalog.find((item) =>
-        item.source === "openai_compatible" && modelProviderId(item) === providerId
-      );
-      if (!model) {
+      const provider = configuredProviders().find((item) => item.id === providerId);
+      if (!provider) {
         resetProviderForm();
         return;
       }
-      const parts = splitProviderBaseUrl(model.base_url || "");
+      const parts = splitProviderBaseUrl(provider.baseUrl);
       state.activeProviderId = providerId;
-      el.modelProviderName.value = model.provider || "";
+      el.modelProviderName.value = provider.name;
       el.modelApiUrl.value = parts.apiUrl;
       el.modelApiPath.value = parts.apiPath;
       el.modelApiKey.value = "";
@@ -3511,6 +3438,7 @@
       closeModelDiscovery();
       updateProviderPreview();
       renderProviderSelector();
+      document.querySelector("#provider-save-status").textContent = "已从本机配置读取；上游 Key 留空可复用，修改后请保存。";
     }
 
     function closeModelDiscovery() {
@@ -3531,6 +3459,7 @@
       updateProviderPreview();
       renderProviderSelector();
       el.modelProviderName.focus();
+      document.querySelector("#provider-save-status").textContent = "填写后点击“保存接口配置”；尚未获取或导入模型也可以保存。";
     }
 
     function providerConnectionPayload() {
@@ -3552,27 +3481,46 @@
       };
     }
 
-    async function discoverProviderModels() {
+    async function saveProviderConfiguration({ notify = true } = {}) {
       const payload = providerConnectionPayload();
       if (!payload.provider) {
         showToast("请填写用于标记来源的名称。", true);
         el.modelProviderName.focus();
-        return;
+        return false;
       }
       if (!payload.base_url) {
         showToast("请填写 API URL。", true);
         el.modelApiUrl.focus();
-        return;
+        return false;
       }
-      if (!payload.api_key && !payload.credential_model_id) {
+      const savedProvider = configuredProviders().find((item) => item.id === payload.provider_id && item.apiKeySet && item.baseUrl.replace(/\/+$/, "").toLowerCase() === payload.base_url.replace(/\/+$/, "").toLowerCase());
+      if (!payload.api_key && !payload.credential_model_id && !savedProvider) {
         showToast("请填写 API Key；已有同地址模型时可以留空复用。", true);
         el.modelApiKey.focus();
-        return;
+        return false;
       }
+      try {
+        const result = await request("/admin/providers", { method: "POST", body: JSON.stringify(payload) });
+        state.activeProviderId = result.provider_id;
+        state.providerFormInitialized = true;
+        el.modelApiKey.value = "";
+        await loadModels();
+        document.querySelector("#provider-save-status").textContent = "接口配置已保存到本机文件，下次打开自动恢复。可继续获取并导入模型。";
+        if (notify) showToast("接口配置和密钥已保存，下次打开可直接使用。");
+        return true;
+      } catch (error) {
+        showToast(`保存接口配置失败：${error.message}`, true);
+        return false;
+      }
+    }
+
+    async function discoverProviderModels() {
       const button = document.querySelector("#discover-models");
       button.disabled = true;
       button.textContent = "正在获取…";
       try {
+        if (!await saveProviderConfiguration({ notify: false })) return;
+        const payload = providerConnectionPayload();
         const result = await request("/admin/models/discover", {
           method: "POST",
           body: JSON.stringify(payload),
@@ -3667,12 +3615,12 @@
       const providerModels = state.catalog.filter((model) =>
         model.source === "openai_compatible" && modelProviderId(model) === providerId
       );
-      if (!providerId || !providerModels.length) {
+      if (!providerId) {
         showToast("请先选择要删除的供应商。", true);
         return;
       }
 
-      const providerName = providerModels[0].provider || "未命名供应商";
+      const providerName = configuredProviders().find((item) => item.id === providerId)?.name || "未命名供应商";
       const currentModelId = currentScenario()?.model || "";
       const currentUsesProvider = providerModels.some((model) => model.id === currentModelId);
       const candidates = state.catalog.filter((model) =>
@@ -3786,18 +3734,47 @@
       }
     }
 
+    function showPortableOperation(message) {
+      state.systemActionPending = true;
+      const panel = document.querySelector("#portable-operation");
+      panel.hidden = false;
+      panel.textContent = message;
+      panel.focus();
+      document.querySelectorAll("main button, main input, main select, main textarea").forEach((input) => input.disabled = true);
+      setStatus("正在保存");
+    }
+
     async function requestSystemAction(action) {
-      const label = action === "restart" ? "重启" : "停止";
       const warning = action === "restart"
-        ? "确定重启 EduGate 吗？页面会短暂断开并自动在正确地址重新打开。"
-        : "确定关闭 EduGate 服务吗？教师页面和学生页面都会停止访问；配置和课堂记录会留在当前文件夹中。";
+        ? "确定重启 EduGate 吗？当前课堂会结束，数据保存后重新打开控制台。"
+        : "结束课堂并退出 EduGate？将先保存记录、等待资料处理完成，再关闭程序。请等待退出确认后再安全弹出 U 盘。";
       if (!confirm(warning)) return;
       try {
         await request("/admin/system/action", { method: "POST", body: JSON.stringify({ action }) });
-        showToast(`已安排${label}服务。`);
-        setStatus(`${label}中`);
+        showPortableOperation(action === "restart"
+          ? "正在保存并重启，请等待控制台重新打开。"
+          : "正在结束课堂并保存数据，请勿拔出 U 盘。Windows 会在 EduGate 进程完全退出后显示确认窗口；网页断开不代表保存完成。");
       } catch (error) {
-        showToast(`${label}失败：${error.message}`, true);
+        showToast(`操作未完成：${error.message}`, true);
+      }
+    }
+
+    async function upgradeProgram() {
+      const file = document.querySelector("#upgrade-package").files?.[0];
+      if (!file) return showToast("请先选择新版 EduGate 程序升级 ZIP。", true);
+      if (!state.systemStatus?.upgrade_supported) return showToast("此功能需要 Windows EXE 便携版。", true);
+      if (!confirm("升级将结束当前课堂，保存数据后替换程序并重新启动。config、data 和原程序备份会保留。升级期间请勿拔出 U 盘。确定使用所选升级包吗？")) return;
+      const button = document.querySelector("#upgrade-program");
+      button.disabled = true;
+      const body = new FormData();
+      body.append("file", file);
+      try {
+        showToast("正在上传并校验升级包，请稍候。");
+        const result = await request("/admin/system/upgrade", { method: "POST", body, json: false });
+        showPortableOperation(`已校验版本 ${result.version}。正在保存课堂并升级程序，完成后将重新打开控制台。请勿拔出 U 盘。`);
+      } catch (error) {
+        button.disabled = false;
+        showToast(`升级未开始：${error.message}`, true);
       }
     }
 
@@ -3833,33 +3810,59 @@
       }
     }
 
+    function renderPlatformKeyNote() {
+      const length = el.platformApiKey.value.length;
+      document.querySelector("#platform-key-note").textContent = state.platformKeyDirty
+        ? `当前输入 ${length} 个字符，尚未保存；已接入客户端仍使用原密钥。`
+        : `密钥已保存在本机 secrets.json，重启后不变${length ? `（当前 ${length} 个字符）` : ""}。只有保存替换值或生成新密钥才会更换。`;
+    }
+
+    async function loadPlatformKey({ refresh = false } = {}) {
+      if (!state.adminToken || state.platformKeyDirty || (state.platformKeyLoaded && !refresh)) return;
+      const token = state.adminToken;
+      const result = await request("/admin/system/platform-key", { cache: "no-store" });
+      if (state.adminToken !== token || state.platformKeyDirty) return;
+      state.savedPlatformKey = result.api_key || "";
+      state.platformKeyLoaded = true;
+      el.platformApiKey.value = state.savedPlatformKey;
+      renderPlatformKeyNote();
+    }
+
     async function savePlatformKey() {
       const value = el.platformApiKey.value.trim();
       if (!value) {
         showToast("请输入下游 API 密钥，或点击“生成”。", true);
         return;
       }
+      if (state.systemStatus?.platform_api_key_set && value !== state.savedPlatformKey && !confirm("替换密钥后，已有客户端需要填写新的 Key。确定保存吗？")) return;
       try {
         const result = await request("/admin/system/platform-key", {
           method: "PUT",
           body: JSON.stringify({ api_key: value }),
         });
-        state.generatedPlatformKey = value;
+        state.savedPlatformKey = value;
+        state.platformKeyDirty = false;
+        state.platformKeyLoaded = true;
         state.systemStatus.platform_api_key_set = result.platform_api_key_set;
         renderSystem();
-        showToast("平台 API Key 已保存；可在离开页面前复制。 ");
+        renderPlatformKeyNote();
+        showToast("API Key 已保存到本机，重启后仍使用此密钥。");
       } catch (error) {
         showToast(`保存平台密钥失败：${error.message}`, true);
       }
     }
 
     async function generatePlatformKey() {
+      if (state.systemStatus?.platform_api_key_set && !confirm("生成新密钥会使原密钥立即失效，已有客户端需要更新 Key。确定生成吗？")) return;
       try {
         const result = await request("/admin/system/platform-key/generate", { method: "POST" });
-        state.generatedPlatformKey = result.api_key || "";
-        el.platformApiKey.value = state.generatedPlatformKey;
+        state.savedPlatformKey = result.api_key || "";
+        el.platformApiKey.value = state.savedPlatformKey;
+        state.platformKeyDirty = false;
+        state.platformKeyLoaded = true;
         state.systemStatus.platform_api_key_set = true;
         renderSystem();
+        renderPlatformKeyNote();
         showToast("已生成并保存新密钥；旧平台密钥立即失效。 ");
       } catch (error) {
         showToast(`生成平台密钥失败：${error.message}`, true);
@@ -3870,10 +3873,13 @@
       if (!confirm("确定关闭 OpenAI 兼容接口吗？已有下游客户端会立即失去访问权限。")) return;
       try {
         await request("/admin/system/platform-key", { method: "DELETE" });
-        state.generatedPlatformKey = "";
+        state.savedPlatformKey = "";
+        state.platformKeyDirty = false;
+        state.platformKeyLoaded = true;
         el.platformApiKey.value = "";
         state.systemStatus.platform_api_key_set = false;
         renderSystem();
+        document.querySelector("#platform-key-note").textContent = "接口已关闭，重启后仍保持关闭。保存或生成密钥可重新启用。";
         showToast("OpenAI 兼容接口已关闭。 ");
       } catch (error) {
         showToast(`关闭平台接口失败：${error.message}`, true);
@@ -3927,11 +3933,11 @@
     el.adminPassword.addEventListener("keydown", (event) => {
       if (event.key === "Enter") login();
     });
-    document.querySelector("#reload-models").addEventListener("click", loadModels);
-    document.querySelector("#reload-sources").addEventListener("click", loadSources);
-    document.querySelector("#refresh-source-admin").addEventListener("click", loadSources);
-    document.querySelector("#reload-files").addEventListener("click", loadFiles);
-    document.querySelector("#refresh-records").addEventListener("click", () => loadClassroomRecords());
+    document.querySelector("#reload-models").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadModels));
+    document.querySelector("#reload-sources").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadSources));
+    document.querySelector("#refresh-source-admin").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadSources));
+    document.querySelector("#reload-files").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadFiles));
+    document.querySelector("#refresh-records").addEventListener("click", (event) => withButtonBusy(event.currentTarget, () => loadClassroomRecords()));
     document.querySelector("#save-scenario").addEventListener("click", saveScenario);
     document.querySelector("#save-source").addEventListener("click", saveSource);
     el.cancelSourceEdit.addEventListener("click", () => resetSourceEditor({ close: true }));
@@ -3960,16 +3966,44 @@
     el.rotateClassroomToken.addEventListener("click", rotateClassroomToken);
     el.startClass.addEventListener("click", startClassroom);
     el.endClass.addEventListener("click", endClassroom);
-    document.querySelector("#refresh-system").addEventListener("click", loadSystem);
+    document.querySelector("#refresh-system").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadSystem));
     document.querySelector("#restart-system").addEventListener("click", () => requestSystemAction("restart"));
     document.querySelector("#shutdown-system").addEventListener("click", () => requestSystemAction("shutdown"));
+    document.querySelector("#exit-classroom").addEventListener("click", () => requestSystemAction("shutdown"));
+    document.querySelector("#upgrade-program").addEventListener("click", upgradeProgram);
+    document.querySelector("#upgrade-package-trigger").addEventListener("click", () => document.querySelector("#upgrade-package").click());
+    document.querySelector("#upgrade-package").addEventListener("change", (event) => updateFilePicker(event.target, document.querySelector("#upgrade-package-name")));
     document.querySelector("#open-app-directory").addEventListener("click", openAppDirectory);
     document.querySelector("#save-advanced-settings").addEventListener("click", saveAdvancedSettings);
     document.querySelector("#save-platform-key").addEventListener("click", savePlatformKey);
     document.querySelector("#generate-platform-key").addEventListener("click", generatePlatformKey);
     document.querySelector("#disable-platform-key").addEventListener("click", disablePlatformKey);
     document.querySelector("#copy-openai-base").addEventListener("click", () => copyText(el.openaiBaseUrl.value, "OpenAI API Base URL"));
-    document.querySelector("#copy-platform-key").addEventListener("click", () => copyText(state.generatedPlatformKey, "新平台密钥"));
+    document.querySelector("#copy-platform-key").addEventListener("click", async () => {
+      try { await loadPlatformKey(); await copyText(state.savedPlatformKey, "已保存的 API Key"); }
+      catch (error) { showToast(`读取密钥失败：${error.message}`, true); }
+    });
+    document.querySelector("#downstream-api-panel").addEventListener("toggle", (event) => {
+      if (event.target.open) loadPlatformKey({ refresh: true }).catch((error) => showToast(`读取密钥失败：${error.message}`, true));
+      else {
+        el.platformApiKey.type = "password";
+        el.togglePlatformKey.textContent = "显示";
+        el.togglePlatformKey.setAttribute("aria-pressed", "false");
+      }
+    });
+    el.platformApiKey.addEventListener("input", () => { state.platformKeyDirty = true; renderPlatformKeyNote(); });
+    el.togglePlatformKey.addEventListener("click", async () => {
+      try {
+        await loadPlatformKey();
+        const visible = el.platformApiKey.type === "password";
+        el.platformApiKey.type = visible ? "text" : "password";
+        el.togglePlatformKey.textContent = visible ? "隐藏" : "显示";
+        el.togglePlatformKey.setAttribute("aria-pressed", String(visible));
+      } catch (error) { showToast(`读取密钥失败：${error.message}`, true); }
+    });
+    el.browserEmbedMode.addEventListener("change", renderDownstreamIntegration);
+    document.querySelector("#copy-browser-distribution").addEventListener("click", () => copyText(el.browserDistributionUrl.value, "课堂分发地址"));
+    document.querySelector("#save-model-provider").addEventListener("click", () => saveProviderConfiguration());
     document.querySelector("#copy-openai-example").addEventListener("click", () => copyText(el.openaiExample.textContent, "OpenAI 调用示例"));
     document.querySelector("#copy-browser-sdk").addEventListener("click", () => copyText(el.browserSdkUrl.value, "浏览器 SDK 地址"));
     document.querySelector("#copy-browser-example").addEventListener("click", () => copyText(el.browserEmbedExample.textContent, "教学网页嵌入代码"));
@@ -4007,32 +4041,61 @@
       updateTemperatureProgress();
     });
     el.systemPrompt.addEventListener("input", updatePromptCharacterCount);
+    document.querySelector(".strategy-form").addEventListener("input", markStrategyDraft);
+    document.querySelector(".strategy-form").addEventListener("change", markStrategyDraft);
     el.tokenPresetButtons.forEach((button) => {
       button.addEventListener("click", () => {
         el.maxTokens.value = button.dataset.tokenPreset;
         renderTokenPreset(el.maxTokens.value);
+        markStrategyDraft();
       });
     });
-    el.tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        const name = tab.dataset.tab;
-        state.activeTab = name;
-        el.tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === name));
-        el.tabs.forEach((item) => item.setAttribute("aria-selected", String(item.dataset.tab === name)));
-        el.controlView.hidden = name !== "control";
-        el.recordsView.hidden = name !== "records";
-        el.settingsView.hidden = name !== "settings";
-        el.systemView.hidden = name !== "system";
-        if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
-        window.scrollTo({ top: 0 });
+    function activateTab(name, { focus = false } = {}) {
+      state.activeTab = name;
+      el.tabs.forEach((item) => {
+        const selected = item.dataset.tab === name;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-selected", String(selected));
+        item.tabIndex = selected ? 0 : -1;
+        if (selected && focus) item.focus();
       });
+      el.controlView.hidden = name !== "control";
+      el.recordsView.hidden = name !== "records";
+      el.settingsView.hidden = name !== "settings";
+      el.systemView.hidden = name !== "system";
+      if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
+      window.dispatchEvent(new CustomEvent("edugate:tab-change", { detail: name }));
+      window.scrollTo({ top: 0 });
+    }
+
+    el.tabs.forEach((tab, index) => {
+      tab.id = `tab-${tab.dataset.tab}`;
+      tab.tabIndex = tab.classList.contains("active") ? 0 : -1;
+      const panel = document.getElementById(tab.getAttribute("aria-controls"));
+      if (panel) { panel.setAttribute("role", "tabpanel"); panel.setAttribute("aria-labelledby", tab.id); }
+      tab.addEventListener("click", () => activateTab(tab.dataset.tab));
+      tab.addEventListener("keydown", (event) => {
+        const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+        if (event.ctrlKey || event.metaKey || event.altKey || !keys.includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === "Home" ? 0 : event.key === "End" ? el.tabs.length - 1
+          : (index + (event.key === "ArrowRight" ? 1 : -1) + el.tabs.length) % el.tabs.length;
+        if (!el.tabs[next].disabled) activateTab(el.tabs[next].dataset.tab, { focus: true });
+      });
+    });
+    window.addEventListener("edugate:system-panel-change", (event) => {
+      if (event.detail === "integration") loadPlatformKey().catch((error) => showToast(`读取密钥失败：${error.message}`, true));
+      if (event.detail === "overview" || event.detail === "logs") refreshSystemStatus();
+    });
+    window.addEventListener("beforeunload", (event) => {
+      if (state.strategyDirty) { event.preventDefault(); event.returnValue = ""; }
     });
 
     async function boot() {
-      loadSession();
       renderAll();
       const authStatus = await checkAuthStatus();
       if (!authStatus) return;
+      loadSession();
       if (state.portableMode && state.localAutoLogin) {
         try {
           await openLocalTeacherSession();
@@ -4049,7 +4112,7 @@
     }
 
     async function refreshClassroomStatus() {
-      if (!state.adminToken || el.controlView.hidden) return;
+      if (state.systemActionPending || !state.adminToken || el.controlView.hidden) return;
       try {
         await loadClassroom();
       } catch (error) {
@@ -4061,7 +4124,22 @@
     el.advancedSettingList.addEventListener("change", () => { state.advancedSettingsDirty = true; });
     setInterval(refreshSystemStatus, 2000);
     setInterval(refreshClassroomStatus, 5000);
-    boot();
+    window.EduGateKnowledgeAdmin = {
+      request, toast: showToast, scenario: currentScenario,
+      strategyDirty: () => state.strategyDirty,
+      files: () => state.files, sources: () => state.sources,
+      authenticated: () => Boolean(state.adminToken),
+      refresh: async () => { await Promise.all([loadConfig(), loadFiles(), loadSources()]); },
+      original: async (id) => {
+        const response = await fetch(api(`/knowledge/files/${encodeURIComponent(id)}/original`), {headers: authHeaders(false)});
+        if (!response.ok) throw new Error("原文件下载失败");
+        return response.blob();
+      },
+    };
+    window.addEventListener("DOMContentLoaded", boot, { once: true });
   </script>
+  <script src="assets/edugate-select.js"></script>
+  <script src="assets/admin-workspaces.js?v=20261025-trial1"></script>
+  <script src="assets/knowledge-admin.js?v=20261025-trial1"></script>
 </body>
 </html>

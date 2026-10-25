@@ -76,7 +76,8 @@ def test_windows_bundle_is_a_copyable_portable_classroom_folder() -> None:
 
     assert "APP_DIR / \"data\"" in launcher
     assert "APP_DIR / \"config\" / \"edugate.env\"" in launcher
-    assert "migrate_legacy_data()" in launcher
+    initialization = launcher.split("def ensure_runtime_environment()", 1)[1].split("def install_bundled_knowledge_model", 1)[0]
+    assert "migrate_legacy_data()" not in initialization
     assert "build_portable_runtime.py" not in build
     assert (ROOT / "frontend/assets/vendor/pyodide/pyodide.asm.wasm").is_file()
     assert "ADMIN_PASSWORD=edugate" in example
@@ -167,12 +168,12 @@ def test_system_view_remains_admin_only() -> None:
     assert '<section id="system-view" hidden data-admin-only>' in page
 
 
-def test_teaching_page_publishing_is_last_system_panel_and_controls_student_entry() -> None:
+def test_teaching_page_publishing_precedes_advanced_settings_and_controls_student_entry() -> None:
     page = _read("frontend/admin.html")
     wrapper = _read("frontend/published.html")
     demo = _read("frontend/student.html")
 
-    assert page.index('id="advanced-settings-panel"') < page.index('id="teaching-page-panel"')
+    assert page.index('id="teaching-page-panel"') < page.index('id="advanced-settings-panel"')
     assert 'id="published-page-file"' in page
     assert 'request("/admin/published-pages"' in page
     assert 'const pathname = activePage ? "/published.html" : "/student.html";' in page
@@ -247,7 +248,7 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     assert (
         '<div class="system-action-group critical">\n'
         '                <button class="button ghost" id="restart-system" type="button">重启服务</button>\n'
-        '                <button class="button danger" id="shutdown-system" type="button">停止服务</button>'
+        '                <button class="button danger" id="shutdown-system" type="button">保存并退出</button>'
         in page
     )
     assert 'request("/admin/system/open-app-dir"' in page
@@ -265,10 +266,10 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     assert 'id="model-api-panel"' in system
     assert system.index('id="dashboard-metrics"') < system.index('id="model-api-panel"')
     assert system.index('id="model-api-panel"') < system.index('id="system-log-panel"')
-    assert 'id="model-api-panel" open' in page
+    assert 'id="model-api-panel" open' not in page
     assert "模型与供应商管理" not in page
-    assert "下游 API 密钥" in page
-    assert 'id="downstream-api-panel" open' in page
+    assert "固定 API Key" in page
+    assert 'id="downstream-api-panel" open' not in page
     assert 'id="openai-base-url"' in page
     assert 'id="generate-platform-key"' in page
     assert 'id="copy-openai-example"' in page
@@ -276,14 +277,14 @@ def test_system_view_prioritizes_classroom_operations() -> None:
     assert "EduGateClient" in page
     assert "/admin/system/platform-key/generate" in page
     assert 'method: "DELETE"' in page
-    assert 'state.generatedPlatformKey = "";' in page
+    assert 'state.savedPlatformKey = "";' in page
     system_log = page.index('id="system-log-panel"')
     model_api = page.index('id="model-api-panel"')
     advanced = page.index('id="advanced-settings-panel"')
-    assert model_api < system_log < advanced
-    assert '<details class="collapsible-panel system-log-panel" id="system-log-panel" open>' in page
-    assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel" open>' in page
-    assert '<details class="collapsible-panel" id="backup-panel" open>' in page
+    assert model_api < advanced < system_log
+    assert '<details class="collapsible-panel system-log-panel" id="system-log-panel">' in page
+    assert '<details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">' in page
+    assert '<details class="collapsible-panel" id="backup-panel">' in page
     backup = page.split('id="backup-panel"', 1)[1].split("</details>", 1)[0]
     backup_actions = backup.split('<div class="actions" style="justify-content:flex-start">', 1)[1].split(
         "</div>", 1

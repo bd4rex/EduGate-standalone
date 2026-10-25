@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import logging
+import json
 import os
 import queue
 import secrets
@@ -169,6 +170,7 @@ class BusinessDB:
             )
             self._ensure_column(conn, "classroom_turns", "computer_name", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "classroom_turns", "client_ip", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "ai_request_logs", "retrieval_json", "TEXT")
             conn.execute(
                 "UPDATE classroom_runs SET ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP) WHERE ended_at IS NULL"
             )
@@ -881,6 +883,7 @@ class BusinessDB:
         stream_bytes: int | None = None,
         stream_duration_ms: int | None = None,
         stream_finish_reason: str | None = None,
+        retrieval: dict[str, Any] | None = None,
     ) -> None:
         usage = usage or {}
         payload = {
@@ -900,6 +903,7 @@ class BusinessDB:
             "stream_bytes": stream_bytes,
             "stream_duration_ms": stream_duration_ms,
             "stream_finish_reason": stream_finish_reason,
+            "retrieval_json": json.dumps(retrieval, ensure_ascii=False) if retrieval else None,
             "error": error,
         }
         if self._writer_active():
@@ -933,9 +937,10 @@ class BusinessDB:
                 stream_bytes,
                 stream_duration_ms,
                 stream_finish_reason,
-                error
+                error,
+                retrieval_json
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 payload["route"],
@@ -955,6 +960,7 @@ class BusinessDB:
                 payload["stream_duration_ms"],
                 payload["stream_finish_reason"],
                 payload["error"],
+                payload.get("retrieval_json"),
             ),
         )
 
@@ -982,14 +988,21 @@ class BusinessDB:
                     stream_bytes,
                     stream_duration_ms,
                     stream_finish_reason,
-                    error
+                    error,
+                    retrieval_json
                 FROM ai_request_logs
                 ORDER BY id DESC
                 LIMIT ?
                 """,
                 (limit,),
             ).fetchall()
-        return [_json_ready(row) for row in rows]
+        result = []
+        for row in rows:
+            item = _json_ready(row)
+            if "retrieval_json" in item:
+                item["retrieval"] = json.loads(item.pop("retrieval_json") or "null")
+            result.append(item)
+        return result
 
     def dashboard(self) -> dict[str, Any]:
         self.flush_writes()

@@ -9,8 +9,8 @@ EDUGATE_VERSION="${EDUGATE_VERSION:-0.0.0}"
 BUILD_VENV="${PWD}/.venv-build-macos"
 BUILD_PYTHON="${BUILD_VENV}/bin/python"
 
-"${PYTHON_BIN}" -c 'import operator,sys; raise SystemExit(0 if operator.ge(sys.version_info, (3, 10)) else 1)' || {
-  echo "[ERROR] EduGate builds require Python 3.10 or newer." >&2
+"${PYTHON_BIN}" -c 'import sys; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] < (3, 13) else 1)' || {
+  echo "[ERROR] The macOS 11 compatible build requires Python 3.10-3.12." >&2
   exit 1
 }
 
@@ -25,6 +25,8 @@ fi
 
 "${BUILD_PYTHON}" -m pip install --index-url "${PYPI_INDEX}" --upgrade pip pyinstaller
 "${BUILD_PYTHON}" -m pip install --index-url "${PYPI_INDEX}" -r backend/requirements.txt
+
+"${BUILD_PYTHON}" desktop/prepare_knowledge_model.py --directory build/knowledge-model-cache --export build/knowledge-model
 
 EDUGATE_VERSION="${EDUGATE_VERSION}" \
   "${BUILD_PYTHON}" -m PyInstaller --noconfirm --clean desktop/edugate_standalone.spec

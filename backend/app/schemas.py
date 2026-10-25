@@ -3,10 +3,11 @@ from __future__ import annotations
 import hashlib
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from app.config import settings
-from app.knowledge import KnowledgeSource
+from app.knowledge import KnowledgeSource, KnowledgeScope, KnowledgeSearchResult
+from app.knowledge_policy import KnowledgePolicy
 
 
 class Message(BaseModel):
@@ -28,6 +29,15 @@ class ChatRequest(BaseModel):
 
     messages: list[ClientMessage] = Field(..., min_length=1)
     scenario_id: str = Field(default="default", min_length=1)
+    _knowledge_result: KnowledgeSearchResult | None = PrivateAttr(default=None)
+    _knowledge_decision: str = PrivateAttr(default="not_checked")
+    _knowledge_gate_ms: float = PrivateAttr(default=0)
+    _knowledge_check_usage: dict[str, Any] = PrivateAttr(default_factory=dict)
+    _knowledge_policy: KnowledgePolicy | None = PrivateAttr(default=None)
+    _policy_check_ms: float = PrivateAttr(default=0)
+    _policy_topic: str = PrivateAttr(default="")
+    _policy_decision: str = PrivateAttr(default="not_checked")
+    _knowledge_local_message: str | None = PrivateAttr(default=None)
 
 
 class V1ChatCompletionRequest(BaseModel):
@@ -51,6 +61,7 @@ class TeachingScenario(BaseModel):
     max_tokens: int | None = Field(default=None, ge=1)
     knowledge_source_id: str | None = None
     knowledge_strict: bool = Field(default=False)
+    knowledge_scope: KnowledgeScope = Field(default_factory=KnowledgeScope)
 
 
 def _provider_catalog_id(provider: str, base_url: str | None) -> str:
@@ -108,6 +119,15 @@ class ModelBatchImportRequest(ModelProviderConnectionRequest):
     description: str = Field(default="", max_length=500)
 
 
+class ModelProviderConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    base_url: str
+    credential_id: str
+
+
 class RuntimeConfigData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -115,7 +135,9 @@ class RuntimeConfigData(BaseModel):
         default_factory=lambda: {"default": TeachingScenario()}
     )
     model_catalog: dict[str, ModelCatalogItem] = Field(default_factory=dict)
+    providers: dict[str, ModelProviderConfig] = Field(default_factory=dict)
     legacy_runtime_migration_complete: bool = False
+    knowledge_policy: KnowledgePolicy = Field(default_factory=KnowledgePolicy)
 
 
 class ModelSwitchRequest(BaseModel):
@@ -134,6 +156,7 @@ class ScenarioUpdateRequest(BaseModel):
     max_tokens: int | None = Field(default=None, ge=1)
     knowledge_source_id: str | None = Field(default=None, min_length=1)
     knowledge_strict: bool | None = None
+    knowledge_scope: KnowledgeScope | None = None
 
 
 class KnowledgeSourceRequest(BaseModel):

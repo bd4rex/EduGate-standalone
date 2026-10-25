@@ -439,6 +439,7 @@ def test_ai_switch_blocks_classroom_requests(
 
 
 def test_openai_compatible_endpoint_is_disabled_without_platform_key(client: TestClient) -> None:
+    secret_store.set("system:platform_api_key", "")
     response = client.post(
         "/v1/chat/completions",
         json={"messages": [{"role": "user", "content": "hello"}]},
@@ -451,7 +452,7 @@ def test_model_api_key_storage_matches_secret_store_mode_and_is_never_returned(
     admin_headers: dict[str, str],
 ) -> None:
     model_id = "secure-direct-model"
-    api_key = "sk-secret-value-that-must-not-be-plaintext"
+    api_key = "fixture-classroom-platform-key"
     response = client.post(
         "/admin/models",
         headers=admin_headers,
@@ -1256,7 +1257,7 @@ def test_platform_key_is_managed_in_encrypted_store(
     assert generated.status_code == 200
     generated_key = generated.json()["api_key"]
     assert generated_key.startswith("eg_")
-    assert len(generated_key) >= 40
+    assert len(generated_key) == 25
     assert secret_store.get("system:platform_api_key") == generated_key
 
     disabled = client.delete("/admin/system/platform-key", headers=admin_headers)

@@ -98,6 +98,62 @@ def _configured_model(model_id: str = "functional-model") -> ModelCatalogItem:
     )
 
 
+def test_saved_provider_can_be_reloaded_without_importing_models(client: TestClient, admin_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.runtime_config import RuntimeConfig
+
+    payload = {"provider": "未导入模型的供应商", "base_url": "https://saved.example/v1", "api_key": "upstream-saved-key"}
+    assert client.post("/admin/providers", json=payload).status_code == 401
+    response = client.post("/admin/providers", json=payload, headers=admin_headers)
+    assert response.status_code == 200
+    provider_id = response.json()["provider_id"]
+    assert "upstream-saved-key" not in runtime_config._path.read_text(encoding="utf-8")
+    reloaded_store = SecretStore(str(secret_store.path), mode=secret_store.mode)
+    reloaded = RuntimeConfig(str(runtime_config._path), secret_store=reloaded_store)
+    saved = reloaded.data.providers[provider_id]
+    assert saved.name == payload["provider"]
+    assert reloaded_store.get(saved.credential_id) == payload["api_key"]
+    listed = client.get("/admin/providers", headers=admin_headers)
+    assert "upstream-saved-key" not in listed.text
+    assert next(p for p in listed.json() if p["id"] == provider_id)["model_count"] == 0
+
+    async def discover(*, base_url: str, api_key: str) -> list[dict[str, str]]:
+        assert base_url == payload["base_url"] and api_key == payload["api_key"]
+        return [{"id": "saved-provider-model"}]
+
+    monkeypatch.setattr(chat_service.state.client, "list_openai_models", discover)
+    reused = {**payload, "api_key": None, "provider_id": provider_id}
+    assert client.post("/admin/models/discover", headers=admin_headers, json=reused).json()["used_saved_api_key"] is True
+    changed_address = client.post("/admin/providers", headers=admin_headers, json={**reused, "base_url": "https://different.example/v1"})
+    assert changed_address.status_code == 400
+    assert client.delete(f"/admin/providers/{provider_id}", headers=admin_headers).status_code == 200
+    assert provider_id not in runtime_config.data.providers
+    assert not secret_store.has(saved.credential_id)
+
+
+def test_provider_configuration_updates_imported_models_and_rejects_invalid_addresses(client: TestClient, admin_headers: dict[str, str]) -> None:
+    model = _configured_model("provider-update-model")
+    payload = {"provider": "Renamed", "provider_id": model.provider_id, "base_url": "https://new.example/v1", "api_key": "replacement-key"}
+    assert client.post("/admin/providers", headers=admin_headers, json=payload).status_code == 200
+    updated = runtime_config.data.model_catalog[model.id]
+    assert updated.base_url == payload["base_url"] and updated.provider == "Renamed"
+    assert secret_store.get(updated.credential_id) == "replacement-key"
+    for address in ("ftp://server", "not-a-url", "http://server:bad/v1", "https://user:pass@server/v1"):
+        assert client.post("/admin/providers", headers=admin_headers, json={**payload, "base_url": address}).status_code == 400
+
+
+def test_platform_key_reveal_is_teacher_only_and_not_cached(client: TestClient, admin_headers: dict[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+    secret_store.set("system:platform_api_key", "reveal-test-key")
+    assert client.get("/admin/system/platform-key").status_code == 401
+    assert client.get("/admin/system/platform-key", headers={"Authorization": "Bearer reveal-test-key"}).status_code == 401
+    revealed = client.get("/admin/system/platform-key", headers=admin_headers)
+    assert revealed.json()["api_key"] == "reveal-test-key"
+    assert revealed.headers["cache-control"] == "no-store"
+    assert "reveal-test-key" not in client.get("/admin/system/status", headers=admin_headers).text
+    monkeypatch.setattr(settings, "allow_lan_admin", False)
+    monkeypatch.setattr("app.dependencies._client_ip", lambda _: "192.168.50.30")
+    assert client.get("/admin/system/platform-key", headers=admin_headers).status_code == 403
+
+
 def test_route_inventory_openapi_and_root_redirect_are_complete(client: TestClient) -> None:
     expected = {
         ("GET", "/health"),
@@ -124,14 +180,17 @@ def test_route_inventory_openapi_and_root_redirect_are_complete(client: TestClie
         ("POST", "/admin/system/open-app-dir"),
         ("PUT", "/admin/system/settings"),
         ("PUT", "/admin/system/platform-key"),
+        ("GET", "/admin/system/platform-key"),
         ("POST", "/admin/system/platform-key/generate"),
         ("DELETE", "/admin/system/platform-key"),
         ("GET", "/admin/system/backup"),
         ("POST", "/admin/system/restore"),
         ("POST", "/admin/system/action"),
+        ("POST", "/admin/system/upgrade"),
         ("GET", "/admin/classroom"),
         ("POST", "/admin/classroom/rotate"),
         ("POST", "/admin/classroom/start"),
+        ("POST", "/admin/classroom/trial"),
             ("POST", "/admin/classroom/end"),
             ("GET", "/admin/published-pages"),
             ("POST", "/admin/published-pages"),
@@ -151,8 +210,18 @@ def test_route_inventory_openapi_and_root_redirect_are_complete(client: TestClie
         ("POST", "/admin/models/{model_id}/set-default"),
         ("DELETE", "/admin/models/{model_id}"),
         ("GET", "/admin/providers"),
+        ("POST", "/admin/providers"),
         ("DELETE", "/admin/providers/{provider_id}"),
         ("POST", "/admin/providers/{name}/test"),
+        ("GET", "/knowledge/status"),
+        ("GET", "/knowledge/policy"),
+        ("PUT", "/knowledge/policy"),
+        ("POST", "/knowledge/search"),
+        ("POST", "/knowledge/jobs"),
+        ("PATCH", "/knowledge/files/{file_id}/metadata"),
+        ("GET", "/knowledge/files/{file_id}/preview"),
+        ("GET", "/knowledge/files/{file_id}/original"),
+        ("GET", "/knowledge/citations/{chunk_id}"),
         ("GET", "/knowledge/sources"),
         ("POST", "/knowledge/sources"),
         ("DELETE", "/knowledge/sources/{source_id}"),
@@ -721,46 +790,22 @@ def test_chat_translates_upstream_http_failures(
     assert response.status_code == expected
 
 
-def test_strict_knowledge_gate_covers_social_overview_related_and_unrelated_paths(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scenario = TeachingScenario(
-        model="strict-model",
-        knowledge_source_id="strict-source",
-        knowledge_strict=True,
-    )
-    monkeypatch.setattr(chat_service, "_knowledge_hits", lambda request, scenario: [])
-    monkeypatch.setattr(
-        chat_service,
-        "_knowledge_source_summary",
-        lambda source_id: "Mounted knowledge source with indexed lesson files.",
-    )
-
-    greeting = ChatRequest(messages=[{"role": "user", "content": "hello"}])
-    assert asyncio.run(chat_service._strict_miss_decision(greeting, scenario)) == (True, False)
-    assert "assistant" == chat_service._strict_knowledge_miss_response(greeting, scenario)["choices"][0]["message"]["role"]
-
-    overview = ChatRequest(messages=[{"role": "user", "content": "knowledge files"}])
-    assert asyncio.run(chat_service._strict_miss_decision(overview, scenario)) == (True, False)
-    assert "Mounted knowledge source" in chat_service._strict_knowledge_message(overview, scenario)
-
-    question = ChatRequest(messages=[{"role": "user", "content": "Explain the lesson theorem"}])
-
-    async def related(request: ChatRequest, scenario: TeachingScenario) -> bool:
-        return True
-
-    monkeypatch.setattr(chat_service, "_llm_topic_related", related)
-    assert asyncio.run(chat_service._strict_miss_decision(question, scenario)) == (False, True)
-
-    async def unrelated(request: ChatRequest, scenario: TeachingScenario) -> bool:
-        return False
-
-    monkeypatch.setattr(chat_service, "_llm_topic_related", unrelated)
-    assert asyncio.run(chat_service._strict_miss_decision(question, scenario)) == (True, False)
-
-    chunks = b"".join(chat_service._strict_knowledge_miss_sse(question, scenario))
-    assert chunks.count(b"data:") == 3
+def test_strict_knowledge_gate_never_substitutes_topic_for_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.knowledge import KnowledgeHit, KnowledgeSearchResult
+    scenario = TeachingScenario(model="strict-model", knowledge_source_id="strict-source", knowledge_strict=True)
+    hit = KnowledgeHit(source_id="strict-source",file_id="file",filename="NAT.txt",chunk_index=0,score=1,text="NAT converts a private address to a public address.")
+    question = ChatRequest(messages=[{"role":"user", "content":"Who invented NAT?"}])
+    question._knowledge_result = KnowledgeSearchResult(query="Who invented NAT?",hits=[hit])
+    async def unrelated_evidence(payload):
+        return {"choices":[{"message":{"content":'{"supported":false,"evidence":[]}'}}]}
+    monkeypatch.setattr(chat_service,"_chat_completion",unrelated_evidence)
+    assert asyncio.run(chat_service._strict_miss_decision(question,scenario)) == (True,False)
+    assert question._knowledge_decision == "insufficient_evidence"
+    chunks = b"".join(chat_service._strict_knowledge_miss_sse(question,scenario))
     assert b"[DONE]" in chunks
+    missing = ChatRequest(messages=[{"role":"user","content":"Explain NAT"}])
+    missing._knowledge_result = KnowledgeSearchResult(query="Explain NAT")
+    assert asyncio.run(chat_service._strict_miss_decision(missing,scenario)) == (True,False)
 
 
 def test_sse_parser_and_stream_error_conversion_cover_fragmented_protocol_edges() -> None:

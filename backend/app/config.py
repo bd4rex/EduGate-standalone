@@ -66,6 +66,9 @@ class Settings:
     published_pages_dir: str = _data_path("PUBLISHED_PAGES_DIR", "published_pages")
     knowledge_db_path: str = _data_path("KNOWLEDGE_DB_PATH", "knowledge.sqlite3")
     knowledge_search_limit: int = int(os.getenv("KNOWLEDGE_SEARCH_LIMIT", "5"))
+    knowledge_model_dir: str = _data_path("KNOWLEDGE_MODEL_DIR", "knowledge_models")
+    knowledge_index_dir: str = _data_path("KNOWLEDGE_INDEX_DIR", "knowledge_index")
+    knowledge_semantic_enabled: bool = _as_bool("KNOWLEDGE_SEMANTIC_ENABLED", True)
     sqlite_db_path: str = _data_path("EDUGATE_SQLITE_DB_PATH", "edugate.sqlite3")
     platform_api_key: str | None = os.getenv("PLATFORM_API_KEY") or None
     lan_advertise_ip: str = os.getenv("LAN_ADVERTISE_IP", "").strip()
@@ -109,7 +112,7 @@ class Settings:
     classroom_record_max_records: int = int(os.getenv("CLASSROOM_RECORD_MAX_RECORDS", "20000"))
     classroom_record_max_content_chars: int = int(os.getenv("CLASSROOM_RECORD_MAX_CONTENT_CHARS", "12000"))
     max_upload_bytes: int = int(os.getenv("MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
-    max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "200"))
+    max_pdf_pages: int = int(os.getenv("MAX_PDF_PAGES", "500"))
     log_message_preview: bool = _as_bool("LOG_MESSAGE_PREVIEW", False)
     log_max_records: int = int(os.getenv("LOG_MAX_RECORDS", "5000"))
     db_write_queue_size: int = int(os.getenv("DB_WRITE_QUEUE_SIZE", "4096"))

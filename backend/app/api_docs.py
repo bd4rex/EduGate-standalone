@@ -15,6 +15,16 @@ OPENAPI_TAGS = [
 ]
 
 API_DOCS = {
+    ("POST", "/admin/classroom/trial"): ("教师完整课堂试问", "教师会话专用；复用学生回答流程，按已保存的当前模型、策略、资料范围和黑名单生成最终回答及引用。可携带追问上下文，无需开始课堂，不写入学生课堂记录；请求日志单独标记。最多 21 条消息、32000 字符，不能传入策略或范围覆盖值。"),
+    ("GET", "/knowledge/policy"): ("读取课堂黑名单", "教师读取全课堂共享的禁答话题、别名和提示语。"),
+    ("PUT", "/knowledge/policy"): ("保存课堂黑名单", "教师保存禁答规则，覆盖普通、流式及兼容接口；更新后新请求生效。"),
+    ("GET", "/knowledge/status"): ("资料检索状态", "读取本地语义模型、索引和后台处理进度；需要教师会话。"),
+    ("POST", "/knowledge/search"): ("试问资料", "在指定课堂范围内检索依据，支持关键词、语义和混合对照；需要教师会话。"),
+    ("POST", "/knowledge/jobs"): ("处理资料索引", "后台准备本地语义模型、扫描或重建资料索引；需要教师会话。"),
+    ("PATCH", "/knowledge/files/{file_id}/metadata"): ("更新资料属性", "设置学科、年级、版本、学期与学生/教师可用范围。"),
+    ("GET", "/knowledge/files/{file_id}/preview"): ("解析预览", "教师分页检查抽取的文字、章节、页码与解析警告。"),
+    ("GET", "/knowledge/files/{file_id}/original"): ("下载原始资料", "教师下载原文件，使用附件响应。"),
+    ("GET", "/knowledge/citations/{chunk_id}"): ("核对课堂引用", "学生凭有效课堂会话查看当前范围及版本内的资料依据；下课或范围改变后重新校验。"),
     ("GET", "/health"): ("健康检查", "确认 EduGate 服务可用。"),
     ("POST", "/auth/local-session"): ("本机教师会话", "仅回环地址可换取便携版教师会话。"),
     ("POST", "/auth/setup"): ("初始化教师管理员", "仅允许从教师电脑首次设置。"),
@@ -53,6 +63,7 @@ API_DOCS = {
     ("GET", "/knowledge/sources"): ("知识库列表", "读取本机全部知识库。"),
     ("POST", "/knowledge/sources"): ("保存知识库", "新建或更新知识库。"),
     ("POST", "/knowledge/sources/{source_id}/scan"): ("扫描知识库", "同步固定目录中的支持文件。"),
+    ("POST", "/admin/system/upgrade"): ("升级便携程序", "仅 Windows EXE；校验程序 ZIP，保存退出后替换程序，保留 config/data 和旧版程序备份。"),
     ("POST", "/run_python"): ("已停用：服务端 Python", "始终返回 410；请使用学生浏览器 EduGateClient.runPython()。"),
     ("POST", "/run_python/stream"): ("已停用：服务端流式 Python", "始终返回 410；教师端不再执行学生代码。"),
     ("GET", "/classroom/python-config"): ("浏览器 Python 策略", "返回当前课堂 ID、超时和代码长度上限。"),

@@ -4,6 +4,7 @@ import base64
 import ctypes
 import json
 import os
+import secrets
 import threading
 from ctypes import wintypes
 from pathlib import Path
@@ -25,6 +26,12 @@ class SecretStore:
         with self._lock:
             self._data[key] = value if self.mode == "portable" else _protect(value.encode("utf-8"))
             self._save_locked()
+
+    def ensure_platform_key(self, default: str | None = None) -> None:
+        """Initialize once; an existing key or explicit disabled entry is retained."""
+        with self._lock:
+            if not self.has("system:platform_api_key"):
+                self.set("system:platform_api_key", default or f"eg_{secrets.token_urlsafe(16)}")
 
     def get(self, key: str | None, *, default: str | None = None) -> str | None:
         if not key:

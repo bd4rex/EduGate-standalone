@@ -1,0 +1,24 @@
+.edugate-select { display: block; position: relative; width: 100%; min-width: 0; }
+.edugate-select > select[hidden] { display: none !important; }
+.edugate-select-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 42px; padding: 9px 12px; border: 1px solid var(--line, #dbe3ef);
+  border-radius: 8px; background: #fff; color: var(--text, #20304a);
+  font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.edugate-select-trigger:hover { border-color: #a8bfe8; background: #f8faff; }
+.edugate-select-trigger:focus-visible, .edugate-select-trigger[aria-expanded="true"] { outline: none; border-color: var(--brand, #2563eb); box-shadow: 0 0 0 3px #2563eb20; }
+.edugate-select-trigger:disabled { cursor: default; opacity: .55; background: #f5f7fa; }
+.edugate-select-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.edugate-select-chevron { flex: 0 0 8px; width: 8px; height: 8px; border-right: 2px solid #6b7d99; border-bottom: 2px solid #6b7d99; transform: translateY(-2px) rotate(45deg); }
+.edugate-select-trigger[aria-expanded="true"] .edugate-select-chevron { transform: translateY(2px) rotate(225deg); }
+.select-control:has(.edugate-select)::after { display: none; }
+.edugate-select-menu { position: fixed; z-index: 10000; overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid #d6e1f1; border-radius: 10px; background: #fff; box-shadow: 0 12px 32px #1e3a5f26, 0 2px 8px #1e3a5f0d; }
+.edugate-select-menu[hidden] { display: none; }
+.edugate-select-option { position: relative; padding: 10px 32px 10px 12px; border-radius: 6px; color: #24354f; font: 13px/1.5 system-ui, sans-serif; overflow-wrap: anywhere; cursor: pointer; }
+.edugate-select-option[aria-selected="true"] { color: #245dcc; font-weight: 650; background: #eff5ff; }
+.edugate-select-option[aria-selected="true"]::after { content: "✓"; position: absolute; right: 11px; }
+.edugate-select-option.is-highlighted { background: #e4eeff; }
+.edugate-select-option[aria-disabled="true"] { color: #9aa7ba; cursor: default; background: transparent; }
+@media (pointer: coarse) { .edugate-select-trigger, .edugate-select-option { min-height: 44px; } }

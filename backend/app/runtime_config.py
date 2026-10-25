@@ -9,8 +9,11 @@ from fastapi import HTTPException, status
 
 from app.config import settings
 from app.secret_store import SecretStore
+from app.knowledge_policy import KnowledgePolicy
 from app.schemas import (
     ModelCatalogItem,
+    ModelProviderConfig,
+    ModelProviderConnectionRequest,
     RuntimeConfigData,
     ScenarioUpdateRequest,
     TeachingScenario,
@@ -112,6 +115,29 @@ class RuntimeConfig:
                 os.fsync(handle.fileno())
             os.replace(temp, self._path)
 
+    def save_provider(self, request: ModelProviderConnectionRequest, api_key: str) -> ModelProviderConfig:
+        """Persist a connection even before any models can be discovered/imported."""
+        with self._lock:
+            provider_id = request.provider_id or _provider_catalog_id(request.provider, request.base_url)
+            provider = ModelProviderConfig(
+                id=provider_id,
+                name=request.provider.strip(),
+                base_url=request.base_url.strip().rstrip("/"),
+                credential_id=f"provider:{provider_id}",
+            )
+            self._secret_store.set(provider.credential_id, api_key)
+            self.data.providers[provider_id] = provider
+            for model_id, model in list(self.data.model_catalog.items()):
+                if model.source == "openai_compatible" and model.provider_id == provider_id:
+                    credential_id = model.credential_id or f"model:{model_id}"
+                    self._secret_store.set(credential_id, api_key)
+                    self.data.model_catalog[model_id] = model.model_copy(update={
+                        "provider": provider.name, "base_url": provider.base_url,
+                        "credential_id": credential_id,
+                    })
+            self.save()
+            return provider
+
     def get_scenario(self, scenario_id: str) -> TeachingScenario:
         scenario = self.data.scenarios.get(scenario_id)
         if scenario is None:
@@ -121,11 +147,17 @@ class RuntimeConfig:
             )
         return scenario
 
+    def update_knowledge_policy(self, policy: KnowledgePolicy) -> KnowledgePolicy:
+        with self._lock:
+            self.data.knowledge_policy = KnowledgePolicy.model_validate(policy.model_dump())
+            self.save()
+            return self.data.knowledge_policy.model_copy(deep=True)
+
     def update_scenario(self, scenario_id: str, request: ScenarioUpdateRequest) -> TeachingScenario:
         with self._lock:
             current = self.data.scenarios.get(scenario_id, TeachingScenario())
             changes = request.model_dump(exclude_unset=True)
-            updated = current.model_copy(update=changes)
+            updated = TeachingScenario.model_validate({**current.model_dump(), **changes})
             self.data.scenarios[scenario_id] = updated
             self.save()
             return updated
@@ -227,7 +259,8 @@ class RuntimeConfig:
                 if model.source == "openai_compatible"
                 and (model.provider_id or _provider_catalog_id(model.provider, model.base_url)) == provider_id
             ]
-            if not provider_models:
+            saved_provider = self.data.providers.get(provider_id)
+            if not provider_models and not saved_provider:
                 return [], []
 
             model_ids = {model.id for model in provider_models}
@@ -256,6 +289,9 @@ class RuntimeConfig:
                             update={"model": replacement.id}
                         )
             credential_ids = {model.credential_id for model in provider_models if model.credential_id}
+            if saved_provider:
+                credential_ids.add(saved_provider.credential_id)
+                self.data.providers.pop(provider_id)
             for model_id in model_ids:
                 self.data.model_catalog.pop(model_id, None)
             self.save()

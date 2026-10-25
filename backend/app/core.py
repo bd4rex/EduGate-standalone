@@ -4,6 +4,7 @@ New code should import from app.state, app.dependencies, or app.chat_service dir
 """
 
 from app.state import (
+    instance_id,
     ModelConcurrencyLimiter,
     business_db,
     classroom_access,

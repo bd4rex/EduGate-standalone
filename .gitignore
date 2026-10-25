@@ -1,5 +1,6 @@
 .env
 .venv/
+.venv-kb/
 .venv-build/
 .venv-build-macos/
 .venv-bootstrap/

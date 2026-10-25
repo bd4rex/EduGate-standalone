@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+import os
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
@@ -16,6 +17,7 @@ from app.core import (
     settings,
 )
 from app.schemas import ChangePasswordRequest, LoginRequest, SetupRequest
+from app import state
 
 router = APIRouter()
 
@@ -23,6 +25,8 @@ router = APIRouter()
 @router.get("/auth/status")
 async def auth_status() -> dict[str, Any]:
     return {
+        "instance_id": state.instance_id,
+        "run_id": os.getenv("EDUGATE_RUN_ID", ""),
         "initialized": business_db.is_admin_initialized(settings.admin_username),
         "admin_username": settings.admin_username,
         "portable_mode": settings.portable_mode,

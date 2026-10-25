@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,6 +18,7 @@ from app.core import (
     settings,
 )
 from app.routers.config import _config_response
+from app.chat_service import _provider_api_key
 from app.schemas import (
     ConfigResponse,
     ModelBatchImportRequest,
@@ -84,6 +86,7 @@ async def admin_batch_import_models(request: ModelBatchImportRequest) -> dict[st
             )
         )
     models = runtime_config.upsert_models(model_requests)
+    runtime_config.save_provider(request, api_key)
     return {
         "status": "imported",
         "imported_count": len(models),
@@ -126,6 +129,21 @@ async def admin_set_default_model(
     return _config_response(current_teacher)
 
 
+@router.post("/admin/providers", dependencies=[Depends(require_admin)])
+async def admin_save_provider(request: ModelProviderConnectionRequest) -> dict[str, Any]:
+    try:
+        address = urlsplit(request.base_url.strip())
+        valid = address.scheme in {"http", "https"} and bool(address.hostname) and not address.username and not address.fragment and not address.query
+        address.port  # Reject malformed port numbers before saving.
+    except ValueError:
+        valid = False
+    if not valid or not request.provider.strip():
+        raise HTTPException(status_code=400, detail="请填写供应商名称和有效的 http:// 或 https:// 接口地址。")
+    api_key, _ = _provider_api_key(request)
+    provider = runtime_config.save_provider(request, api_key)
+    return {"status": "saved", "provider_id": provider.id}
+
+
 @router.get("/admin/providers", dependencies=[Depends(require_admin)])
 async def admin_providers() -> list[dict[str, Any]]:
     if settings.deployment_mode == "standalone":
@@ -155,7 +173,14 @@ async def admin_providers() -> list[dict[str, Any]]:
                     "configured_model_count": configured_count,
                 }
             )
-        providers.sort(key=lambda item: (item["name"].casefold(), item["id"]))
+        by_id = {item["id"]: item for item in providers}
+        for saved in runtime_config.data.providers.values():
+            by_id[saved.id] = {
+                **by_id.get(saved.id, {"model_count": 0, "configured_model_count": 0}),
+                "id": saved.id, "name": saved.name, "base_url": saved.base_url,
+                "status": "configured" if secret_store.get(saved.credential_id) else "needs_configuration",
+            }
+        providers = sorted(by_id.values(), key=lambda item: (item["name"].casefold(), item["id"]))
         return [
             *providers,
             {
@@ -192,11 +217,12 @@ async def admin_delete_provider(
     provider_id: str,
     replacement_model_id: str | None = None,
 ) -> dict[str, Any]:
+    was_saved = provider_id in runtime_config.data.providers
     deleted_model_ids, references = runtime_config.delete_provider(
         provider_id,
         replacement_model_id=replacement_model_id,
     )
-    if not deleted_model_ids:
+    if not deleted_model_ids and not was_saved:
         raise HTTPException(status_code=404, detail=f"找不到供应商：{provider_id}")
     return {
         "status": "deleted",

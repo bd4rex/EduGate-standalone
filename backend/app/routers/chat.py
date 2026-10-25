@@ -24,6 +24,7 @@ from app.core import (
     _trace_chat_result,
     business_db,
     now_ms,
+    require_admin,
     require_classroom_access,
     require_platform_key,
     runtime_config,
@@ -32,6 +33,7 @@ from app.core import (
 from app.schemas import ChatRequest, ClientMessage, V1ChatCompletionRequest
 from app.security import StudentIdentity
 from app.classroom_tasks import run_in_classroom
+from app.chat_service import _knowledge_metadata, _with_knowledge_event, _check_generated_answer, _answer_stream, _full_response_content
 
 router = APIRouter()
 
@@ -41,15 +43,47 @@ async def chat(
     request: ChatRequest,
     student: StudentIdentity = Depends(require_classroom_access),
 ) -> dict[str, Any]:
+    if request.scenario_id != "default":
+        raise HTTPException(status_code=403, detail="学生只能使用教师当前课堂的资料范围")
     return await run_in_classroom(student, _chat(request, student))
 
 
-async def _chat(request: ChatRequest, student: StudentIdentity) -> dict[str, Any]:
+@router.post("/admin/classroom/trial", dependencies=[Depends(require_admin)])
+async def classroom_trial(request: ChatRequest) -> dict[str, Any]:
+    """Teacher-only preview of the student answer pipeline, without a classroom turn."""
+    if request.scenario_id != "default":
+        raise HTTPException(status_code=403, detail="试问只能使用当前课堂的已保存设置")
+    if request.messages[-1].role != "user":
+        raise HTTPException(status_code=422, detail="最后一条消息必须是学生提问")
+    if len(request.messages) > 21 or sum(len(message.content) for message in request.messages) > 32000:
+        raise HTTPException(status_code=422, detail="本轮试问内容过长，请开始新一轮试问")
+    scenario = runtime_config.get_scenario("default").model_copy(deep=True)
+    diagnostics: dict[str, Any] = {}
+    started = time.perf_counter()
+    response = await _chat(request, None, route="/admin/classroom/trial", diagnostics=diagnostics)
+    response["edugate_trial"] = {
+        **diagnostics, "answer": _full_response_content(response), "model": scenario.model, "knowledge_source_id": scenario.knowledge_source_id,
+        "knowledge_scope": scenario.knowledge_scope.model_dump(), "knowledge_strict": scenario.knowledge_strict,
+        "elapsed_ms": now_ms(started), "classroom_recorded": False,
+    }
+    return response
+
+
+async def _chat(
+    request: ChatRequest, student: StudentIdentity | None, *, route: str = "/chat",
+    diagnostics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     effective_scenario_id, scenario, _ = _resolve_chat_context(request)
     teacher_id = settings.admin_username
     start = time.perf_counter()
     try:
         should_block, strict_topic_related = await _strict_miss_decision(request, scenario)
+        if diagnostics is not None:
+            diagnostics.update(
+                question_policy=request._policy_decision, question_topic=request._policy_topic,
+                retrieval_decision=request._knowledge_decision, generation_requested=not should_block,
+                answer_policy_checked=bool(not should_block and request._knowledge_policy and request._knowledge_policy.active),
+            )
         if should_block:
             response = _strict_knowledge_miss_response(request, scenario)
         else:
@@ -60,8 +94,14 @@ async def _chat(request: ChatRequest, student: StudentIdentity) -> dict[str, Any
                     strict_topic_related=strict_topic_related,
                 )
             )
+        response = await _check_generated_answer(response, request, scenario)
+        if diagnostics is not None:
+            diagnostics.update(answer_policy=request._policy_decision, answer_topic=request._policy_topic,
+                               final_decision=request._knowledge_decision)
+        if metadata := _knowledge_metadata(request):
+            response["edugate_knowledge"] = metadata
         await _trace_chat_result(
-            route="/chat",
+            route=route,
             request=request,
             scenario=scenario,
             effective_scenario_id=effective_scenario_id,
@@ -83,7 +123,7 @@ async def _chat(request: ChatRequest, student: StudentIdentity) -> dict[str, Any
     except httpx.HTTPStatusError as error:
         latency = now_ms(start)
         business_db.log_request(
-            route="/chat",
+            route=route,
             scenario_id=effective_scenario_id,
             teacher_id=teacher_id,
             model=scenario.model,
@@ -106,7 +146,7 @@ async def _chat(request: ChatRequest, student: StudentIdentity) -> dict[str, Any
     except httpx.HTTPError as error:
         latency = now_ms(start)
         business_db.log_request(
-            route="/chat",
+            route=route,
             scenario_id=effective_scenario_id,
             teacher_id=teacher_id,
             model=scenario.model,
@@ -136,6 +176,8 @@ async def chat_stream(
     request: ChatRequest,
     student: StudentIdentity = Depends(require_classroom_access),
 ) -> StreamingResponse:
+    if request.scenario_id != "default":
+        raise HTTPException(status_code=403, detail="学生只能使用教师当前课堂的资料范围")
     return await run_in_classroom(student, _chat_stream(request, student))
 
 
@@ -146,7 +188,7 @@ async def _chat_stream(request: ChatRequest, student: StudentIdentity) -> Stream
     if should_block:
         return StreamingResponse(
             _stream_with_completion_log(
-                _strict_knowledge_miss_sse(request, scenario),
+                _with_knowledge_event(_strict_knowledge_miss_sse(request, scenario), request),
                 route="/chat/stream",
                 request=request,
                 scenario=scenario,
@@ -164,7 +206,7 @@ async def _chat_stream(request: ChatRequest, student: StudentIdentity) -> Stream
     )
     return StreamingResponse(
         _stream_with_completion_log(
-            _stream_with_errors(payload),
+            _answer_stream(payload, request, scenario, stream_factory=_stream_with_errors),
             route="/chat/stream",
             request=request,
             scenario=scenario,
@@ -205,7 +247,7 @@ async def v1_chat_completions(request: V1ChatCompletionRequest):
 
     if request.stream:
         if should_block:
-            source = _strict_knowledge_miss_sse(chat_request, scenario)
+            source = _with_knowledge_event(_strict_knowledge_miss_sse(chat_request, scenario), chat_request)
         else:
             payload = _v1_payload(
                 request,
@@ -214,7 +256,7 @@ async def v1_chat_completions(request: V1ChatCompletionRequest):
                 stream=True,
                 strict_topic_related=strict_topic_related,
             )
-            source = _stream_with_errors(payload)
+            source = _answer_stream(payload, chat_request, scenario, stream_factory=_stream_with_errors)
         return StreamingResponse(
             _stream_with_completion_log(
                 source,
@@ -246,7 +288,10 @@ async def v1_chat_completions(request: V1ChatCompletionRequest):
                     strict_topic_related=strict_topic_related,
                 )
             )
+        response = await _check_generated_answer(response, chat_request, scenario)
         response = _normalize_v1_response(response, public_model_id)
+        if metadata := _knowledge_metadata(chat_request):
+            response["edugate_knowledge"] = metadata
         await _trace_chat_result(
             route="/v1/chat/completions",
             request=chat_request,

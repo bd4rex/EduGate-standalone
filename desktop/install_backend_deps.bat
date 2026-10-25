@@ -90,7 +90,7 @@ if not exist "%CONFIG_DIR%\edugate.env" copy "%BACKEND_DIR%\.env.example" "%CONF
 
 echo.
 echo [6/6] Verifying the installation...
-"%VENV_PYTHON%" -c "import fastapi, httpx, uvicorn, pydantic, multipart, pypdf; print('EduGate backend modules are ready.')"
+"%VENV_PYTHON%" -c "import fastapi, httpx, uvicorn, pydantic, multipart, pypdf, lancedb, fastembed, jieba; print('EduGate backend modules are ready.')"
 if %errorlevel% neq 0 goto :install_failed
 
 echo.

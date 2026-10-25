@@ -135,6 +135,15 @@
       return result;
     }
 
+    async getCitation(source, options = {}) {
+      await this.ensureSession(options);
+      const response = await fetch(`${this.baseUrl}/knowledge/citations/${encodeURIComponent(source.chunk_id)}?version=${encodeURIComponent(source.version || "")}`, {
+        headers: {"X-Student-Token": this.studentToken}, signal: options.signal,
+      });
+      if (!response.ok) throw await responseError(response);
+      return response.json();
+    }
+
     async *stream(messages, options) {
       const config = options || {};
       await this.ensureSession(config);
@@ -170,6 +179,9 @@
               const error = new Error(String(payload.detail || "EduGate stream failed"));
               error.status = payload.status_code || 502;
               throw error;
+            }
+            if (payload.edugate_knowledge && typeof config.onKnowledge === "function") {
+              config.onKnowledge(payload.edugate_knowledge);
             }
             yield payload;
           }

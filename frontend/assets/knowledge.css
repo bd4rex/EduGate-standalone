@@ -1,0 +1,20 @@
+.knowledge-tools .knowledge-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.knowledge-tools .knowledge-state { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+.knowledge-tools .knowledge-state p { margin:4px 0; }
+.knowledge-tools .knowledge-files { max-height:190px; overflow:auto; padding:10px; border:1px solid var(--border,#dbe4ef); border-radius:10px; background:#f8fbff; }
+.knowledge-tools .knowledge-files label { display:flex; gap:8px; align-items:center; padding:6px; font-size:13px; }
+.knowledge-tools .knowledge-files input { width:auto; }
+.knowledge-tools .knowledge-scope-actions { margin:14px 0; }
+.knowledge-tools .knowledge-result { margin-top:12px; padding:14px; border:1px solid var(--border,#dbe4ef); border-radius:10px; }
+.knowledge-tools #knowledge-search-results { max-height:560px; overflow:auto; margin-top:10px; }
+.knowledge-tools pre,.knowledge-dialog pre { white-space:pre-wrap; overflow-wrap:anywhere; font-family:inherit; font-size:14px; line-height:1.7; margin:10px 0 0; }
+.knowledge-dialog { width:min(800px,calc(100vw - 40px)); max-height:85vh; overflow:auto; padding:24px; border:1px solid #dbe4ef; border-radius:16px; color:#213047; background:white; }
+.knowledge-dialog::backdrop { background:rgba(20,35,60,.4); }
+.knowledge-dialog .dialog-heading { display:flex; justify-content:space-between; gap:16px; align-items:center; margin-bottom:16px; }
+.knowledge-dialog .preview-chunk { border-top:1px solid #e2e8f0; padding:14px 0; }
+.knowledge-dialog .metadata-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.knowledge-warning { color:#985d00; white-space:pre-wrap; }
+.knowledge-sources { margin-top:10px; font-size:12px; color:#475569; }
+.knowledge-sources button { margin:6px 6px 0 0; padding:6px 9px; border:1px solid #cbd5e1; border-radius:8px; background:white; color:#1d4ed8; cursor:pointer; font:inherit; }
+.knowledge-citation-text { white-space:pre-wrap; padding:12px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; margin-top:8px; line-height:1.7; }
+@media(max-width:720px) { .knowledge-tools .knowledge-grid,.knowledge-dialog .metadata-grid { grid-template-columns:1fr; } }

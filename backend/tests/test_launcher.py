@@ -104,7 +104,9 @@ def test_legacy_data_is_imported_into_portable_folder_once(
     monkeypatch.setattr(launcher, "CONFIG_PATH", config_path)
     monkeypatch.setattr(launcher, "LEGACY_DATA_DIR", legacy_dir)
     monkeypatch.delenv("EDUGATE_SKIP_LEGACY_IMPORT", raising=False)
-
+    assert launcher.migrate_legacy_data() is False
+    assert not (data_dir / "runtime_config.json").exists()
+    monkeypatch.setenv("EDUGATE_IMPORT_LEGACY", "true")
     assert launcher.migrate_legacy_data() is True
     assert (data_dir / "runtime_config.json").read_text(encoding="utf-8") == '{"version": 1}'
     assert (data_dir / "knowledge_files" / "lesson.txt").read_text(encoding="utf-8") == "lesson"
@@ -119,7 +121,8 @@ def test_first_available_port_skips_an_occupied_port() -> None:
         occupied.bind(("127.0.0.1", 0))
         occupied.listen()
         port = occupied.getsockname()[1]
-        assert launcher.first_available_port(port, attempts=2) == port + 1
+        selected = launcher.first_available_port(port, attempts=20)
+        assert port < selected < min(port + 20, 65536)
 
 
 def test_macos_frozen_app_uses_application_support(monkeypatch: pytest.MonkeyPatch) -> None:

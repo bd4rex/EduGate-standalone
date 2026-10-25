@@ -53,3 +53,23 @@ def test_portable_secret_store_ignores_invalid_json(tmp_path: Path) -> None:
     path.write_text("{invalid", encoding="utf-8")
 
     assert SecretStore(str(path), mode="portable").get("missing") is None
+
+
+def test_default_platform_key_is_short_persistent_and_respects_existing_values(tmp_path: Path) -> None:
+    path = str(tmp_path / "secrets.json")
+    store = SecretStore(path, mode="portable")
+    store.ensure_platform_key()
+    original = store.get("system:platform_api_key")
+    assert original and original.startswith("eg_") and len(original) == 25
+    reloaded = SecretStore(path, mode="portable")
+    reloaded.ensure_platform_key("changed-environment-key")
+    assert reloaded.get("system:platform_api_key") == original
+    for existing in ("my-existing-long-key-must-not-be-shortened", ""):
+        reloaded.set("system:platform_api_key", existing)
+        reloaded = SecretStore(path, mode="portable")
+        reloaded.ensure_platform_key("environment-key")
+        assert reloaded.get("system:platform_api_key") == (existing or None)
+
+    other = SecretStore(str(tmp_path / "other.json"), mode="portable")
+    other.ensure_platform_key("environment-key")
+    assert other.get("system:platform_api_key") == "environment-key"

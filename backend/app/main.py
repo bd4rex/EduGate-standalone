@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -56,7 +57,7 @@ app = FastAPI(
     title="EduGate API",
     summary="EduGate 单机课堂 API",
     description="教师在本机管理课堂，学生凭课堂链接加入，所有管理接口均要求教师会话。",
-    version="2.0.0",
+    version="2.4.0",
     lifespan=core.lifespan,
     openapi_tags=OPENAPI_TAGS,
 )
@@ -121,6 +122,8 @@ async def restrict_teacher_surface(request: Request, call_next: Any) -> Response
         and not _admin_origin_allowed(request)
     ):
         return PlainTextResponse("教师管理端仅允许本机或 IP 白名单中的设备访问。", status_code=403)
+    if core.system_control.pending_action and request.method not in {"GET", "HEAD", "OPTIONS"}:
+        return JSONResponse({"detail": "EduGate 正在保存并退出，请等待完成。"}, status_code=503)
     return await call_next(request)
 
 if settings.cors_origins:
@@ -146,6 +149,8 @@ app.include_router(publishing_router)
 @app.get("/health", include_in_schema=True)
 async def health(response: Response) -> dict[str, str]:
     response.headers["X-EduGate-App"] = "EduGate"
+    response.headers["X-EduGate-Instance"] = core.instance_id
+    response.headers["X-EduGate-Run"] = os.getenv("EDUGATE_RUN_ID", "")
     return {"status": "ok"}
 
 

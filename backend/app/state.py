@@ -21,6 +21,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
+from app.portable import instance_id as portable_instance_id
 from app.db import BusinessDB, latest_user_preview, now_ms
 from app.knowledge import KnowledgeFile, KnowledgeScanResult, KnowledgeSource, KnowledgeStore
 from app.litellm_client import LiteLLMClient
@@ -60,6 +61,9 @@ knowledge_store = KnowledgeStore(
     settings.knowledge_dir,
     max_upload_bytes=settings.max_upload_bytes,
     max_pdf_pages=settings.max_pdf_pages,
+    model_dir=settings.knowledge_model_dir,
+    index_dir=settings.knowledge_index_dir,
+    semantic_enabled=settings.knowledge_semantic_enabled,
 )
 published_pages = PublishedPageStore(
     settings.published_pages_dir,
@@ -77,6 +81,9 @@ business_db = BusinessDB(
     cleanup_interval_seconds=settings.db_cleanup_interval_seconds,
 )
 secret_store = SecretStore(settings.secret_store_path, mode=settings.secret_store_mode)
+instance_id = portable_instance_id(Path(settings.data_dir))
+if settings.deployment_mode == "standalone":
+    secret_store.ensure_platform_key(settings.platform_api_key)
 runtime_config = RuntimeConfig(settings.runtime_config_path, secret_store=secret_store)
 langfuse = LangfuseClient()
 sessions = SessionStore(settings.session_ttl_seconds)
@@ -128,12 +135,27 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         role="admin",
     )
     business_db.start_writer()
+    await asyncio.to_thread(knowledge_store.warm_index)
+    knowledge_status = await asyncio.to_thread(knowledge_store.status)
+    if knowledge_status["outdated_file_count"] or (knowledge_status["model_ready"] and knowledge_status["embedded_count"] < knowledge_status["chunk_count"]):
+        knowledge_store.start_job("reindex")
     if settings.portable_mode:
         classroom_access.end()
     try:
         yield
     finally:
-        await asyncio.to_thread(business_db.stop_writer)
-        await asyncio.to_thread(business_db.checkpoint)
-        await asyncio.to_thread(knowledge_store.checkpoint)
-        await client.close()
+        try:
+            await asyncio.to_thread(knowledge_store.close)
+            if not await asyncio.to_thread(business_db.stop_writer):
+                raise RuntimeError("课堂记录未能全部写入磁盘")
+            write_stats = business_db.writer_stats()
+            if write_stats.get("failed", 0) or write_stats.get("dropped", 0):
+                raise RuntimeError("部分课堂记录曾写入失败，请检查日志；不能确认全部数据已保存。")
+            await asyncio.to_thread(business_db.checkpoint)
+            await asyncio.to_thread(knowledge_store.checkpoint)
+            await client.close()
+        except Exception as error:
+            system_control.finish_shutdown(str(error))
+            raise
+        else:
+            system_control.finish_shutdown()

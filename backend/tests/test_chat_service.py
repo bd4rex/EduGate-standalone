@@ -49,36 +49,39 @@ def test_chat_payload_includes_teacher_prompt_knowledge_hits_and_limits(
     assert "Strict mode" in payload["messages"][1]["content"]
 
 
-@pytest.mark.parametrize(
-    ("answer", "expected"),
-    [("RELATED", True), ("UNRELATED", False), ("probably related", True)],
-)
-def test_llm_topic_gate_understands_related_and_unrelated_responses(
-    monkeypatch: pytest.MonkeyPatch,
-    answer: str,
-    expected: bool,
-) -> None:
-    scenario = TeachingScenario(model="topic-model", knowledge_source_id="math", knowledge_strict=True)
-    monkeypatch.setattr(chat_service, "_knowledge_source_summary", lambda _: "Fractions lesson")
+@pytest.mark.parametrize(("answer","expected"), [
+    ('{"supported":true,"evidence":[{"id":"K1","quote":"A numerator is above the denominator."}]}', True),
+    ('{"supported":false,"evidence":[]}', False),
+    ('RELATED', False),
+    ('{"supported":true,"evidence":[{"id":"K9","quote":"A numerator is above the denominator."}]}', False),
+    ('{"supported":true,"evidence":[{"id":"K1","quote":"This quote is invented."}]}', False),
+    ('{"supported":true,"evidence":[]}', False),
+])
+def test_evidence_check_requires_valid_supporting_quotes(monkeypatch, answer, expected):
+    from app.knowledge import KnowledgeSearchResult
+    scenario = TeachingScenario(model="topic-model",knowledge_source_id="math",knowledge_strict=True)
+    request = _request()
+    request._knowledge_result = KnowledgeSearchResult(query="Explain fractions",hits=[KnowledgeHit(
+        source_id="math",file_id="file",filename="fractions.txt",chunk_index=0,score=1,
+        text="A numerator is above the denominator.")])
+    async def complete(payload):
+        assert "evidence" in payload["messages"][-1]["content"]
+        return {"choices":[{"message":{"content":answer}}]}
+    monkeypatch.setattr(chat_service,"_chat_completion",complete)
+    assert asyncio.run(chat_service._evidence_supported(request,scenario)) is expected
 
-    async def complete(payload: dict[str, Any]) -> dict[str, Any]:
-        assert payload["temperature"] == 0
-        assert "Fractions lesson" in payload["messages"][-1]["content"]
-        return {"choices": [{"message": {"content": answer}}]}
 
-    monkeypatch.setattr(chat_service, "_chat_completion", complete)
-    assert asyncio.run(chat_service._llm_topic_related(_request(), scenario)) is expected
-
-
-def test_llm_topic_gate_fails_closed_when_the_probe_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    scenario = TeachingScenario(model="topic-model", knowledge_source_id="math", knowledge_strict=True)
-    monkeypatch.setattr(chat_service, "_knowledge_source_summary", lambda _: "Fractions lesson")
-
-    async def fail(payload: dict[str, Any]) -> dict[str, Any]:
+def test_evidence_check_fails_closed_when_provider_is_offline(monkeypatch):
+    from app.knowledge import KnowledgeSearchResult
+    request = _request()
+    request._knowledge_result = KnowledgeSearchResult(query="Explain fractions",hits=[KnowledgeHit(
+        source_id="math",file_id="file",filename="fractions.txt",chunk_index=0,score=1,text="Fractions represent parts of a whole.")])
+    async def fail(payload):
         raise httpx.ConnectError("offline")
-
-    monkeypatch.setattr(chat_service, "_chat_completion", fail)
-    assert asyncio.run(chat_service._llm_topic_related(_request(), scenario)) is False
+    monkeypatch.setattr(chat_service,"_chat_completion",fail)
+    scenario = TeachingScenario(model="topic-model",knowledge_source_id="math",knowledge_strict=True)
+    assert asyncio.run(chat_service._evidence_supported(request,scenario)) is False
+    assert request._knowledge_decision == "evidence_check_unavailable"
 
 
 def test_knowledge_source_summary_handles_missing_empty_and_indexed_sources(
@@ -124,7 +127,7 @@ def test_provider_key_reuse_and_discovery_errors_are_explicit(
     monkeypatch.setattr(
         chat_service.state,
         "runtime_config",
-        SimpleNamespace(data=SimpleNamespace(model_catalog={model.id: model})),
+        SimpleNamespace(data=SimpleNamespace(model_catalog={model.id: model}, providers={})),
     )
     monkeypatch.setattr(
         chat_service.state,

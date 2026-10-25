@@ -1,0 +1,32 @@
+/* System-only layout; typography and controls come from admin-theme.css. */
+#system-view .collapsible-panel > summary {
+  display:flex; align-items:center; gap:10px; list-style:none; cursor:pointer;
+}
+#system-view .collapsible-panel > summary::-webkit-details-marker { display:none; }
+#system-view .collapsible-panel > summary::before {
+  content:""; width:18px; height:18px; flex:0 0 18px;
+  background:currentColor; opacity:.65;
+  mask:url("icons/tabler/chevron-down.svg") center / contain no-repeat;
+  -webkit-mask:url("icons/tabler/chevron-down.svg") center / contain no-repeat;
+  transform:rotate(-90deg); transition:transform .15s;
+}
+#system-view .collapsible-panel[open] > summary::before { transform:rotate(0); }
+#system-view .collapsible-panel[open] > summary { border-bottom:1px solid var(--line); }
+#system-view #downstream-api-panel .integration-grid { align-items:start; }
+#system-view #downstream-api-panel .integration-card-head { flex-wrap:wrap; }
+#system-view #downstream-api-panel .integration-fields { grid-template-columns:minmax(0,1fr) minmax(100px,140px); gap:12px; }
+#system-view #downstream-api-panel .integration-key-row { grid-template-columns:1fr; gap:8px; }
+.key-input-wrap { display:flex; align-items:stretch; gap:8px; }
+.key-input-wrap input { flex:1; min-width:0; }
+.key-input-wrap button { flex:0 0 auto; }
+#system-view #downstream-api-panel .integration-code { min-height:0; max-height:260px; padding:12px; }
+.integration-help { margin-top:16px; border-top:1px solid var(--line); padding-top:12px; }
+.integration-help > summary { cursor:pointer; color:var(--muted); padding:4px 0; }
+.integration-help .hint { margin:8px 0; }
+.integration-help label + button { margin-top:8px; }
+#config-storage-note { overflow-wrap:anywhere; }
+#system-view .system-log-group .section-title { flex-wrap:wrap; gap:8px; }
+#system-view #request-log-list { max-height:320px; overflow-y:auto; overscroll-behavior:contain; }
+#system-view #request-log-list .row { min-height:48px; padding:12px 16px; }
+#system-view #request-log-list:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+@media(max-width:600px) { #system-view #downstream-api-panel .integration-fields { grid-template-columns:1fr; } }

@@ -437,6 +437,7 @@
     .classroom-gate-card.error h1 { color: #b42318; }
 
   </style>
+  <link rel="stylesheet" href="assets/knowledge.css" />
 </head>
 <body>
   <main class="classroom-gate" id="classroomGate">
@@ -795,6 +796,33 @@ for i in range(3):
 
         wrapper.appendChild(role);
         wrapper.appendChild(bubble);
+        if (msg.role === "assistant" && Array.isArray(msg.sources) && msg.sources.length) {
+          const sources = document.createElement("div");
+          sources.className = "knowledge-sources";
+          const caption = document.createElement("div");
+          caption.textContent = "本次检索依据（点击核对原文）";
+          sources.append(caption);
+          for (const source of msg.sources) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = `[${source.id}] ${source.filename}${source.page ? ` · 第 ${source.page} 页/张` : ""}${source.chapter ? ` · ${source.chapter}` : ""}`;
+            button.onclick = async () => {
+              button.disabled = true;
+              let preview = sources.querySelector(".knowledge-citation-text");
+              if (!preview) { preview = document.createElement("div"); preview.className = "knowledge-citation-text"; sources.append(preview); }
+              preview.textContent = "正在核对当前教材版本…";
+              try {
+                const response = await fetch(`${BACKEND_BASE_URL}/knowledge/citations/${encodeURIComponent(source.chunk_id)}?version=${encodeURIComponent(source.version)}`, {headers:classroomHeaders()});
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "当前课堂无法查看这份资料");
+                preview.textContent = data.context_text || data.text;
+              } catch (error) { preview.textContent = `无法查看依据：${error.message}`; }
+              finally { button.disabled = false; }
+            };
+            sources.append(button);
+          }
+          wrapper.append(sources);
+        }
         chatHistoryEl.appendChild(wrapper);
       });
 
@@ -839,7 +867,7 @@ for i in range(3):
     }
 
     function getRecentMessages() {
-      return messages.slice(-MAX_MESSAGES_TO_SEND);
+      return messages.slice(-MAX_MESSAGES_TO_SEND).map(({role, content}) => ({role, content}));
     }
 
     function buildPayload() {
@@ -924,7 +952,7 @@ for i in range(3):
         throw new Error("普通接口返回成功，但没有解析到 AI 回复内容。");
       }
 
-      return text;
+      return {text, sources: data.edugate_knowledge?.sources || []};
     }
 
     async function sendMessage(userText) {
@@ -947,6 +975,7 @@ for i in range(3):
 
       const tempBubble = appendTemporaryAssistantMessage("");
       let fullAssistantReply = "";
+      let knowledgeSources = [];
       activeController = new AbortController();
 
       try {
@@ -1023,6 +1052,7 @@ for i in range(3):
 
             try {
               const json = JSON.parse(dataText);
+              if (json.edugate_knowledge) knowledgeSources = json.edugate_knowledge.sources || [];
               const deltaText = extractAssistantTextFromJson(json);
               if (deltaText) {
                 fullAssistantReply += deltaText;
@@ -1045,7 +1075,8 @@ for i in range(3):
 
         messages.push({
           role: "assistant",
-          content: fullAssistantReply
+          content: fullAssistantReply,
+          sources: knowledgeSources
         });
         saveStoredMessages();
 
@@ -1068,7 +1099,8 @@ for i in range(3):
 
           messages.push({
             role: "assistant",
-            content: fallbackText
+            content: fallbackText.text,
+            sources: fallbackText.sources
           });
           saveStoredMessages();
 

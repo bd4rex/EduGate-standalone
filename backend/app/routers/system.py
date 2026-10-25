@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import secrets
+import os
+import shutil
+import uuid
+import zipfile
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
@@ -30,6 +35,7 @@ from app.core import (
 )
 from app.schemas import AdvancedSettingsRequest, PlatformKeyRequest, SystemActionRequest
 from app.dependencies import effective_platform_key
+from app.portable import DirectoryLock, contained_directory, stage_upgrade, write_json
 
 router = APIRouter()
 
@@ -93,6 +99,12 @@ async def admin_update_system_settings(request: AdvancedSettingsRequest) -> dict
     return update_advanced_settings(request.values)
 
 
+@router.get("/admin/system/platform-key", dependencies=[Depends(require_admin)])
+async def admin_read_platform_key(response: Response) -> dict[str, Any]:
+    response.headers["Cache-Control"] = "no-store"
+    return {"api_key": effective_platform_key() or ""}
+
+
 @router.put("/admin/system/platform-key", dependencies=[Depends(require_admin)])
 async def admin_update_platform_key(request: PlatformKeyRequest) -> dict[str, Any]:
     value = (request.api_key or "").strip()
@@ -101,8 +113,9 @@ async def admin_update_platform_key(request: PlatformKeyRequest) -> dict[str, An
 
 
 @router.post("/admin/system/platform-key/generate", dependencies=[Depends(require_admin)])
-async def admin_generate_platform_key() -> dict[str, Any]:
-    value = f"eg_{secrets.token_urlsafe(32)}"
+async def admin_generate_platform_key(response: Response) -> dict[str, Any]:
+    response.headers["Cache-Control"] = "no-store"
+    value = f"eg_{secrets.token_urlsafe(16)}"
     secret_store.set("system:platform_api_key", value)
     return {
         "status": "generated",
@@ -140,6 +153,60 @@ async def admin_restore_backup(file: UploadFile = File(...)) -> dict[str, Any]:
 
 @router.post("/admin/system/action", dependencies=[Depends(require_admin)])
 async def admin_system_action(request: SystemActionRequest) -> dict[str, Any]:
-    if not system_control.request(request.action):
-        raise HTTPException(status_code=409, detail="System control requires the EduGate supervised launcher")
+    try:
+        accepted = system_control.request(request.action)
+    except (OSError, RuntimeError) as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    if not accepted:
+        raise HTTPException(status_code=409, detail="服务未由启动器管理，或已有退出操作正在执行。")
     return {"status": "scheduled", "action": request.action}
+
+
+@router.post("/admin/system/upgrade", dependencies=[Depends(require_admin)])
+async def admin_program_upgrade(file: UploadFile = File(...)) -> dict[str, Any]:
+    if os.name != "nt" or os.getenv("EDUGATE_FROZEN") != "true" or not system_control.supervised:
+        raise HTTPException(status_code=409, detail="请在 Windows EXE 便携版中使用程序升级。")
+    if system_control.pending_action:
+        raise HTTPException(status_code=409, detail="已有退出或升级操作正在执行。")
+    root = Path(settings.app_dir).resolve()
+    data = contained_directory(root, Path(settings.data_dir))
+    pending = data / "pending-upgrade.json"
+    # Exclusive claim also serializes concurrent upload/validation requests.
+    claim = DirectoryLock(data, ".upgrade-upload.lock")
+    if not claim.acquire():
+        raise HTTPException(status_code=409, detail="另一个升级包正在处理，请稍候。")
+    stage = data / "updates" / uuid.uuid4().hex
+    archive = stage.with_suffix(".zip")
+    scheduled = False
+    created_pending = False
+    try:
+        if pending.exists():
+            raise HTTPException(status_code=409, detail="存在尚未完成的升级，请先查看 data/last-upgrade.json。")
+        stage.parent.mkdir(parents=True, exist_ok=True)
+        size = 0
+        with archive.open("wb") as output:
+            while chunk := await file.read(1024 * 1024):
+                size += len(chunk)
+                if size > 2 * 1024**3:
+                    raise ValueError("升级压缩包不能超过 2 GB")
+                output.write(chunk)
+        if shutil.disk_usage(data).free < size * 3:
+            raise ValueError("U 盘剩余空间不足，请为解压和旧版程序保留更多空间。")
+        manifest = await run_in_threadpool(stage_upgrade, archive, stage)
+        write_json(pending, {"staging": stage.relative_to(data).as_posix(), "version": manifest["version"]})
+        created_pending = True
+        if not system_control.request("upgrade"):
+            raise RuntimeError("未能安排升级，当前程序保持运行。")
+        scheduled = True
+        return {"status": "scheduled", "version": manifest["version"], "message": "正在保存课堂，退出后替换程序；config 和 data 保持不变。"}
+    except (ValueError, OSError, RuntimeError, zipfile.BadZipFile) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    finally:
+        claim.release()
+        archive.unlink(missing_ok=True)
+        if not scheduled:
+            if created_pending:
+                pending.unlink(missing_ok=True)
+            if stage.exists():
+                contained_directory(data, stage)
+                await run_in_threadpool(shutil.rmtree, stage)

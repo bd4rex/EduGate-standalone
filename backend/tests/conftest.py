@@ -51,6 +51,7 @@ os.environ["UPSTREAM_API_KEY"] = ""
 os.environ["PLATFORM_API_KEY"] = ""
 os.environ["PYTHON_RUNNER_ENABLED"] = "false"
 os.environ["CORS_ORIGINS"] = ""
+os.environ["KNOWLEDGE_SEMANTIC_ENABLED"] = "false"
 os.environ["ALLOW_LAN_ADMIN"] = "true"
 
 
