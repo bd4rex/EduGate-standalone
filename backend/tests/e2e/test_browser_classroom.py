@@ -68,10 +68,14 @@ class _ProviderHandler(BaseHTTPRequestHandler):
                 data = json.loads(payload["messages"][-1]["content"])
                 text = data["text"]
                 if data.get("kind") == "question":
-                    context = json.loads(text)
-                    text = context["current_question"]
-                    if re.search(r"再|继续|详细|further|another", text, re.I):
-                        text += str(context.get("prior_context", ""))
+                    try:
+                        context = json.loads(text)
+                    except json.JSONDecodeError:
+                        context = None
+                    if isinstance(context, dict) and "current_question" in context:
+                        text = context["current_question"]
+                        if re.search(r"再|继续|详细|further|another", text, re.I):
+                            text += str(context.get("prior_context", ""))
                 match = next((topic["label"] for topic in data["forbidden_topics"] if any(word in text for word in [topic["label"], *topic["aliases"]])), "")
                 self._json_response({"choices":[{"message":{"content":json.dumps({"blocked":bool(match),"topic":match},ensure_ascii=False)}}]})
                 return
@@ -346,19 +350,19 @@ def test_advanced_edits_survive_poll_refresh_save_and_navigation(live_classroom:
             page = browser.new_page()
             _login_and_start_class(page, live_classroom)
             page.locator('[data-tab="system"]').click()
-            page.locator("#advanced-settings-panel > summary").click()
+            page.get_by_role("tab", name="高级设置", exact=True).click()
             field = page.locator('[data-setting-key="STUDENT_SESSION_TTL_SECONDS"]')
             field.fill("34567")
             checkbox = page.locator('[data-setting-key="PYTHON_RUNNER_ENABLED"]')
             checkbox.uncheck()
             page.evaluate('window.editedSettingNode = document.querySelector("[data-setting-key=STUDENT_SESSION_TTL_SECONDS]")')
-            for _ in range(2):
-                with page.expect_response(lambda response: response.url.endswith("/admin/system/status")):
-                    pass
+            with page.expect_response(lambda response: response.url.endswith("/admin/system/status")):
+                page.get_by_role("tab", name="运行状态", exact=True).click()
             expect(field).to_have_value("34567")
             expect(checkbox).not_to_be_checked()
             with page.expect_response(lambda response: response.url.endswith("/admin/system/settings")):
                 page.locator("#refresh-system").click()
+            page.get_by_role("tab", name="高级设置", exact=True).click()
             expect(field).to_have_value("34567")
             assert page.evaluate('editedSettingNode === document.querySelector("[data-setting-key=STUDENT_SESSION_TTL_SECONDS]")')
             with page.expect_response(lambda response: response.url.endswith("/admin/system/settings") and response.request.method == "PUT") as saved:

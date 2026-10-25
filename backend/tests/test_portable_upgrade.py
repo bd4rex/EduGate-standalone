@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,6 +22,9 @@ from test_portable import archive_fixture
 
 @pytest.fixture
 def upgrade_client(tmp_path, monkeypatch):
+    # Exercise package validation on any host without changing os.name globally
+    # (which would also change pathlib and the real directory-lock backend).
+    monkeypatch.setattr(system, "os", SimpleNamespace(name="nt", getenv=os.getenv))
     data = tmp_path / "data"
     data.mkdir()
     monkeypatch.setattr(system.settings, "app_dir", str(tmp_path))
@@ -83,6 +87,14 @@ def test_source_mode_cannot_install_an_executable_package(upgrade_client, monkey
     assert client.post("/admin/system/upgrade", files={"file": ("release.zip", b"bad")}).status_code == 409
 
 
+def test_non_windows_runtime_rejects_executable_upgrade(upgrade_client, monkeypatch):
+    client, data = upgrade_client
+    monkeypatch.setattr(system, "os", SimpleNamespace(name="posix", getenv=os.getenv))
+    response = client.post("/admin/system/upgrade", files={"file": ("release.zip", b"bad")})
+    assert response.status_code == 409
+    assert not (data / "pending-upgrade.json").exists()
+
+
 def test_program_manifest_does_not_allow_accidental_credential_distribution(tmp_path):
     (tmp_path / "EduGate-Standalone.exe").write_bytes(b"exe")
     (tmp_path / "_internal").mkdir()
@@ -101,18 +113,31 @@ def test_maintenance_never_reports_success_before_a_clean_process_exit(tmp_path,
     data.mkdir()
     (data / ".edugate.lock").write_bytes(b"0")
     write_json(data / "launcher-state.json", {"run_id": "test-run", "saved": saved, "status": "stopped" if saved else "failed"})
-    parent = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(2)"], creationflags=subprocess.CREATE_NO_WINDOW)
+    parent = subprocess.Popen([sys.executable, "-c", "import sys;sys.stdin.buffer.read(1)"],
+                              stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
     job = {"root": str(tmp_path), "data": str(data), "pid": parent.pid, "run_id": "test-run", "action": "shutdown",
         "notice": False, "ready": str(tmp_path / "ready"), "result": str(tmp_path / "result.json")}
     process = run_helper(job)
-    deadline = time.monotonic() + 8
-    while not (tmp_path / "ready").exists() and time.monotonic() < deadline: time.sleep(.03)
-    assert not (tmp_path / "result.json").exists()
-    parent.wait(timeout=10)
-    assert process.wait(timeout=15) == 0
-    result = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
-    assert result["status"] == ("saved_and_exited" if saved else "failed")
-    assert (data / "last-exit.json").exists() is saved
+    try:
+        deadline = time.monotonic() + 15
+        while not (tmp_path / "ready").exists() and time.monotonic() < deadline: time.sleep(.03)
+        assert (tmp_path / "ready").exists()
+        assert parent.poll() is None
+        assert not (tmp_path / "result.json").exists()
+        # Release the parent only after observing readiness; helper startup speed
+        # must not decide whether this test actually checks a live process.
+        parent.stdin.write(b"x")
+        parent.stdin.close()
+        assert parent.wait(timeout=10) == 0
+        assert process.wait(timeout=15) == 0
+        result = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
+        assert result["status"] == ("saved_and_exited" if saved else "failed")
+        assert (data / "last-exit.json").exists() is saved
+    finally:
+        for child in (parent, process):
+            if child.poll() is None:
+                child.terminate()
+                child.wait(timeout=10)
 
 
 def run_helper(job):
