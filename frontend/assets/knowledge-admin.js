@@ -206,6 +206,8 @@
     if (editButton) editMetadata(editButton.dataset.knowledgeMetadata);
   });
   window.addEventListener("edugate:knowledge-data", renderScope);
+  window.addEventListener("edugate:resource-panel-change", () => refreshStatus());
+  window.addEventListener("edugate:tab-change", (event) => { if (event.detail === "settings") refreshStatus(); });
   setInterval(() => { if (!document.hidden && !byId("knowledge-tools").closest("[hidden]")) refreshStatus(); }, 2000);
   renderScope(); refreshStatus();
 })();

@@ -1018,266 +1018,7 @@
       .temperature-control #temperature-value { grid-column: 1 / -1; }
     }
 
-    /* Reference-matched secondary workspaces */
-    .section-icon-title { display: flex; align-items: center; gap: 12px; }
-    .section-icon-title .ui-icon { width: 25px; height: 25px; flex-basis: 25px; color: var(--brand); }
 
-    .records-overview-card { min-height: 313px; padding: 26px !important; }
-    .records-overview-card .section-title { margin-bottom: 18px !important; }
-    .records-overview-card .section-title .button { min-width: 134px; }
-    #recording-note.recording-note {
-      display: flex;
-      min-height: 56px;
-      align-items: center;
-      gap: 13px;
-      padding: 13px 17px;
-      border-color: #cbdcff;
-      border-radius: 8px;
-      background: #f7faff;
-      color: #435370;
-    }
-    #recording-note .ui-icon { width: 24px; height: 24px; flex-basis: 24px; color: var(--brand); }
-    #record-summary { margin-top: 24px !important; }
-    #record-summary .record-summary-card {
-      min-height: 98px;
-      flex-direction: row;
-      align-items: center;
-      gap: 18px;
-      padding: 16px 18px;
-      background: #fff;
-    }
-    .record-summary-icon {
-      display: grid !important;
-      width: 58px;
-      height: 58px;
-      min-height: 58px !important;
-      flex: 0 0 58px;
-      place-items: center;
-      border-radius: 50%;
-      background: #eaf2ff;
-      color: var(--brand);
-    }
-    .record-summary-card.green .record-summary-icon { background: #e9f9f0; color: #14a768; }
-    .record-summary-card.violet .record-summary-icon { background: #eeeeff; color: #5d5ee8; }
-    .record-summary-card.orange .record-summary-icon { background: #fff1e5; color: #ed7823; }
-    .record-summary-icon .ui-icon { width: 29px; height: 29px; flex-basis: 29px; }
-    .record-summary-copy { min-height: 0 !important; }
-    #record-summary .record-summary-copy > span { min-height: 0; font-size: 14px; }
-    #record-summary .record-summary-copy strong { margin-top: 4px; font-size: 25px; line-height: 1.1; }
-    .record-layout { grid-template-columns: minmax(360px, .52fr) minmax(0, 1fr); }
-    .records-list-card,
-    .records-detail-card { min-height: 344px; padding: 24px 26px !important; }
-    .record-session-list { min-height: 238px; max-height: 680px; }
-    .record-empty-state {
-      display: grid;
-      min-height: 238px;
-      place-items: center;
-      align-content: center;
-      gap: 10px;
-      padding: 24px;
-      border: 1px dashed var(--line-strong);
-      border-radius: 9px;
-      color: var(--muted);
-      text-align: center;
-    }
-    .record-empty-state .ui-icon { width: 48px; height: 48px; color: #c8cfda; }
-    .record-empty-state p { margin: 0; }
-    .record-empty-state .row-title { color: var(--ink); font-size: 18px; }
-    .record-toolbar { gap: 18px; margin-bottom: 24px; }
-    .record-toolbar select { min-height: 54px; }
-    .record-detail-empty {
-      display: flex;
-      min-height: 98px;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      color: #8b96a8;
-      font-size: 16px;
-    }
-    .record-detail-empty .ui-icon { width: 30px; height: 30px; color: #c7ced9; }
-
-    #settings-view { gap: 18px; }
-    #settings-view { padding-top: 10px; }
-    #records-view { padding-top: 20px; }
-    .resource-knowledge-section,
-    .resource-upload-section,
-    .resource-files-section { padding: 22px 26px 26px !important; }
-    .knowledge-source-frame { overflow: hidden; border: 1px solid var(--line); border-radius: 10px; }
-    .knowledge-source-frame > .list-card { border: 0 !important; border-radius: 0 !important; }
-    .resource-source-row { min-height: 132px; padding: 20px 22px; }
-    .resource-source-row .row-main { flex: 1 1 auto; }
-    .resource-source-row .row-title { font-size: 18px; }
-    .resource-icon-tile {
-      display: grid;
-      width: 64px;
-      height: 64px;
-      flex: 0 0 64px;
-      place-items: center;
-      border-radius: 16px;
-      background: #f2f6fc;
-      color: var(--brand);
-    }
-    .resource-icon-tile .ui-icon { width: 32px; height: 32px; flex-basis: 32px; }
-    .resource-icon-tile.neutral { color: #7a879b; }
-    .resource-description { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
-    .resource-source-row .row-actions { gap: 14px; }
-    .resource-source-row .row-actions > .button { min-width: 150px; }
-    .resource-source-row .action-menu { min-width: 152px; }
-    .resource-source-row .action-menu > summary { gap: 9px; border: 1px solid var(--line); background: var(--soft); }
-    .resource-source-row .action-menu .ui-icon { width: 18px; height: 18px; }
-    .knowledge-source-frame > .compact-panel { border-top: 1px solid var(--line); border-radius: 0; }
-    .knowledge-source-frame > .compact-panel > summary { min-height: 58px; padding: 12px 24px; font-size: 16px; }
-    .source-editor-body { padding: 0 24px 20px; }
-    .resource-upload-section .section-title { margin-bottom: 16px !important; }
-    .resource-upload-section { min-height: 241px; }
-    .resource-upload-section .upload-card { padding: 0; border: 0; }
-    .resource-upload-section .upload-layout {
-      grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.35fr) auto;
-      column-gap: 30px;
-      row-gap: 14px;
-    }
-    .resource-upload-section .file-picker { min-height: 54px; }
-    .resource-upload-section select { min-height: 54px; }
-    .resource-upload-section #upload-file { min-width: 166px; min-height: 54px; }
-    .resource-upload-section .hint { margin-top: 0; }
-    .resource-files-section { min-height: 214px; }
-    .resource-files-section .list-card { min-height: 92px; }
-    .resource-file-empty,
-    .resource-file-row { display: flex; min-height: 92px; align-items: center; gap: 22px; padding: 16px 22px; }
-    .resource-file-empty .resource-icon-tile,
-    .resource-file-row .resource-icon-tile { width: 54px; height: 54px; flex-basis: 54px; border-radius: 14px; }
-    .resource-file-empty .resource-icon-tile .ui-icon,
-    .resource-file-row .resource-icon-tile .ui-icon { width: 27px; height: 27px; }
-
-    .system-request-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
-    .system-request-block > .section-title { margin-bottom: 10px !important; }
-
-    @media (max-width: 1100px) and (min-width: 761px) {
-      .topbar { min-height: 68px; padding: 9px 20px; }
-      .brand-lockup { gap: 12px; }
-      .brand-mark { width: 44px; height: 44px; flex-basis: 44px; }
-      .brand-copy h1 { font-size: 20px; }
-      .brand-copy > p { margin-top: 2px; font-size: 12px; }
-      .status-pill { min-height: 36px; padding: 0 14px; font-size: 13px; }
-      .tabs { min-height: 44px; padding: 0 22px; }
-      .tab { min-width: 112px; min-height: 44px; padding: 0 16px; gap: 8px; font-size: 13px; }
-      .tab .ui-icon { width: 17px; height: 17px; flex-basis: 17px; }
-      .content { padding: 9px 20px 16px; }
-      #system-view { gap: 5px; }
-      #system-view > .section { padding: 9px 13px; border-radius: 8px; box-shadow: 0 2px 8px rgba(37, 51, 78, .04); }
-      #system-view .section-title { margin-bottom: 8px; }
-      #system-view h2 { font-size: 15px; }
-      #system-view .button { min-height: 30px; padding: 0 13px; border-radius: 6px; font-size: 12px; }
-      #system-view .button.mini { min-height: 26px; padding: 0 9px; font-size: 10px; }
-      #system-view .system-actions { gap: 8px; }
-      #system-view .system-action-group { gap: 8px; }
-      #system-view .system-action-group.critical { padding-left: 8px; }
-      #system-view .system-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-      #system-view .system-metric { min-height: 54px; padding: 7px 10px; border-radius: 7px; }
-      #system-view .system-metric span { min-height: 13px; font-size: 10px; line-height: 13px; }
-      #system-view .system-metric strong { font-size: 14px; line-height: 18px; }
-      #system-view .system-metric-value { min-height: 24px; margin-top: 1px; }
-      #system-view .system-metric-value .button { min-height: 25px; }
-      #system-view .runtime-stat + .runtime-stat { padding-left: 8px; }
-      #system-view .system-request-block { margin-top: 8px; padding-top: 8px; }
-      #system-view .system-request-block > .section-title { margin-bottom: 6px !important; }
-      #system-view .collapsible-panel > summary { min-height: 28px; padding: 2px 0; font-size: 15px; }
-      #system-view .collapsible-panel[open] > summary { margin-bottom: 3px; }
-      #system-view .list-card { border-radius: 7px; }
-      #system-view .list-card[style] { padding: 10px !important; }
-      #system-view .stack { gap: 8px; }
-      #system-view .hint { font-size: 10px; line-height: 1.45; }
-      #system-view .field-label,
-      #system-view label { gap: 3px; font-size: 10px; }
-      #system-view input,
-      #system-view select { min-height: 28px; padding: 0 9px; border-radius: 5px; font-size: 11px; }
-      #system-view .file-picker { min-height: 30px; border-radius: 5px; }
-      #system-view .file-picker-button { min-height: 28px; padding: 0 10px; font-size: 11px; }
-      #system-view .provider-picker { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 7px; }
-      #system-view .upstream-provider-heading { min-height: 34px; padding: 6px 11px; }
-      #system-view .upstream-provider-heading h3,
-      #system-view .imported-model-heading h3 { font-size: 12px; }
-      #system-view .upstream-provider-body { padding: 9px 11px; }
-      #system-view .provider-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
-      #system-view .provider-form-grid .full { grid-column: auto; }
-      #system-view .api-endpoint-preview { grid-column: 1 / -1; margin: -2px 0 0; font-size: 9px; }
-      #system-view .provider-actions { margin-top: 7px; }
-      #system-view .provider-actions + .hint { margin: 6px 0 0; }
-      #system-view .imported-models { margin-top: 8px; }
-      #system-view .imported-model-heading { margin-bottom: 5px; }
-      #system-view .catalog-provider-heading { min-height: 28px; padding: 4px 9px; }
-      #system-view .catalog-model-row { min-height: 42px; grid-template-columns: minmax(150px, 1fr) minmax(220px, .9fr) auto; gap: 8px; padding: 5px 9px; }
-      #system-view .catalog-display-name input { min-height: 27px; }
-      #system-view .catalog-model-id { font-size: 11px; }
-      #system-view .catalog-model-key,
-      #system-view .row-meta { font-size: 9px; }
-      #system-view .badge { min-height: 17px; padding: 0 6px; border-radius: 5px; font-size: 9px; }
-      #system-view .log-view { max-height: 180px; padding: 8px 10px; font-size: 8px; line-height: 1.35; }
-      #system-view .setting-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 18px; }
-      #system-view .setting-list label { grid-template-columns: minmax(95px, .7fr) minmax(0, 1.6fr); align-items: center; }
-      #system-view .setting-list .checkbox-row { display: flex; min-height: 28px; }
-      #system-view .setting-list input[type="checkbox"] { width: 15px; height: 15px; min-height: 15px; }
-      #system-view #advanced-setting-list + .stack { margin-top: 8px !important; }
-      #system-view .advanced-settings-panel .actions { gap: 8px; }
-      #system-view .footer-note { font-size: 10px; }
-
-      #system-view .system-overview-section { padding-top: 7px; padding-bottom: 7px; }
-      #system-view .system-overview-section .system-metric { min-height: 46px; padding-top: 5px; padding-bottom: 5px; }
-      #system-view #system-metrics .system-metric strong { font-size: 12px; }
-      #system-view #system-metrics .system-metric-value .button { min-height: 22px; padding: 0 6px; font-size: 9px; }
-      #system-view > .section:has(#backup-panel) { padding-top: 5px; padding-bottom: 6px; }
-      #system-view #backup-panel > summary { min-height: 24px; }
-      #system-view #backup-panel > .list-card { padding: 4px 6px !important; }
-      #system-view #backup-panel .stack { gap: 2px; }
-      #system-view #backup-panel .button { min-height: 24px; }
-      #system-view #backup-panel .file-picker { min-height: 24px; }
-      #system-view #backup-panel .file-picker-button { min-height: 22px; }
-      #system-view #backup-panel .hint { margin: 1px 0 0; line-height: 1.15; }
-
-      #system-view > .section:has(#model-api-panel) { padding-top: 5px; padding-bottom: 7px; }
-      #system-view #model-api-panel > summary { min-height: 24px; }
-      #system-view #model-api-panel > .hint { margin: 0 0 6px !important; line-height: 1.25; }
-      #system-view #model-api-panel .provider-picker { margin-bottom: 3px; }
-      #system-view #model-api-panel .upstream-provider-heading { min-height: 25px; padding: 3px 8px; }
-      #system-view #model-api-panel .upstream-provider-body { padding: 4px 8px; }
-      #system-view #model-api-panel .provider-form-grid { gap: 1px 9px; }
-      #system-view #model-api-panel input,
-      #system-view #model-api-panel select { min-height: 20px; height: 20px; padding-top: 0; padding-bottom: 0; }
-      #system-view #model-api-panel .api-endpoint-preview { line-height: 1.2; }
-      #system-view #model-api-panel .provider-actions { margin-top: 1px; }
-      #system-view #model-api-panel .provider-actions .button { min-height: 22px; }
-      #system-view #model-api-panel .provider-actions + .hint { margin: 1px 0 0; line-height: 1.1; }
-      #system-view #model-api-panel .imported-models { margin-top: 3px; }
-      #system-view #model-api-panel .imported-model-heading { margin-bottom: 2px; }
-      #system-view #model-api-panel .catalog-provider-heading { min-height: 21px; padding: 2px 7px; }
-      #system-view #model-api-panel .catalog-model-row { min-height: 30px; padding: 2px 7px; line-height: 1.15; }
-      #system-view #model-api-panel .catalog-display-name input { min-height: 20px; height: 20px; }
-
-      #system-view #system-log-panel > summary { min-height: 24px; }
-
-      #system-view > .section:has(#advanced-settings-panel) { padding-top: 5px; padding-bottom: 7px; }
-      #system-view #advanced-settings-panel > summary { min-height: 24px; }
-      #system-view #advanced-settings-panel > .list-card { padding: 7px 10px !important; }
-      #system-view #advanced-settings-panel .setting-list { gap: 1px 18px; }
-      #system-view #advanced-settings-panel .setting-list label { min-height: 21px; gap: 5px; line-height: 1.1; }
-      #system-view #advanced-settings-panel .setting-list input:not([type="checkbox"]) { min-height: 21px; height: 21px; padding: 0 7px; }
-      #system-view #advanced-settings-panel .setting-list .checkbox-row { min-height: 21px; }
-      #system-view #advanced-settings-panel #advanced-setting-list + .stack { gap: 5px; margin-top: 5px !important; }
-      #system-view #advanced-settings-panel #platform-api-key { min-height: 23px; }
-      #system-view #advanced-settings-panel .actions .button { min-height: 27px; }
-      #system-view #advanced-settings-panel .hint { margin: 0; }
-      #system-view #downstream-api-panel > summary { min-height: 24px; }
-      #system-view #downstream-api-panel .integration-grid { gap: 8px; }
-      #system-view #downstream-api-panel .integration-card { padding: 8px 10px; }
-      #system-view #downstream-api-panel .integration-card-head { margin-bottom: 6px; }
-      #system-view #downstream-api-panel .integration-card h3 { font-size: 12px; }
-      #system-view #downstream-api-panel .integration-code { min-height: 88px; max-height: 130px; margin-top: 6px; padding: 6px 8px; font-size: 8px; line-height: 1.35; }
-      #system-view #downstream-api-panel .integration-note { margin-top: 5px; font-size: 9px; line-height: 1.35; }
-      #system-view #downstream-api-panel .integration-fields,
-      #system-view #downstream-api-panel .integration-key-row { gap: 5px; }
-    }
 
     @media (max-width: 900px) and (min-width: 761px) {
       .record-layout { grid-template-columns: minmax(280px, .62fr) minmax(0, 1fr); }
@@ -1350,7 +1091,9 @@
     }
   </style>
   <link rel="stylesheet" href="assets/edugate-select.css" />
-  <link rel="stylesheet" href="assets/admin-settings.css?v=20261022" />
+  <link rel="stylesheet" href="assets/admin-settings.css?v=20261024-ui1" />
+  <link rel="stylesheet" href="assets/knowledge.css" />
+  <link rel="stylesheet" href="assets/admin-theme.css?v=20261024-ui1" />
 </head>
 <body>
   <div class="shell">
@@ -1404,7 +1147,7 @@
                 <div class="summary-item"><span class="ui-icon icon-brain" aria-hidden="true"></span><span>AI：<strong id="current-ai-state">-</strong></span></div>
                 <div class="summary-item"><span class="ui-icon icon-cube" aria-hidden="true"></span><span>模型：<strong id="current-model">-</strong></span></div>
                 <div class="summary-item"><span class="ui-icon icon-book" aria-hidden="true"></span><span>知识库：<strong id="current-source">general</strong></span></div>
-                <div class="summary-item"><span class="ui-icon icon-users" aria-hidden="true"></span><span>在线学生：<strong id="current-student-count">0</strong> 人</span></div>
+                <div class="summary-item"><span class="ui-icon icon-users" aria-hidden="true"></span><span>已加入：<strong id="current-student-count">0</strong> 台设备</span></div>
               </div>
               <div class="class-controls" id="class-controls" hidden>
                 <button class="button primary" id="start-class" type="button"><span class="ui-icon icon-play" aria-hidden="true"></span><span>开始课堂</span></button>
@@ -1422,7 +1165,7 @@
                   <strong>扫码进入课堂</strong>
                 </div>
                 <div class="classroom-link-panel">
-                  <span class="field-caption">课堂访问地址（简洁链接）</span>
+                  <span class="field-caption">课堂地址摘要 · 请复制链接或扫码</span>
                   <strong class="classroom-url-display" id="classroom-url-display">登录后显示课堂地址</strong>
                   <input class="visually-hidden" id="classroom-url" readonly tabindex="-1" aria-hidden="true" />
                   <div class="classroom-link-actions">
@@ -1437,6 +1180,7 @@
 
             <section class="dashboard-card classroom-ai-settings">
               <div class="card-heading-row"><h2>课堂 AI 设置</h2></div>
+              <p class="hint immediate-note">AI 开关、模型与知识库选择会立即生效。</p>
               <div class="compact-setting-list">
                 <div class="compact-setting-row">
                   <div class="row-main">
@@ -1479,7 +1223,7 @@
           </div>
 
           <aside class="side-panel strategy-panel">
-            <div class="strategy-heading"><span class="ui-icon icon-sparkles" aria-hidden="true"></span><h2>AI 教学策略</h2></div>
+            <div class="strategy-heading"><span class="ui-icon icon-sparkles" aria-hidden="true"></span><h2>AI 教学策略</h2><span class="save-state" id="strategy-save-state" role="status">已保存</span></div>
             <div class="form-grid strategy-form">
               <label>教学要求
                 <textarea id="system-prompt" maxlength="500" placeholder="教师控制的教学提示词，学生端不可见。"></textarea>
@@ -1513,7 +1257,7 @@
               </fieldset>
 
               <button class="button primary strategy-save" id="save-scenario"><span class="ui-icon icon-save" aria-hidden="true"></span><span>保存当前 AI 策略</span></button>
-              <p class="hint">保存后，模型、提示词、知识库和参数会立即应用到当前课堂。</p>
+              <p class="hint">教学要求、回答风格、长度与回答依据在保存后生效。</p>
             </div>
           </aside>
         </div>
@@ -1557,7 +1301,7 @@
               </label>
               <label>学生电脑<select id="record-student-filter"><option value="all">全部电脑</option></select></label>
             </div>
-            <div id="record-turn-list"></div>
+            <div id="record-turn-list" role="region" aria-label="课堂记录内容" tabindex="0"></div>
           </section>
         </div>
       </section>
@@ -1828,7 +1572,7 @@
         <section class="section">
           <details class="collapsible-panel advanced-settings-panel" id="advanced-settings-panel">
             <summary>高级设置</summary>
-            <div class="list-card" style="padding:18px">
+            <div class="list-card panel-body">
               <div class="setting-list" id="advanced-setting-list"></div>
               <div class="stack" style="margin-top:16px">
                 <div class="actions">
@@ -1860,8 +1604,15 @@
         <section class="section">
           <details class="collapsible-panel" id="program-upgrade-panel">
             <summary>程序升级 · 保留课堂资料</summary>
-            <div class="stack" style="padding:18px">
-              <label>新版程序升级 ZIP <input id="upgrade-package" type="file" accept=".zip,application/zip" /></label>
+            <div class="stack panel-body">
+              <div>
+                <span class="field-label">新版程序升级 ZIP</span>
+                <div class="file-picker">
+                  <input class="file-input-hidden" id="upgrade-package" type="file" accept=".zip,application/zip" aria-hidden="true" tabindex="-1" hidden />
+                  <button class="file-picker-button" id="upgrade-package-trigger" type="button">选择升级包</button>
+                  <span class="file-picker-name" id="upgrade-package-name">未选择文件</span>
+                </div>
+              </div>
               <button class="button soft" id="upgrade-program" type="button">校验并升级程序</button>
               <p class="hint">仅适用于 Windows EXE 便携版。升级只替换程序和运行环境，保留当前文件夹中的配置、模型密钥、教材和课堂记录；原程序另存于 data/updates。请勿选择数据备份 ZIP。</p>
             </div>
@@ -1870,7 +1621,7 @@
         <section class="section">
           <details class="collapsible-panel" id="backup-panel">
             <summary>备份与恢复</summary>
-            <div class="list-card" style="padding:18px">
+            <div class="list-card panel-body">
               <div class="stack">
                 <div class="actions" style="justify-content:flex-start">
                   <button class="button soft" id="download-backup" type="button">下载完整备份</button>
@@ -1894,7 +1645,7 @@
       <section class="section" id="portable-operation" role="status" aria-live="polite" tabindex="-1" hidden></section>
       <div class="footer-note">
         <span>教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
-        <span>v2.3 · 单教师便携课堂版 · 2026.10.24</span>
+        <span>v2.3.1 · 单教师便携课堂版 · 2026.10.24</span>
       </div>
     </main>
   </div>
@@ -1915,6 +1666,8 @@
       instanceId: "",
       runId: "",
       systemActionPending: false,
+      strategyDirty: false,
+      strategySaving: false,
       adminToken: "",
       username: "admin",
       currentTeacher: null,
@@ -2123,6 +1876,7 @@
 
     function clearSession() {
       state.adminToken = "";
+      state.strategyDirty = false;
       state.currentTeacher = null;
       state.sessionExpiresAt = 0;
       state.classroomActive = false;
@@ -2269,7 +2023,7 @@
       if (!fullUrl || state.classroomUrlExpanded) return fullUrl;
       try {
         const parsed = new URL(fullUrl);
-        return `${parsed.host}/classroom`;
+        return `${parsed.host}${parsed.pathname}`;
       } catch {
         return fullUrl;
       }
@@ -2449,7 +2203,7 @@
         : model;
       el.currentSource.textContent = sourceDisplayName(source);
 
-      if (scenario) {
+      if (scenario && !state.strategyDirty) {
         el.systemPrompt.value = scenario.system_prompt || "";
         el.temperature.value = scenario.temperature ?? 0.4;
         el.temperatureValue.value = scenario.temperature ?? 0.4;
@@ -2460,6 +2214,7 @@
       }
       updatePromptCharacterCount();
       renderTokenPreset(el.maxTokens.value);
+      renderStrategySaveState();
 
       renderSources(source);
       renderModels(model);
@@ -2926,9 +2681,7 @@
       el.platformApiKey.placeholder = system.platform_api_key_set
         ? "密钥已保存，展开后可显示或复制"
         : "输入自定义密钥，或生成新密钥";
-      document.querySelector("#config-storage-note").textContent = system.data_dir
-        ? `配置自动保存在 ${system.data_dir} 文件夹：runtime_config.json 保存供应商、模型和课堂设置，secrets.json 保存密钥。保留该文件夹，下次打开即可继续使用。`
-        : "配置和密钥保存在本机 data 文件夹，下次打开自动读取。";
+      document.querySelector("#config-storage-note").textContent = "配置和密钥保存在当前便携文件夹中，下次启动自动恢复。换电脑时请携带整个文件夹，可在系统页点击“打开目录”查看位置。";
       renderDownstreamIntegration();
     }
 
@@ -3041,7 +2794,7 @@
           ? `${turn.latency_ms} ms（排队 ${turn.queue_wait_ms} ms）`
           : `${turn.latency_ms} ms`;
         return `
-          <article class="record-turn">
+          <article class="record-turn" data-kind="${escapeHtml(turn.kind)}">
             <div class="record-turn-heading">
               <span class="badge">${escapeHtml(`${turnComputerName} · ${turnClientIp}`)}</span>
               <span class="badge ${statusClass}">${escapeHtml(typeLabel)}</span>
@@ -3185,6 +2938,20 @@
       renderAll();
     }
 
+    async function withButtonBusy(button, action) {
+      if (button.disabled) return;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      try {
+        await action();
+      } catch (error) {
+        showToast(`刷新失败：${error.message}`, true);
+      } finally {
+        button.disabled = false;
+        button.setAttribute("aria-busy", "false");
+      }
+    }
+
     async function loadModels() {
       const [catalog, providers] = await Promise.all([request("/admin/models"), request("/admin/providers")]);
       state.catalog = catalog || [];
@@ -3227,6 +2994,7 @@
 
     async function refreshSystemStatus() {
       if (state.systemActionPending || !state.adminToken || el.systemView.hidden || state.systemStatusRefreshing) return;
+      if (el.systemView.dataset.activePanel && !["overview", "logs"].includes(el.systemView.dataset.activePanel)) return;
       state.systemStatusRefreshing = true;
       try {
         state.systemStatus = await request("/admin/system/status");
@@ -3415,23 +3183,61 @@
       }
     }
 
-    async function saveScenario() {
-      const payload = {
+    function strategyDraft() {
+      return {
         system_prompt: el.systemPrompt.value.trim(),
         temperature: Number(el.temperature.value),
-        knowledge_source_id: el.sourceSelect.value || "general",
         knowledge_strict: el.knowledgeStrict.checked,
+        max_tokens: el.maxTokens.value.trim() ? Number(el.maxTokens.value) : null,
       };
-      if (el.maxTokens.value.trim()) payload.max_tokens = Number(el.maxTokens.value.trim());
+    }
+
+    function renderStrategySaveState() {
+      const note = document.querySelector("#strategy-save-state");
+      note.dataset.dirty = String(state.strategyDirty);
+      note.textContent = state.strategySaving ? "正在保存…" : state.strategyDirty ? "有未保存的修改" : "已保存";
+      const button = document.querySelector("#save-scenario");
+      button.disabled = state.strategySaving || !state.adminToken;
+      button.setAttribute("aria-busy", String(state.strategySaving));
+    }
+
+    function markStrategyDraft() {
+      const scenario = currentScenario();
+      if (!scenario) return;
+      const original = {
+        system_prompt: scenario.system_prompt || "",
+        temperature: scenario.temperature ?? 0.4,
+        knowledge_strict: Boolean(scenario.knowledge_strict),
+        max_tokens: scenario.max_tokens ?? null,
+      };
+      state.strategyDirty = JSON.stringify(strategyDraft()) !== JSON.stringify(original);
+      renderStrategySaveState();
+    }
+
+    async function saveScenario() {
+      if (state.strategySaving) return;
+      const draft = strategyDraft();
+      const payload = { ...draft, knowledge_source_id: el.sourceSelect.value || "general" };
+      if (payload.max_tokens === null) delete payload.max_tokens;
+      state.strategySaving = true;
+      renderStrategySaveState();
       try {
-        await request("/config/scenarios/default", {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        });
-        await loadConfig();
-        showToast("已保存当前 AI 策略。");
+        const saved = await request("/config/scenarios/default", { method: "PUT", body: JSON.stringify(payload) });
+        if (state.config) state.config.scenarios.default = saved;
+        // Inputs remain editable while saving; preserve any newer edits.
+        state.strategyDirty = JSON.stringify(strategyDraft()) !== JSON.stringify(draft);
+        try {
+          await loadConfig();
+        } catch (error) {
+          showToast(`策略已保存，但页面刷新未完成：${error.message}`, true);
+          return;
+        }
+        showToast(state.strategyDirty ? "已保存上次提交的策略；新修改还未保存。" : "已保存当前 AI 策略。");
       } catch (error) {
         showToast(`保存失败：${error.message}`, true);
+      } finally {
+        state.strategySaving = false;
+        renderStrategySaveState();
       }
     }
 
@@ -4101,11 +3907,11 @@
     el.adminPassword.addEventListener("keydown", (event) => {
       if (event.key === "Enter") login();
     });
-    document.querySelector("#reload-models").addEventListener("click", loadModels);
-    document.querySelector("#reload-sources").addEventListener("click", loadSources);
-    document.querySelector("#refresh-source-admin").addEventListener("click", loadSources);
-    document.querySelector("#reload-files").addEventListener("click", loadFiles);
-    document.querySelector("#refresh-records").addEventListener("click", () => loadClassroomRecords());
+    document.querySelector("#reload-models").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadModels));
+    document.querySelector("#reload-sources").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadSources));
+    document.querySelector("#refresh-source-admin").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadSources));
+    document.querySelector("#reload-files").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadFiles));
+    document.querySelector("#refresh-records").addEventListener("click", (event) => withButtonBusy(event.currentTarget, () => loadClassroomRecords()));
     document.querySelector("#save-scenario").addEventListener("click", saveScenario);
     document.querySelector("#save-source").addEventListener("click", saveSource);
     el.cancelSourceEdit.addEventListener("click", () => resetSourceEditor({ close: true }));
@@ -4134,11 +3940,13 @@
     el.rotateClassroomToken.addEventListener("click", rotateClassroomToken);
     el.startClass.addEventListener("click", startClassroom);
     el.endClass.addEventListener("click", endClassroom);
-    document.querySelector("#refresh-system").addEventListener("click", loadSystem);
+    document.querySelector("#refresh-system").addEventListener("click", (event) => withButtonBusy(event.currentTarget, loadSystem));
     document.querySelector("#restart-system").addEventListener("click", () => requestSystemAction("restart"));
     document.querySelector("#shutdown-system").addEventListener("click", () => requestSystemAction("shutdown"));
     document.querySelector("#exit-classroom").addEventListener("click", () => requestSystemAction("shutdown"));
     document.querySelector("#upgrade-program").addEventListener("click", upgradeProgram);
+    document.querySelector("#upgrade-package-trigger").addEventListener("click", () => document.querySelector("#upgrade-package").click());
+    document.querySelector("#upgrade-package").addEventListener("change", (event) => updateFilePicker(event.target, document.querySelector("#upgrade-package-name")));
     document.querySelector("#open-app-directory").addEventListener("click", openAppDirectory);
     document.querySelector("#save-advanced-settings").addEventListener("click", saveAdvancedSettings);
     document.querySelector("#save-platform-key").addEventListener("click", savePlatformKey);
@@ -4207,25 +4015,54 @@
       updateTemperatureProgress();
     });
     el.systemPrompt.addEventListener("input", updatePromptCharacterCount);
+    document.querySelector(".strategy-form").addEventListener("input", markStrategyDraft);
+    document.querySelector(".strategy-form").addEventListener("change", markStrategyDraft);
     el.tokenPresetButtons.forEach((button) => {
       button.addEventListener("click", () => {
         el.maxTokens.value = button.dataset.tokenPreset;
         renderTokenPreset(el.maxTokens.value);
+        markStrategyDraft();
       });
     });
-    el.tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        const name = tab.dataset.tab;
-        state.activeTab = name;
-        el.tabs.forEach((item) => item.classList.toggle("active", item.dataset.tab === name));
-        el.tabs.forEach((item) => item.setAttribute("aria-selected", String(item.dataset.tab === name)));
-        el.controlView.hidden = name !== "control";
-        el.recordsView.hidden = name !== "records";
-        el.settingsView.hidden = name !== "settings";
-        el.systemView.hidden = name !== "system";
-        if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
-        window.scrollTo({ top: 0 });
+    function activateTab(name, { focus = false } = {}) {
+      state.activeTab = name;
+      el.tabs.forEach((item) => {
+        const selected = item.dataset.tab === name;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-selected", String(selected));
+        item.tabIndex = selected ? 0 : -1;
+        if (selected && focus) item.focus();
       });
+      el.controlView.hidden = name !== "control";
+      el.recordsView.hidden = name !== "records";
+      el.settingsView.hidden = name !== "settings";
+      el.systemView.hidden = name !== "system";
+      if (name === "records") loadClassroomRecords().catch((error) => showToast(`加载课堂记录失败：${error.message}`, true));
+      window.dispatchEvent(new CustomEvent("edugate:tab-change", { detail: name }));
+      window.scrollTo({ top: 0 });
+    }
+
+    el.tabs.forEach((tab, index) => {
+      tab.id = `tab-${tab.dataset.tab}`;
+      tab.tabIndex = tab.classList.contains("active") ? 0 : -1;
+      const panel = document.getElementById(tab.getAttribute("aria-controls"));
+      if (panel) { panel.setAttribute("role", "tabpanel"); panel.setAttribute("aria-labelledby", tab.id); }
+      tab.addEventListener("click", () => activateTab(tab.dataset.tab));
+      tab.addEventListener("keydown", (event) => {
+        const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+        if (event.ctrlKey || event.metaKey || event.altKey || !keys.includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === "Home" ? 0 : event.key === "End" ? el.tabs.length - 1
+          : (index + (event.key === "ArrowRight" ? 1 : -1) + el.tabs.length) % el.tabs.length;
+        if (!el.tabs[next].disabled) activateTab(el.tabs[next].dataset.tab, { focus: true });
+      });
+    });
+    window.addEventListener("edugate:system-panel-change", (event) => {
+      if (event.detail === "integration") loadPlatformKey().catch((error) => showToast(`读取密钥失败：${error.message}`, true));
+      if (event.detail === "overview" || event.detail === "logs") refreshSystemStatus();
+    });
+    window.addEventListener("beforeunload", (event) => {
+      if (state.strategyDirty) { event.preventDefault(); event.returnValue = ""; }
     });
 
     async function boot() {
@@ -4272,10 +4109,10 @@
         return response.blob();
       },
     };
-    boot();
+    window.addEventListener("DOMContentLoaded", boot, { once: true });
   </script>
   <script src="assets/edugate-select.js"></script>
-  <link rel="stylesheet" href="assets/knowledge.css" />
-  <script src="assets/knowledge-admin.js"></script>
+  <script src="assets/admin-workspaces.js?v=20261024-ui1"></script>
+  <script src="assets/knowledge-admin.js?v=20261024-ui1"></script>
 </body>
 </html>

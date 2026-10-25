@@ -1,15 +1,15 @@
 {
-  "version": "2.3.0",
+  "version": "2.3.1",
   "recorded_on": "2026-10-25",
   "archive_kind": "runtime-source-process-record",
   "source_status": "bytecode-verified-reconstruction",
   "base_source_commit": "2f6ca5445a9dd1b6287c7dcb9bbcf0b10a25223e",
-  "original_build_batch": "2.3.0-20261024-105253",
+  "original_build_batch": "2.3.1-20261024-210302",
   "package": {
-    "filename": "EduGate-Standalone-2.3.0-windows-x64.zip",
-    "sha256": "4b75c6216f2dc58fbf5ebe08d6c5edea22cb2743e55c97a2f3593ca203ed1944",
-    "bytes": 261181017,
-    "program_file_count": 1861
+    "filename": "EduGate-Standalone-2.3.1-windows-x64.zip",
+    "sha256": "15dbf6a974c73dace7e44c509232d7b1cfd71445b7a7f8237bd8f1e685bc9d0e",
+    "bytes": 261188849,
+    "program_file_count": 1863
   },
   "application_modules": {
     "app": {
@@ -168,11 +168,19 @@
     },
     "frontend/admin.html": {
       "archive_path": "_internal/frontend/admin.html",
-      "sha256": "271ba8b4f8cf0932856ef7ba4ce2d53328ada6cc32b2716a43bede007aa87f5b"
+      "sha256": "549d746dab319688be1fe132cc1441b115f325117c18371ed20474daa0c79e6f"
     },
     "frontend/assets/admin-settings.css": {
       "archive_path": "_internal/frontend/assets/admin-settings.css",
-      "sha256": "769ecafbb48d3c414497dfa0e03fa743e631a2d38fcc733d9f9f0aabd3b3f27f"
+      "sha256": "45d5e300d1d4b555e86046885272ec613cc854b44dba6255317c9e8b0b0e469c"
+    },
+    "frontend/assets/admin-theme.css": {
+      "archive_path": "_internal/frontend/assets/admin-theme.css",
+      "sha256": "64266622c27e891aa9d8b2fb669fc4326969634a9b70413090aa417aa6b3f90b"
+    },
+    "frontend/assets/admin-workspaces.js": {
+      "archive_path": "_internal/frontend/assets/admin-workspaces.js",
+      "sha256": "69a13e9a6b73b601ceef00f8e26b4fd195689ae3598f2285857ca18407fbe1c0"
     },
     "frontend/assets/brand/edugate-icon-1024.png": {
       "archive_path": "_internal/frontend/assets/brand/edugate-icon-1024.png",
@@ -336,7 +344,7 @@
     },
     "frontend/assets/knowledge-admin.js": {
       "archive_path": "_internal/frontend/assets/knowledge-admin.js",
-      "sha256": "0e0d942526b05c640dbb4e23ac1a5f56db17661db4f1b9d69a4d59e36d5ede7d"
+      "sha256": "ba7db31328991842d415557563a6d5241676b53387944b0e06858d03bed51a3d"
     },
     "frontend/assets/knowledge.css": {
       "archive_path": "_internal/frontend/assets/knowledge.css",
@@ -416,7 +424,7 @@
     },
     "README.txt": {
       "archive_path": "README.txt",
-      "sha256": "8dbc7e3a90e117002686903988141776dba778d2712d284583e05dcaa0e74097"
+      "sha256": "94abf386f17de51e2b7e79333b30d0ddec74f6176807e78e7b569beb980f571f"
     }
   },
   "verification_scope": "Python 3.12 instructions, constants, names, flags and exception tables match; filenames and line-number debug metadata excluded.",
