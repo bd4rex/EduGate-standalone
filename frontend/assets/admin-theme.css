@@ -119,6 +119,7 @@ body { color: var(--ink); font-size: var(--text-body); line-height: 1.6; }
 .classroom-ai-settings .compact-setting-row .row-title { font-size: var(--text-body); }
 .compact-setting-body .field-caption { margin-bottom: 6px; }
 .compact-control-line { display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: start; gap: 12px; }
+.classroom-ai-settings .model-setting-row, .classroom-ai-settings .source-setting-row { flex-wrap: nowrap; }
 .classroom-ai-settings .compact-control-line .text-action { min-height: var(--control-height); margin-left: 0; width: 112px; justify-content: center; }
 .model-setting-row > .ui-icon, .source-setting-row > .ui-icon { align-self: flex-start; margin-top: calc(27px + (var(--control-height) - 27px) / 2); }
 .advanced-policy-link summary strong { font-size: var(--text-body); font-weight: 600; }
