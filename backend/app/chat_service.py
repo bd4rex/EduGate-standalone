@@ -827,7 +827,7 @@ def _chat_response_content(response: dict[str, Any] | None) -> str:
 def _record_classroom_turn(
     *,
     teacher_id: str | None,
-    student: StudentIdentity,
+    student: StudentIdentity | None,
     kind: str,
     input_content: str,
     output_content: str,
@@ -836,7 +836,7 @@ def _record_classroom_turn(
     queue_wait_ms: int | None = None,
     timed_out: bool | None = None,
 ) -> None:
-    if not state.settings.classroom_recording_enabled or not teacher_id or not student.student_id:
+    if student is None or not state.settings.classroom_recording_enabled or not teacher_id or not student.student_id:
         return
     try:
         state.business_db.record_classroom_turn(

@@ -1,14 +1,14 @@
 {
-  "version": "2.3.2",
+  "version": "2.4.0",
   "recorded_on": "2026-10-25",
   "archive_kind": "runtime-source-process-record",
-  "source_status": "bytecode-verified-reconstruction",
+  "source_status": "published-source",
   "base_source_commit": "2f6ca5445a9dd1b6287c7dcb9bbcf0b10a25223e",
-  "original_build_batch": "2.3.2-20261025-091049",
+  "original_build_batch": "2.4.0-20261025-094148",
   "package": {
-    "filename": "EduGate-Standalone-2.3.2-windows-x64.zip",
-    "sha256": "0c178386cf550034c346ed83098dcb37011fe1455551d21e3ab1503f36821873",
-    "bytes": 261193227,
+    "filename": "EduGate-Standalone-2.4.0-windows-x64.zip",
+    "sha256": "03b21c9c6ab0b5c07faa88bb3a3882a0497be7be06ff009f651c15ad4db2d928",
+    "bytes": 261195135,
     "program_file_count": 1863
   },
   "application_modules": {
@@ -18,11 +18,11 @@
     },
     "app.api_docs": {
       "source_file": "backend/app/api_docs.py",
-      "fingerprint": "f793dedc05029b765968b6cacfb4a8c349da1ac5403f4902fdb8b1992d8fe0fc"
+      "fingerprint": "610d6b0609bf56b6473a2169f8da5edaa8921be572fd5be709daac560d826139"
     },
     "app.chat_service": {
       "source_file": "backend/app/chat_service.py",
-      "fingerprint": "1a940882849c4b72e55820439de0ef49febd208473db2965e05d92c6cabfe063"
+      "fingerprint": "447ff0eec162505d1c5c140ff77fdecdab5034841433b2a312721414583d49cc"
     },
     "app.classroom_tasks": {
       "source_file": "backend/app/classroom_tasks.py",
@@ -66,7 +66,7 @@
     },
     "app.main": {
       "source_file": "backend/app/main.py",
-      "fingerprint": "9fa23e1b5405316e10515d4025f072e4cbbb2f489c8abb5fa50e2f565a08cd66"
+      "fingerprint": "15c3f8de6dc06a055d17ba65b11a1039607d7243b50ba3e4452b45d022cf0d8a"
     },
     "app.network": {
       "source_file": "backend/app/network.py",
@@ -94,7 +94,7 @@
     },
     "app.routers.chat": {
       "source_file": "backend/app/routers/chat.py",
-      "fingerprint": "0a2662c2c6d4aef840d421fcc9b03919a603cb3cac36bcd57def67835ac1fc5f"
+      "fingerprint": "b5d4f384a48ca71abd8528afa3c139c731da83a867170103c802ef06b49ec4b3"
     },
     "app.routers.classroom": {
       "source_file": "backend/app/routers/classroom.py",
@@ -168,7 +168,7 @@
     },
     "frontend/admin.html": {
       "archive_path": "_internal/frontend/admin.html",
-      "sha256": "c09af21504b96abd03a7388f649b94a8f6185bc8516334b2267b35841c841afa"
+      "sha256": "905716141ab5d99a2260fac8b4b029b4fad3fff94aa8ec5e1dac5f098f3fe45b"
     },
     "frontend/assets/admin-settings.css": {
       "archive_path": "_internal/frontend/assets/admin-settings.css",
@@ -176,7 +176,7 @@
     },
     "frontend/assets/admin-theme.css": {
       "archive_path": "_internal/frontend/assets/admin-theme.css",
-      "sha256": "c0c4d92c742a925dee83c4b2b96612169019aa6bcee7b61fd083bae721bdf26b"
+      "sha256": "dd8a20bb812d2fd51e7e00db6eafe030d1ff688d51f56bb8dbc02fce4550de3d"
     },
     "frontend/assets/admin-workspaces.js": {
       "archive_path": "_internal/frontend/assets/admin-workspaces.js",
@@ -344,7 +344,7 @@
     },
     "frontend/assets/knowledge-admin.js": {
       "archive_path": "_internal/frontend/assets/knowledge-admin.js",
-      "sha256": "b679b542fffe744e7a4158709a878a8ff4bd6c06f696511a3575d7e077333712"
+      "sha256": "f06a0d9609241bbcd72fcdcb71b82330d020b4a2bab93b90d3cf4a648c7837f3"
     },
     "frontend/assets/knowledge.css": {
       "archive_path": "_internal/frontend/assets/knowledge.css",
@@ -424,7 +424,7 @@
     },
     "README.txt": {
       "archive_path": "README.txt",
-      "sha256": "fe96fb662e5fa0286b92ceb762a7132ad6deb3057a71bbe1db36bdaac08d494f"
+      "sha256": "ff3ee3b4c4cec537b15875f8e1fd7d938b65e38977f0037ee5643a94931550e4"
     }
   },
   "verification_scope": "Python 3.12 instructions, constants, names, flags and exception tables match; filenames and line-number debug metadata excluded.",

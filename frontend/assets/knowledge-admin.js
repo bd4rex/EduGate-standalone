@@ -8,6 +8,7 @@
   let policyLoaded = false, policyDirty = false, savedPolicy = null, policyVersion = 0, policyLoad = 0;
   let scopeSaving = false, policySaving = false, searching = false, searchVersion = 0, resultContext = "";
   let scopeError = "", policyError = "";
+  let trialHistory = [], busyKind = "";
   const policyFields = ["knowledge-blacklist-enabled", "knowledge-blacklist-topics", "knowledge-blacklist-message"];
 
   function normalizedScope(scope = {}) {
@@ -16,31 +17,42 @@
 
   function currentContext() {
     const scenario = host.scenario();
-    return JSON.stringify([scenario?.knowledge_source_id, normalizedScope(scenario?.knowledge_scope), savedPolicy]);
+    return JSON.stringify([scenario, savedPolicy]);
   }
 
   function clearTrial() {
     searchVersion += 1;
     resultContext = "";
-    byId("knowledge-search-results").innerHTML = '<div class="trial-empty"><span class="ui-icon icon-circle-check" aria-hidden="true"></span><strong>准备好后，试问一个课堂问题</strong><p>这里会分别显示黑名单检查与资料检索结果。</p></div>';
+    trialHistory = [];
+    byId("knowledge-search-results").innerHTML = '<div class="trial-empty"><span class="ui-icon icon-message" aria-hidden="true"></span><strong>试问一个课堂问题，查看学生会收到的回答</strong><p>回答、检查结果和引用依据会显示在这里。</p></div>';
+    byId("knowledge-evidence-results").textContent = "";
+    byId("knowledge-trial-status").textContent = "";
+    byId("knowledge-trial-round").textContent = "新一轮试问";
   }
 
   function renderTrialContext() {
+    if (resultContext && resultContext !== currentContext()) clearTrial();
     const scenario = host.scenario(), scope = scenario?.knowledge_scope || {}, source = host.sources().find((item) => item.id === scenario?.knowledge_source_id);
-    byId("knowledge-trial-source").textContent = source?.name || "尚未选择课堂知识库";
+    byId("knowledge-trial-source").textContent = source?.name || "未挂载课堂资料";
     const labels = {subject:"学科", grade:"年级", edition:"版本", term:"学期", chapter:"章节"};
     const filters = fields.filter((key) => scope[key]).map((key) => `${labels[key]}：${scope[key]}`);
-    byId("knowledge-trial-scope").textContent = [scope.file_ids?.length ? `已选 ${scope.file_ids.length} 个文件` : "不限文件", ...filters].join(" · ");
+    byId("knowledge-trial-scope").textContent = source ? [scope.file_ids?.length ? `已选 ${scope.file_ids.length} 个文件` : "不限文件", ...filters].join(" · ") : scenario?.knowledge_strict ? "严格依据模式下将提示资料不足" : "当前允许使用通用知识";
     byId("knowledge-trial-policy").textContent = !policyLoaded ? "等待规则读取" : savedPolicy?.enabled ? (savedPolicy.topics.length ? `已启用 ${savedPolicy.topics.length} 个禁答话题` : "已开启，尚无禁答话题") : "未启用禁答话题";
-    const pending = [dirty ? "课堂范围" : "", policyDirty ? "黑名单" : ""].filter(Boolean);
+    const strategyDirty = Boolean(host.strategyDirty?.());
+    const pending = [dirty ? "课堂范围" : "", policyDirty ? "黑名单" : "", strategyDirty ? "教学策略" : ""].filter(Boolean);
     const notice = byId("knowledge-trial-notice");
-    notice.hidden = !pending.length && Boolean(source) && policyLoaded;
-    notice.textContent = pending.length ? `${pending.join("和")}有未保存的修改。请先${dirty ? "到“课堂范围”应用设置" : "保存黑名单"}${dirty && policyDirty ? "，并保存左侧黑名单" : ""}，再统一试问。`
-      : !source ? "请先到“课堂范围”选择知识库并应用设置。" : "请先读取黑名单规则后再试问。";
-    byId("knowledge-search").disabled = searching || scopeSaving || policySaving || !host.authenticated() || !source || !policyLoaded || Boolean(pending.length);
-    byId("knowledge-search").textContent = searching ? "正在检查…" : "开始试问";
+    notice.hidden = !pending.length && policyLoaded;
+    const steps = [dirty ? "到“课堂范围”应用设置" : "", policyDirty ? "保存左侧黑名单" : "", strategyDirty ? "到“控制”保存教学策略" : ""].filter(Boolean);
+    notice.textContent = pending.length ? `${pending.join("和")}有未保存的修改。请先${steps.join("，")}，再试问。` : "请先读取黑名单规则后再试问。";
+    const unavailable = searching || scopeSaving || policySaving || !host.authenticated() || !policyLoaded || Boolean(pending.length);
+    byId("knowledge-search").disabled = unavailable || trialHistory.length >= 20;
+    byId("knowledge-search-evidence").disabled = unavailable || !source;
+    byId("knowledge-search").textContent = searching && busyKind === "answer" ? "正在生成并检查…" : trialHistory.length ? "继续追问" : "生成试问回答";
     byId("knowledge-search").setAttribute("aria-busy", String(searching));
-    if (resultContext && resultContext !== currentContext()) clearTrial();
+    byId("knowledge-trial-reset").disabled = searching;
+    byId("knowledge-question").disabled = searching;
+    byId("knowledge-trial-round").textContent = trialHistory.length ? `已完成 ${trialHistory.length / 2} 轮 / 最多 10 轮` : "新一轮试问";
+    byId("knowledge-trial-model").textContent = `当前模型：${scenario?.model || "未配置"} · ${scenario?.knowledge_strict ? "仅依据课堂资料" : "可使用通用知识"} · 使用已保存的教学策略`;
   }
 
   function renderScopeState() {
@@ -155,13 +167,14 @@
     } catch (error) { host.toast(error.message, true); }
   }
 
-  async function search() {
-    if (searching || dirty || policyDirty || scopeSaving || policySaving || !policyLoaded) { renderTrialContext(); return; }
+  async function searchEvidence() {
+    if (searching || dirty || policyDirty || host.strategyDirty?.() || scopeSaving || policySaving || !policyLoaded) { renderTrialContext(); return; }
     const query = byId("knowledge-question").value.trim();
     if (!query) { host.toast("请输入一个学生可能提出的问题。", true); byId("knowledge-question").focus(); return; }
     searching = true;
+    busyKind = "evidence";
     const version = ++searchVersion;
-    const results = byId("knowledge-search-results");
+    const results = byId("knowledge-evidence-results");
     results.setAttribute("aria-busy", "true");
     results.textContent = "正在读取已保存设置、检查黑名单并查找资料…";
     renderTrialContext();
@@ -193,7 +206,64 @@
         results.querySelector(".trial-hit-list").append(card);
       });
     } catch (error) { if (version === searchVersion) results.textContent = `试问未完成：${error.message}`; }
-    finally { searching = false; results.setAttribute("aria-busy", "false"); renderTrialContext(); }
+    finally { searching = false; busyKind = ""; results.setAttribute("aria-busy", "false"); renderTrialContext(); }
+  }
+
+  function appendTrialAnswer(query, response) {
+    const results = byId("knowledge-search-results"), info = response.edugate_trial;
+    const knowledge = response.edugate_knowledge || {}, sources = knowledge.sources || [];
+    const hitCount = knowledge.retrieval?.hit_count ?? sources.length;
+    const stage = (label, title, outcome) => `<div class="trial-stage" data-outcome="${outcome}"><span>${label}</span><strong>${escape(title)}</strong></div>`;
+    const policy = info.question_policy;
+    const questionLabel = policy === "blocked" ? `命中：${info.question_topic || "禁答话题"}` : policy === "unavailable" ? "检查暂不可用" : policy === "allowed" ? "已通过" : "未启用禁答话题";
+    const decisions = {supported:"资料依据核对通过", assisted: hitCount ? `检索到 ${hitCount} 个资料片段` : "无资料命中，允许通用知识", no_evidence:"未找到资料依据", insufficient_evidence:"资料不足以回答", evidence_check_unavailable:"依据核对暂不可用", local_reply:"课堂范围说明", blocked_topic:"未继续检索或引用", policy_check_unavailable:"未执行"};
+    const answerLabel = !info.generation_requested ? "课堂提示 / 拒答" : info.answer_policy === "blocked" ? "回答已被拦截" : info.answer_policy === "unavailable" ? "回答检查未通过" : info.answer_policy_checked ? "回答与引用已通过" : "回答已生成";
+    const article = document.createElement("details");
+    article.className = "trial-conversation-turn"; article.open = true;
+    article.innerHTML = `<summary>第 ${trialHistory.length / 2 + 1} 轮 · ${escape(query)}</summary><div class="trial-stage-row trial-answer-stages">${stage("1 · 提问黑名单",questionLabel,policy === "allowed" ? "pass" : ["blocked","unavailable"].includes(policy) ? "warning" : "idle")}${stage("2 · 课堂资料依据",decisions[info.retrieval_decision] || "未检索",["supported","assisted"].includes(info.retrieval_decision) ? "pass" : "warning")}${stage("3 · 最终回答",answerLabel,info.generation_requested && !["blocked","unavailable"].includes(info.answer_policy) ? "pass" : "warning")}</div><h3>学生会收到的回答</h3><div class="trial-answer-text">${escape(info.answer)}</div><p class="trial-result-note">${escape(info.model)} · ${escape(info.elapsed_ms)} ms · 教师试问，不计入学生记录</p><div class="trial-answer-sources"></div>`;
+    for (const source of sources) {
+      const detail = document.createElement("details"); detail.className = "knowledge-result";
+      detail.innerHTML = `<summary><strong>[${escape(source.id)}] ${escape(source.filename)}</strong></summary><p class="hint">${escape(source.chapter || "正文")}${source.page ? ` · 第 ${source.page} 页/张` : ""}</p><pre>${escape(source.text)}</pre>`;
+      article.querySelector(".trial-answer-sources").append(detail);
+    }
+    if (!trialHistory.length) results.replaceChildren();
+    results.querySelectorAll(".trial-conversation-turn").forEach((turn) => { turn.open = false; });
+    results.append(article);
+  }
+
+  async function generateTrial() {
+    if (searching || dirty || policyDirty || host.strategyDirty?.() || scopeSaving || policySaving || !policyLoaded || trialHistory.length >= 20) { renderTrialContext(); return; }
+    const query = byId("knowledge-question").value.trim();
+    if (!query) { host.toast("请输入一个学生可能提出的问题。", true); byId("knowledge-question").focus(); return; }
+    searching = true; busyKind = "answer";
+    const version = ++searchVersion, status = byId("knowledge-trial-status");
+    status.classList.remove("knowledge-warning");
+    status.textContent = "正在检查课堂规则并生成回答；完整检查后显示结果…";
+    byId("knowledge-search-results").setAttribute("aria-busy", "true");
+    renderTrialContext();
+    try {
+      await host.refresh(); await loadPolicy();
+      if (version !== searchVersion || dirty || policyDirty || host.strategyDirty?.()) return;
+      const context = currentContext();
+      const response = await host.request("/admin/classroom/trial", {method:"POST", body:JSON.stringify({messages:[...trialHistory,{role:"user",content:query}]})});
+      if (version !== searchVersion || context !== currentContext()) return;
+      if (!response.edugate_trial?.answer?.trim()) throw new Error("模型未返回可显示的文本回答，请检查模型服务后重试。");
+      appendTrialAnswer(query, response);
+      trialHistory.push({role:"user",content:query},{role:"assistant",content:response.edugate_trial.answer});
+      resultContext = context;
+      byId("knowledge-question").value = "";
+      byId("knowledge-question").placeholder = "可以继续追问；测试另一个问题时可点击“新一轮试问”。";
+      status.textContent = trialHistory.length >= 20 ? "本轮已完成 10 次提问，请点击“新一轮试问”继续。" : ["blocked_topic","policy_check_unavailable","no_evidence","insufficient_evidence","evidence_check_unavailable"].includes(response.edugate_trial.final_decision) ? "本次试问返回课堂提示或拒答，可核对规则后开始新一轮。" : "回答已完成，可以继续追问或开始新一轮试问。";
+    } catch (error) {
+      if (version === searchVersion) {
+        status.classList.add("knowledge-warning");
+        status.textContent = error.message.includes("AI service is disabled") ? "课堂 AI 当前已关闭，请到“控制”开启后再试问。" : `试问未完成：${error.message}`;
+      }
+    } finally {
+      searching = false; busyKind = "";
+      byId("knowledge-search-results").setAttribute("aria-busy", "false");
+      renderTrialContext();
+    }
   }
 
   function dialog(title) {
@@ -343,11 +413,17 @@
   byId("knowledge-prepare").onclick = () => startJob("prepare");
   byId("knowledge-reindex").onclick = () => startJob("reindex");
   byId("knowledge-refresh").onclick = refreshStatus;
-  byId("knowledge-search").onclick = search;
-  byId("knowledge-question").addEventListener("input", clearTrial);
-  byId("knowledge-search-mode").addEventListener("change", clearTrial);
+  byId("knowledge-search").onclick = generateTrial;
+  byId("knowledge-search-evidence").onclick = searchEvidence;
+  byId("knowledge-trial-reset").onclick = () => {
+    clearTrial(); byId("knowledge-question").value = "";
+    byId("knowledge-question").placeholder = "例如：为什么教室里的电脑有不同的 IP 地址？";
+    renderTrialContext(); byId("knowledge-question").focus();
+  };
+  byId("knowledge-question").addEventListener("input", () => { byId("knowledge-evidence-results").textContent = ""; });
+  byId("knowledge-search-mode").addEventListener("change", () => { byId("knowledge-evidence-results").textContent = ""; });
   byId("knowledge-question").addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && !event.isComposing) { event.preventDefault(); search(); }
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey) && !event.isComposing) { event.preventDefault(); generateTrial(); }
   });
   byId("file-list").addEventListener("click", (event) => {
     const previewButton = event.target.closest("[data-knowledge-preview]");
@@ -356,6 +432,7 @@
     if (editButton) editMetadata(editButton.dataset.knowledgeMetadata);
   });
   window.addEventListener("edugate:knowledge-data", renderScope);
+  window.addEventListener("edugate:strategy-draft-change", renderTrialContext);
   window.addEventListener("edugate:resource-panel-change", () => refreshStatus());
   window.addEventListener("edugate:tab-change", (event) => { if (event.detail === "settings") refreshStatus(); });
   window.addEventListener("beforeunload", (event) => {

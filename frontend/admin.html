@@ -1091,9 +1091,9 @@
     }
   </style>
   <link rel="stylesheet" href="assets/edugate-select.css" />
-  <link rel="stylesheet" href="assets/admin-settings.css?v=20261025-resources1" />
+  <link rel="stylesheet" href="assets/admin-settings.css?v=20261025-trial1" />
   <link rel="stylesheet" href="assets/knowledge.css" />
-  <link rel="stylesheet" href="assets/admin-theme.css?v=20261025-resources1" />
+  <link rel="stylesheet" href="assets/admin-theme.css?v=20261025-trial1" />
 </head>
 <body>
   <div class="shell">
@@ -1389,18 +1389,20 @@
         </section>
 
         <section class="section knowledge-trial resource-form-card" id="knowledge-trial">
-          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-circle-check" aria-hidden="true"></span><span>课堂规则试问</span></h2><span class="badge">统一验证</span></div>
-          <p class="hint resource-card-intro">模拟学生提问，先检查黑名单，再查找本课范围内的资料。</p>
+          <div class="section-title"><h2 class="section-icon-title"><span class="ui-icon icon-message" aria-hidden="true"></span><span>课堂 AI 试问</span></h2><span class="badge">完整回答</span></div>
+          <p class="hint resource-card-intro">按学生回答流程生成回复，同时检查资料范围、黑名单和最终引用。</p>
           <div class="trial-context">
             <div><div class="resource-field-heading"><span class="field-label">已应用的资料范围</span><button class="text-action" id="knowledge-edit-scope" type="button">调整范围</button></div><strong id="knowledge-trial-source">正在读取…</strong><p class="hint" id="knowledge-trial-scope"></p></div>
             <div><span class="field-label">已保存的黑名单</span><strong id="knowledge-trial-policy">正在读取…</strong><p class="hint">与学生新提问使用相同规则</p></div>
           </div>
           <div class="trial-notice" id="knowledge-trial-notice" role="status" hidden></div>
           <label>模拟学生提问<textarea id="knowledge-question" rows="3" placeholder="例如：为什么教室里的电脑有不同的 IP 地址？" maxlength="4000" aria-describedby="knowledge-trial-help"></textarea></label>
-          <div class="trial-actions"><span class="hint">Ctrl / ⌘ + Enter 快速试问</span><button class="button primary" id="knowledge-search" type="button" disabled>开始试问</button></div>
-          <details class="resource-help trial-advanced"><summary>检索对照选项</summary><label>检索方式<select id="knowledge-search-mode"><option value="hybrid">混合检索（默认）</option><option value="keyword">仅关键词（对照）</option><option value="vector">仅语义（对照）</option></select></label></details>
-          <p class="hint" id="knowledge-trial-help">使用已保存的课堂范围和黑名单，不会自动保存修改，也不生成 AI 回答。找到片段不代表足以回答问题。</p>
-          <div class="trial-results" id="knowledge-search-results" role="region" aria-label="课堂规则试问结果" aria-live="polite" aria-busy="false"><div class="trial-empty"><span class="ui-icon icon-circle-check" aria-hidden="true"></span><strong>准备好后，试问一个课堂问题</strong><p>这里会分别显示黑名单检查与资料检索结果。</p></div></div>
+          <div class="trial-actions"><span class="hint" id="knowledge-trial-round">新一轮试问</span><div class="actions"><button class="button ghost" id="knowledge-trial-reset" type="button">新一轮试问</button><button class="button primary" id="knowledge-search" type="button" disabled>生成试问回答</button></div></div>
+          <p class="hint" id="knowledge-trial-model"></p>
+          <p class="hint" id="knowledge-trial-help">使用已保存的模型与教学策略，可连续追问；Ctrl / ⌘ + Enter 发送。无需开启学生课堂，不计入学生记录。修改设置会清空本页试问上下文。</p>
+          <p class="hint" id="knowledge-trial-status" role="status"></p>
+          <div class="trial-results" id="knowledge-search-results" role="region" aria-label="课堂 AI 试问结果" aria-live="polite" aria-busy="false"><div class="trial-empty"><span class="ui-icon icon-message" aria-hidden="true"></span><strong>试问一个课堂问题，查看学生会收到的回答</strong><p>回答、检查结果和引用依据会显示在这里。</p></div></div>
+          <details class="resource-help trial-advanced"><summary>仅检查资料检索（对照）</summary><p class="hint">此处不生成回答，也不影响上方对话。完整试问始终使用学生端的正常检索流程。</p><div class="trial-evidence-controls"><label>检索方式<select id="knowledge-search-mode"><option value="hybrid">混合检索（默认）</option><option value="keyword">仅关键词（对照）</option><option value="vector">仅语义（对照）</option></select></label><button class="button ghost" id="knowledge-search-evidence" type="button">仅检索资料</button></div><div id="knowledge-evidence-results" role="region" aria-label="资料检索对照结果" aria-live="polite"></div></details>
         </section>
 
         <section class="section resource-files-section">
@@ -1668,7 +1670,7 @@
       <section class="section" id="portable-operation" role="status" aria-live="polite" tabindex="-1" hidden></section>
       <div class="footer-note">
         <span>教师控制台仅在本机自动进入；学生设备只能打开课堂页面。</span>
-        <span>v2.3.2 · 单教师便携课堂版 · 2026.10.25</span>
+        <span>v2.4.0 · 单教师便携课堂版 · 2026.10.25</span>
       </div>
     </main>
   </div>
@@ -3222,6 +3224,7 @@
       const button = document.querySelector("#save-scenario");
       button.disabled = state.strategySaving || !state.adminToken;
       button.setAttribute("aria-busy", String(state.strategySaving));
+      window.dispatchEvent(new CustomEvent("edugate:strategy-draft-change"));
     }
 
     function markStrategyDraft() {
@@ -4123,6 +4126,7 @@
     setInterval(refreshClassroomStatus, 5000);
     window.EduGateKnowledgeAdmin = {
       request, toast: showToast, scenario: currentScenario,
+      strategyDirty: () => state.strategyDirty,
       files: () => state.files, sources: () => state.sources,
       authenticated: () => Boolean(state.adminToken),
       refresh: async () => { await Promise.all([loadConfig(), loadFiles(), loadSources()]); },
@@ -4135,7 +4139,7 @@
     window.addEventListener("DOMContentLoaded", boot, { once: true });
   </script>
   <script src="assets/edugate-select.js"></script>
-  <script src="assets/admin-workspaces.js?v=20261025-resources1"></script>
-  <script src="assets/knowledge-admin.js?v=20261025-resources1"></script>
+  <script src="assets/admin-workspaces.js?v=20261025-trial1"></script>
+  <script src="assets/knowledge-admin.js?v=20261025-trial1"></script>
 </body>
 </html>

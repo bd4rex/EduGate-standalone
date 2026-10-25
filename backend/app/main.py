@@ -57,7 +57,7 @@ app = FastAPI(
     title="EduGate API",
     summary="EduGate 单机课堂 API",
     description="教师在本机管理课堂，学生凭课堂链接加入，所有管理接口均要求教师会话。",
-    version="2.2.0",
+    version="2.4.0",
     lifespan=core.lifespan,
     openapi_tags=OPENAPI_TAGS,
 )
