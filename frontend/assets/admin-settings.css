@@ -1,0 +1,65 @@
+/* Settings use a readable, consistent scale whether a panel is expanded or closed. */
+#system-view > .section:has(> details) { padding: 4px 18px; }
+#system-view .collapsible-panel > summary {
+  display: flex; align-items: center; gap: 10px; min-height: 48px;
+  padding: 10px 0; font-size: 15px; list-style: none; cursor: pointer;
+}
+#system-view .collapsible-panel > summary::-webkit-details-marker { display: none; }
+#system-view .collapsible-panel > summary::before {
+  content: ""; width: 8px; height: 8px; flex: 0 0 8px;
+  border-right: 2px solid #7183a0; border-bottom: 2px solid #7183a0;
+  transform: rotate(-45deg); transition: transform .15s;
+}
+#system-view .collapsible-panel[open] > summary::before { transform: translateY(-2px) rotate(45deg); }
+#system-view .collapsible-panel[open] > summary { margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+#system-view .collapsible-panel[open] { padding-bottom: 14px; }
+#system-view #downstream-api-panel > summary,
+#system-view #model-api-panel > summary,
+#system-view #teaching-page-panel > summary,
+#system-view #advanced-settings-panel > summary,
+#system-view #system-log-panel > summary,
+#system-view #backup-panel > summary { min-height: 48px; }
+#system-view .hint, #system-view label, #system-view .field-label { font-size: 12px; line-height: 1.6; }
+#system-view input, #system-view #model-api-panel input { min-height: 36px; height: auto; padding: 7px 10px; font-size: 13px; border-radius: 8px; }
+#system-view .button, #system-view #model-api-panel .provider-actions .button { min-height: 34px; font-size: 12px; padding: 6px 11px; }
+#system-view #downstream-api-panel .integration-grid { gap: 16px; align-items: start; }
+#system-view #downstream-api-panel .integration-card { padding: 16px; }
+#system-view #downstream-api-panel .integration-card-head { margin-bottom: 14px; flex-wrap: wrap; }
+#system-view #downstream-api-panel .integration-card h3 { font-size: 15px; }
+#system-view #downstream-api-panel .badge { min-height: 23px; font-size: 11px; }
+#system-view #downstream-api-panel .integration-fields { gap: 12px; grid-template-columns: minmax(0, 1fr) 100px; }
+#system-view #downstream-api-panel .integration-key-row { grid-template-columns: 1fr; gap: 8px; }
+.key-input-wrap { display: flex; align-items: stretch; gap: 7px; }
+.key-input-wrap input { font-family: Consolas, monospace; flex: 1; min-width: 0; letter-spacing: .3px; }
+.key-input-wrap button { flex: 0 0 auto; }
+#system-view #downstream-api-panel .integration-note { font-size: 12px; line-height: 1.65; margin-top: 12px; }
+#system-view #downstream-api-panel .integration-code { font-size: 11px; line-height: 1.65; min-height: 0; max-height: 260px; padding: 12px; }
+.integration-help { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.integration-help > summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 5px 0; }
+.integration-help .hint { margin: 8px 0; }
+.integration-help label + button { margin-top: 8px; }
+#system-view #model-api-panel .provider-picker { margin-bottom: 12px; }
+#system-view #model-api-panel .upstream-provider-heading { padding: 10px 14px; }
+#system-view #model-api-panel .upstream-provider-heading h3 { font-size: 14px; }
+#system-view #model-api-panel .upstream-provider-body { padding: 14px; }
+#system-view #model-api-panel .provider-form-grid { gap: 10px 14px; }
+#system-view #model-api-panel .api-endpoint-preview { font-size: 11px; line-height: 1.5; margin: 0; }
+#system-view #model-api-panel .provider-actions { margin-top: 14px; }
+#system-view #model-api-panel .provider-actions + .hint { margin-top: 10px; line-height: 1.65; }
+#config-storage-note { overflow-wrap: anywhere; }
+#system-view #model-api-panel .imported-models { margin-top: 16px; }
+#system-view #model-api-panel .catalog-model-row { min-height: 52px; padding: 8px 10px; line-height: 1.5; }
+#system-view #model-api-panel .catalog-model-id { font-size: 12px; }
+#system-view #advanced-settings-panel .setting-list { gap: 10px 18px; }
+#system-view #advanced-settings-panel .setting-list label { line-height: 1.5; }
+#system-view #advanced-settings-panel .setting-list input:not([type="checkbox"]) { min-height: 34px; height: auto; }
+#system-view #backup-panel .stack { gap: 10px; }
+#system-view #backup-panel .hint { line-height: 1.6; margin-top: 4px; }
+#system-view .log-view { font-size: 11px; line-height: 1.6; }
+#system-view .system-log-group + .system-log-group { margin-top: 20px; }
+#system-view .system-log-group .section-title { flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+#system-view .system-log-group h3 { margin: 0; font-size: 14px; }
+#system-view #request-log-list { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
+#system-view #request-log-list .row { min-height: 48px; padding: 10px 14px; }
+#system-view #request-log-list:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (max-width: 1100px) { #system-view #downstream-api-panel .integration-grid { grid-template-columns: 1fr; } }

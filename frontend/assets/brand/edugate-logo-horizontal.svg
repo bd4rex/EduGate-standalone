@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420">
+  <defs>
+    <linearGradient id="gateGrad" x1="45" y1="50" x2="330" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(30,15) scale(.76)">
+    <path d="M358 88H196c-66.3 0-120 53.7-120 120v96c0 66.3 53.7 120 120 120h162"
+          fill="none" stroke="#0F172A" stroke-width="52" stroke-linecap="round"/>
+    <path d="M274 256h150" fill="none" stroke="url(#gateGrad)" stroke-width="52" stroke-linecap="round"/>
+    <circle cx="160" cy="190" r="18" fill="#2563EB"/>
+    <circle cx="160" cy="256" r="18" fill="#2563EB"/>
+    <circle cx="160" cy="322" r="18" fill="#2563EB"/>
+    <path d="M178 190L248 240M178 256H238M178 322L248 272"
+          fill="none" stroke="#93C5FD" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="264" cy="256" r="34" fill="#FFFFFF" stroke="#06B6D4" stroke-width="16"/>
+    <circle cx="264" cy="256" r="10" fill="#0F172A"/>
+  </g>
+
+  <text x="410" y="235" font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="150" font-weight="750" letter-spacing="-5">
+    <tspan fill="#0F172A">Edu</tspan><tspan fill="#2563EB">Gate</tspan>
+  </text>
+  <text x="420" y="305" font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="38" font-weight="500" fill="#64748B" letter-spacing="5">
+    LOCAL AI TEACHING GATEWAY
+  </text>
+</svg>

@@ -1,0 +1,428 @@
+{
+  "version": "2.3.0",
+  "recorded_on": "2026-10-25",
+  "archive_kind": "runtime-source-process-record",
+  "source_status": "bytecode-verified-reconstruction",
+  "base_source_commit": "2f6ca5445a9dd1b6287c7dcb9bbcf0b10a25223e",
+  "original_build_batch": "2.3.0-20261024-105253",
+  "package": {
+    "filename": "EduGate-Standalone-2.3.0-windows-x64.zip",
+    "sha256": "4b75c6216f2dc58fbf5ebe08d6c5edea22cb2743e55c97a2f3593ca203ed1944",
+    "bytes": 261181017,
+    "program_file_count": 1861
+  },
+  "application_modules": {
+    "app": {
+      "source_file": "backend/app/__init__.py",
+      "fingerprint": "61ad6b2590b4cb63c6d8fd003fd5926a15e7dd3bbcd6c81e21ee3ae171bab801"
+    },
+    "app.api_docs": {
+      "source_file": "backend/app/api_docs.py",
+      "fingerprint": "f793dedc05029b765968b6cacfb4a8c349da1ac5403f4902fdb8b1992d8fe0fc"
+    },
+    "app.chat_service": {
+      "source_file": "backend/app/chat_service.py",
+      "fingerprint": "1a940882849c4b72e55820439de0ef49febd208473db2965e05d92c6cabfe063"
+    },
+    "app.classroom_tasks": {
+      "source_file": "backend/app/classroom_tasks.py",
+      "fingerprint": "261752f1091736f6ba5991838c7108cccf50bb5fff12b11ce910898d9007856f"
+    },
+    "app.config": {
+      "source_file": "backend/app/config.py",
+      "fingerprint": "5f0ad95d08b3eac1b47cd94605af9bfbc05693aff4df450a5390ca69d19b2c9b"
+    },
+    "app.core": {
+      "source_file": "backend/app/core.py",
+      "fingerprint": "2a32aeeef4b70b5f64b3b430d81dedd800aed4676c9d44ec5fc17caba5f641d4"
+    },
+    "app.db": {
+      "source_file": "backend/app/db.py",
+      "fingerprint": "d1461404795059ecaba5b64e85d0dd4ab8db99efa5225633d6324fc02939ee9a"
+    },
+    "app.dependencies": {
+      "source_file": "backend/app/dependencies.py",
+      "fingerprint": "2fe8d4637bce78a55f062a7b1fa233485124d1b547228f25efa0ca62114f5436"
+    },
+    "app.knowledge": {
+      "source_file": "backend/app/knowledge.py",
+      "fingerprint": "4ff4a5900ecee7418663ade8e2dbef7d1b4cefe83a1c81a9649b672654001b48"
+    },
+    "app.knowledge_documents": {
+      "source_file": "backend/app/knowledge_documents.py",
+      "fingerprint": "29356a6217914e6c052a422ddded6a3f15a47aacf819e8c2e063eda3d1f7657d"
+    },
+    "app.knowledge_policy": {
+      "source_file": "backend/app/knowledge_policy.py",
+      "fingerprint": "af2ab2df8d99119f04d6ce31fc83f00fe5fd1d55a00a6f4871470bf9963d5621"
+    },
+    "app.knowledge_retrieval": {
+      "source_file": "backend/app/knowledge_retrieval.py",
+      "fingerprint": "17b00227d7792fca1ccf3832059d45b56b5f2d95c3b37e1d25e8d686f481b8e3"
+    },
+    "app.litellm_client": {
+      "source_file": "backend/app/litellm_client.py",
+      "fingerprint": "a345cfb27d4044230bd36b84c5caabc8b6c0048d3dd645f6759d60216a9f28f9"
+    },
+    "app.main": {
+      "source_file": "backend/app/main.py",
+      "fingerprint": "9fa23e1b5405316e10515d4025f072e4cbbb2f489c8abb5fa50e2f565a08cd66"
+    },
+    "app.network": {
+      "source_file": "backend/app/network.py",
+      "fingerprint": "30a9da08778450d449051ad561feffbf12ef6661fbfce233d72dc5ec8f0e0ddd"
+    },
+    "app.observability": {
+      "source_file": "backend/app/observability.py",
+      "fingerprint": "a6a59ba012d3938bcb4f94ee5f86ca079b5c07e7644ee4c795a5fe2da4f58cb0"
+    },
+    "app.portable": {
+      "source_file": "backend/app/portable.py",
+      "fingerprint": "92077a4cacdc9f5be4b89c7c836a36efd27c9b5df31d48a0db09d3c3c1a2a9a4"
+    },
+    "app.published_pages": {
+      "source_file": "backend/app/published_pages.py",
+      "fingerprint": "a6cdb7172fe1097e23e9df7d20d8611e043521de074d79e7051e89988b2afae8"
+    },
+    "app.routers": {
+      "source_file": "backend/app/routers/__init__.py",
+      "fingerprint": "75ea5f5c38a3e1d6564b4d1515917795aa96594b9e72b3035389dad1dc79ccaa"
+    },
+    "app.routers.auth": {
+      "source_file": "backend/app/routers/auth.py",
+      "fingerprint": "9ed68a7d9f443b872c02b3463d41364d2a23100d523777ecaa4b7246d740499e"
+    },
+    "app.routers.chat": {
+      "source_file": "backend/app/routers/chat.py",
+      "fingerprint": "0a2662c2c6d4aef840d421fcc9b03919a603cb3cac36bcd57def67835ac1fc5f"
+    },
+    "app.routers.classroom": {
+      "source_file": "backend/app/routers/classroom.py",
+      "fingerprint": "ef33e31f818a52ede012640147380e8bb4d772aca7b422419978db045770eb84"
+    },
+    "app.routers.config": {
+      "source_file": "backend/app/routers/config.py",
+      "fingerprint": "12ff4034eebac731394602df22591f12e4419732f06664cd789b68673b7e81e8"
+    },
+    "app.routers.knowledge": {
+      "source_file": "backend/app/routers/knowledge.py",
+      "fingerprint": "3266d8a4c50c814c3f68bfa96c475f76978c005bd2ee2007785243c341292b5c"
+    },
+    "app.routers.models": {
+      "source_file": "backend/app/routers/models.py",
+      "fingerprint": "8da6b586ab401339934b26638277a55ba1783c9b51d4346f220353a73a509839"
+    },
+    "app.routers.publishing": {
+      "source_file": "backend/app/routers/publishing.py",
+      "fingerprint": "671633a293384b9e0f8282a8a2fe6474bfc54af10e5d472c5ebe6ed1ac38b78d"
+    },
+    "app.routers.python": {
+      "source_file": "backend/app/routers/python.py",
+      "fingerprint": "1dde6c46f830de66a1a2d2a0547803108fcaaa838d534356a37ee3da2f63d197"
+    },
+    "app.routers.system": {
+      "source_file": "backend/app/routers/system.py",
+      "fingerprint": "5a20600cc47c4210415716ce398b691991da5f55d5ea5e9b6981a9d79a3951b7"
+    },
+    "app.runtime_config": {
+      "source_file": "backend/app/runtime_config.py",
+      "fingerprint": "3fbe5d5b9859ff78d1e0fc3bbf7e0893478a00cda6f649f7c1a31555a4d18e26"
+    },
+    "app.schemas": {
+      "source_file": "backend/app/schemas.py",
+      "fingerprint": "a92cfa2fde79075fb9e6f4508a063fdc745a89c800815fe7b3b7e3b8e4b1c9b4"
+    },
+    "app.secret_store": {
+      "source_file": "backend/app/secret_store.py",
+      "fingerprint": "475dd77c91079626d1aa7516968825d6c1a4a49df5e73d47803921f2dff76a09"
+    },
+    "app.security": {
+      "source_file": "backend/app/security.py",
+      "fingerprint": "b3b10eb4ee5821dc69b2c0145f3c9188f8bc981a8615026a17c14f05dd039846"
+    },
+    "app.state": {
+      "source_file": "backend/app/state.py",
+      "fingerprint": "77a08b7177a542cf7012201fd3c65cd32b31480141c7626ac259e0e9c051e432"
+    },
+    "app.system_control": {
+      "source_file": "backend/app/system_control.py",
+      "fingerprint": "0c219e31e440a219f0802d59deffcfcb9f53f5a5081d10bc464eb69a0bfa4bae"
+    },
+    "app.system_ops": {
+      "source_file": "backend/app/system_ops.py",
+      "fingerprint": "a956c49c14810fa83b2781e794378c6c48b1ede351fce2312cd13c0f8f6fe4a1"
+    }
+  },
+  "launcher": {
+    "source_file": "desktop/edugate_standalone.py",
+    "fingerprint": "98e3b65bcb10d565a71f1bec68525a565bbdb788d50df799ccb65ab62be5bfb8"
+  },
+  "exact_release_files": {
+    "backend/.env.example": {
+      "archive_path": "_internal/backend/.env.example",
+      "sha256": "6dd83e84fa574aab7436ce7a60d19790997581daff4031984463566a92deb4d2"
+    },
+    "desktop/portable_maintenance.ps1": {
+      "archive_path": "_internal/desktop/portable_maintenance.ps1",
+      "sha256": "a386ec89be2d4f86d74b0c6dbac6ca42a1990ec51ba05ca060e457ae822dadf8"
+    },
+    "frontend/admin.html": {
+      "archive_path": "_internal/frontend/admin.html",
+      "sha256": "271ba8b4f8cf0932856ef7ba4ce2d53328ada6cc32b2716a43bede007aa87f5b"
+    },
+    "frontend/assets/admin-settings.css": {
+      "archive_path": "_internal/frontend/assets/admin-settings.css",
+      "sha256": "769ecafbb48d3c414497dfa0e03fa743e631a2d38fcc733d9f9f0aabd3b3f27f"
+    },
+    "frontend/assets/brand/edugate-icon-1024.png": {
+      "archive_path": "_internal/frontend/assets/brand/edugate-icon-1024.png",
+      "sha256": "294294f573843df40401e3096b9022b14726ee4e345eb8ed3035f86d742d2dfc"
+    },
+    "frontend/assets/brand/edugate-icon-mono.svg": {
+      "archive_path": "_internal/frontend/assets/brand/edugate-icon-mono.svg",
+      "sha256": "6f02e31a61b8132876035e3e1bcf5a1f6ec15e2db03e99b25f6a7d0cffd8464f"
+    },
+    "frontend/assets/brand/edugate-icon.svg": {
+      "archive_path": "_internal/frontend/assets/brand/edugate-icon.svg",
+      "sha256": "b6cc74112813707c4b79dafd47e4540c08b6af37fa13b199986a5c714346e9b5"
+    },
+    "frontend/assets/brand/edugate-logo-horizontal.png": {
+      "archive_path": "_internal/frontend/assets/brand/edugate-logo-horizontal.png",
+      "sha256": "5f8ca39977e15ca2d1f6578d464f2e184955d56ccca992f4bc3e605e31044473"
+    },
+    "frontend/assets/brand/edugate-logo-horizontal.svg": {
+      "archive_path": "_internal/frontend/assets/brand/edugate-logo-horizontal.svg",
+      "sha256": "6b2bb15b0f70fe54e5687e01d6a6e3093aba837587bc19e2a7f43b6ec097fb51"
+    },
+    "frontend/assets/edugate-client.js": {
+      "archive_path": "_internal/frontend/assets/edugate-client.js",
+      "sha256": "287d10c62389fb0dd6fd613ce475553aafac0b954722ce3a394f4f845d51f5b8"
+    },
+    "frontend/assets/edugate-python.js": {
+      "archive_path": "_internal/frontend/assets/edugate-python.js",
+      "sha256": "95966661157a335f52bd1c1210eadbd73b542f21c15878aa159a20b7d30e1e4e"
+    },
+    "frontend/assets/edugate-select.css": {
+      "archive_path": "_internal/frontend/assets/edugate-select.css",
+      "sha256": "c048ddefe484e4c4b71f4a99f65ac5495b4d0c1cfa17dc1b514191e1029775c8"
+    },
+    "frontend/assets/edugate-select.js": {
+      "archive_path": "_internal/frontend/assets/edugate-select.js",
+      "sha256": "7f67f83200e4a5525923ae1b450bcad2037f847d44fcc1fb69bc56d85f704808"
+    },
+    "frontend/assets/icons/tabler/adjustments-horizontal.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/adjustments-horizontal.svg",
+      "sha256": "bee7ad12b63cb2ff4ae9486fa2b2c31d5989c2299bc7a11f89c51851ef541242"
+    },
+    "frontend/assets/icons/tabler/archive.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/archive.svg",
+      "sha256": "e4067b18782fbc2b59617f1c11d6914e8b3b3b5c60f684fe13d1c66f2dcc1fe9"
+    },
+    "frontend/assets/icons/tabler/book-2.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/book-2.svg",
+      "sha256": "9af5f85f8080c1dd507622f4ec7fc34d6feb108ef759fdcfa43fa31dd579fd0d"
+    },
+    "frontend/assets/icons/tabler/brain.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/brain.svg",
+      "sha256": "225adf0167080fc31163001627f0ad42b2f272f8135860c0c3b8aa50f822d048"
+    },
+    "frontend/assets/icons/tabler/chevron-down.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/chevron-down.svg",
+      "sha256": "f23e3e7f42bfe024742b5312a7a1a18bb702dfd3c8eeb2eeb12f602aef9ebbd5"
+    },
+    "frontend/assets/icons/tabler/circle-check.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/circle-check.svg",
+      "sha256": "75dfedf9fdf9f1f207bf76aa188e81da46a2c6c7f6afb7749edcd32f76674257"
+    },
+    "frontend/assets/icons/tabler/clipboard-text.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/clipboard-text.svg",
+      "sha256": "6e61fea7f83f52e50914dd6357207c616d2ef977553ac0da2444b82088074089"
+    },
+    "frontend/assets/icons/tabler/cloud-upload.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/cloud-upload.svg",
+      "sha256": "c28f905e719cde4124a7eb07fd925bcc45d78e383e89fdc7a54234b8dcb3728b"
+    },
+    "frontend/assets/icons/tabler/code.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/code.svg",
+      "sha256": "1cf7a0c4d4f9b3dc9c987f317c85a1e8f7a65274694650afe865717991641c18"
+    },
+    "frontend/assets/icons/tabler/copy.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/copy.svg",
+      "sha256": "d04729423606726f0146a81143bfb595197fdb10cb52f5d6ab221fc6c352e7c4"
+    },
+    "frontend/assets/icons/tabler/cube.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/cube.svg",
+      "sha256": "87c8541ec2873b1202e7e36bc9c4ec4e53ed0228991e757b6004f117b0c3061e"
+    },
+    "frontend/assets/icons/tabler/database.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/database.svg",
+      "sha256": "11f423f0009561fa55a7be9ed3d48bf7967124cb0753065de3c974896f9a7455"
+    },
+    "frontend/assets/icons/tabler/device-desktop.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/device-desktop.svg",
+      "sha256": "a1afd83de707c4e319d21c0466908dce63f7a2310fc0ffe012f61e2169747192"
+    },
+    "frontend/assets/icons/tabler/device-floppy.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/device-floppy.svg",
+      "sha256": "a132293a927979d968a6d30c6173fe004b2dc7b6565bebc3238c42b4d35d5a6e"
+    },
+    "frontend/assets/icons/tabler/dots-vertical.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/dots-vertical.svg",
+      "sha256": "dbfc42d0e377b2472db88627bca63a2b9c41a657504774057acdce40394a71e8"
+    },
+    "frontend/assets/icons/tabler/eye.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/eye.svg",
+      "sha256": "7adc98f60824832e5bf7585e1fbbe916953988e6590cacc0cec80f5c7419e003"
+    },
+    "frontend/assets/icons/tabler/file-description.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/file-description.svg",
+      "sha256": "fe8551eb62a3ddacc0e359e31b8d85637e9a63d20f0bafc1f3e14c8b5bd5d860"
+    },
+    "frontend/assets/icons/tabler/folder-open.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/folder-open.svg",
+      "sha256": "53a1d814358f80eb6f0c56ff058b6aa663e8202d7129e43c06d43fb3de9413ba"
+    },
+    "frontend/assets/icons/tabler/folder.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/folder.svg",
+      "sha256": "66955a5862322336d9a4dca229999e1e01af96278464d4bdd56d54aa9b821bd1"
+    },
+    "frontend/assets/icons/tabler/info-circle.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/info-circle.svg",
+      "sha256": "bbe534455dbcebfa1b99b9fe248c22c91c8adad01d3e269de064798b139415b0"
+    },
+    "frontend/assets/icons/tabler/LICENSE": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/LICENSE",
+      "sha256": "dbfa6cff2e8426878267c6719ff68dcd8bc3dadaffb2207f5c46ce939c4becd3"
+    },
+    "frontend/assets/icons/tabler/message.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/message.svg",
+      "sha256": "42167a75666c1bfb60d5a8a152c50f5a5b5d1f3de4f726038a653be5a775095f"
+    },
+    "frontend/assets/icons/tabler/player-play.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/player-play.svg",
+      "sha256": "b678a1a1d0a1c56f77e7640017a81516e87e98a1f2059e4225ce13735fe005d2"
+    },
+    "frontend/assets/icons/tabler/player-stop.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/player-stop.svg",
+      "sha256": "4fe9678e5e7ad39f02579179d1cf1a26cc75a05ab586c3fef69a25c689450236"
+    },
+    "frontend/assets/icons/tabler/refresh.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/refresh.svg",
+      "sha256": "e6c2864efdd3338aed779f6211f76b847937d691025ce691fdad3bcf236d68bf"
+    },
+    "frontend/assets/icons/tabler/school.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/school.svg",
+      "sha256": "092d5882d134f56391a6c5be28e2546f801b58b4f583451bcb6ff0e89adda7a3"
+    },
+    "frontend/assets/icons/tabler/settings.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/settings.svg",
+      "sha256": "48ef08a260d9064b6ba823fc0cd38449d6c79c96d1b1985b876bf091d02f8387"
+    },
+    "frontend/assets/icons/tabler/sparkles.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/sparkles.svg",
+      "sha256": "8e9076e8666acdf064e0ebb78a912c18e25b4fe3f2c2cfdf4b6478837e6a8467"
+    },
+    "frontend/assets/icons/tabler/trash.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/trash.svg",
+      "sha256": "1789728dd7b703a9e60bba60e8a635474b92f8f1444a7c1bce10ec971ed79a10"
+    },
+    "frontend/assets/icons/tabler/upload.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/upload.svg",
+      "sha256": "6c4c5e0c67326e593497e2765c50860477348a824ff6369a43a04bc151860d54"
+    },
+    "frontend/assets/icons/tabler/users.svg": {
+      "archive_path": "_internal/frontend/assets/icons/tabler/users.svg",
+      "sha256": "d1e0df7088c07a0ba9504b01040965b3d979ee451c2cabfe3ec34086173b6570"
+    },
+    "frontend/assets/knowledge-admin.js": {
+      "archive_path": "_internal/frontend/assets/knowledge-admin.js",
+      "sha256": "0e0d942526b05c640dbb4e23ac1a5f56db17661db4f1b9d69a4d59e36d5ede7d"
+    },
+    "frontend/assets/knowledge.css": {
+      "archive_path": "_internal/frontend/assets/knowledge.css",
+      "sha256": "f99e09a276d9f307dab9fabb1e845b8d5c5252373b213fc82c65c7f7d4679317"
+    },
+    "frontend/assets/python-sandbox.js": {
+      "archive_path": "_internal/frontend/assets/python-sandbox.js",
+      "sha256": "4b288b15fd903f47eca799d50300011abbca08acab686fd2296ee434a332345d"
+    },
+    "frontend/assets/vendor/pyodide/LICENSE": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/LICENSE",
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5"
+    },
+    "frontend/assets/vendor/pyodide/LICENSE-CPYTHON": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/LICENSE-CPYTHON",
+      "sha256": "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231"
+    },
+    "frontend/assets/vendor/pyodide/LICENSE-EMSCRIPTEN": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/LICENSE-EMSCRIPTEN",
+      "sha256": "51aea7641f81d560eb039bc97ce35e2517e2656fe8731eb49ce6a18498eb22fe"
+    },
+    "frontend/assets/vendor/pyodide/pyodide-lock.json": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/pyodide-lock.json",
+      "sha256": "3fdaef09e9e365c85e002737720f8d0ab8f278c1c244a2dde6a37663cf488ad4"
+    },
+    "frontend/assets/vendor/pyodide/pyodide.asm.mjs": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/pyodide.asm.mjs",
+      "sha256": "2ac5eba365ec12839c75c03b39b3be1dd63b798852cc460b014b52238be042f7"
+    },
+    "frontend/assets/vendor/pyodide/pyodide.asm.wasm": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/pyodide.asm.wasm",
+      "sha256": "3a0a00dfeaa348ac20f9ef09904233d32d33f644339662d4af368f8a2010f37a"
+    },
+    "frontend/assets/vendor/pyodide/pyodide.mjs": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/pyodide.mjs",
+      "sha256": "69e3f6ccec3e14b465df60be577ca62f536251406b9a00cce019eac5252a2495"
+    },
+    "frontend/assets/vendor/pyodide/python_stdlib.zip": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/python_stdlib.zip",
+      "sha256": "80c5be6babfe03297069703410c3c29404dcf2525d2b128746bae5536f94831f"
+    },
+    "frontend/assets/vendor/pyodide/README.md": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/README.md",
+      "sha256": "95370af682aab048ac03f1becd7fd3156f92e9dd48af3f617a5c5bcdfca26125"
+    },
+    "frontend/assets/vendor/pyodide/SHA256SUMS": {
+      "archive_path": "_internal/frontend/assets/vendor/pyodide/SHA256SUMS",
+      "sha256": "c3944382e8ab810671fa75171327db95fd1ed64866b1a7829f872d52ff809e06"
+    },
+    "frontend/assets/vendor/qrcode-generator.js": {
+      "archive_path": "_internal/frontend/assets/vendor/qrcode-generator.js",
+      "sha256": "55427af126a7fd46b83b7a9557b7ad6a48850b31f2b4a1b32e2289e376dc80b4"
+    },
+    "frontend/assets/vendor/THIRD_PARTY_NOTICES.md": {
+      "archive_path": "_internal/frontend/assets/vendor/THIRD_PARTY_NOTICES.md",
+      "sha256": "91c0ab1248a60804a293449c87dce8846e95d8e38f7e682928fbfae3c0a5f7f0"
+    },
+    "frontend/published.html": {
+      "archive_path": "_internal/frontend/published.html",
+      "sha256": "d8cf74e1af8b8ab28d39f8497650a4eaffc4a2416a8cbd44b5d9caf32f8ee41f"
+    },
+    "frontend/student.html": {
+      "archive_path": "_internal/frontend/student.html",
+      "sha256": "f57fce975a4ea4b50251a96dc090d0ca4956b887bac45372df047578ded088b6"
+    },
+    "licenses/knowledge/FlagEmbedding-MIT.txt": {
+      "archive_path": "_internal/licenses/knowledge/FlagEmbedding-MIT.txt",
+      "sha256": "587a673933425dbc36ec61268d3b954051b2d3ef3c9b322ede357976055ffdd5"
+    },
+    "licenses/knowledge/jieba-MIT.txt": {
+      "archive_path": "_internal/licenses/knowledge/jieba-MIT.txt",
+      "sha256": "522d429662141688e69562df3ef47acb29ed1a3d28147e1c643420740e4e94cc"
+    },
+    "licenses/knowledge/knowledge-NOTICE.txt": {
+      "archive_path": "_internal/licenses/knowledge/knowledge-NOTICE.txt",
+      "sha256": "105789448eb0f3c7fcdc8cfe68de1f0459d29523d58d312f0dc070a6b18784ed"
+    },
+    "README.txt": {
+      "archive_path": "README.txt",
+      "sha256": "8dbc7e3a90e117002686903988141776dba778d2712d284583e05dcaa0e74097"
+    }
+  },
+  "verification_scope": "Python 3.12 instructions, constants, names, flags and exception tables match; filenames and line-number debug metadata excluded.",
+  "limitations": [
+    "Historical 2.3.x commits did not exist in the repository; these commits are recorded on the archival date.",
+    "Recovered runtime sources are not a complete historical development checkout. Historical tests, build scripts and comments are not asserted as original.",
+    "No teacher configuration, credentials, classroom data or local-upgrade backups are included."
+  ]
+}
